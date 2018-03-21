@@ -2,7 +2,7 @@ $(function() {
 
 	$.fn.googleMap = function(params) {
 		params = $.extend( {
-			zoom : 10,
+			zoom : 15,
 			coords : [48.895651, 2.290569],
 			type : "ROADMAP",
 			debug : false,
