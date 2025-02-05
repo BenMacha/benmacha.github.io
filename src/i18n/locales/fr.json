@@ -1,0 +1,192 @@
+{
+  "nav": {
+    "experience": "Expérience",
+    "skills": "Compétences",
+    "projects": "Projets",
+    "education": "Formation"
+  },
+  "home": {
+    "title": "Développeur Full Stack",
+    "description": "Passionné par le développement web et mobile, spécialisé en Symfony, React et Vue.js. Leader technique avec une forte expérience en gestion d'équipe et en architecture logicielle.",
+    "contact": "Contact",
+    "download": "Télécharger mon CV"
+  },
+  "experience": {
+    "title": "Expériences professionnelles",
+    "items": [
+      {
+        "company": "CCM BENCHMARK",
+        "period": "09/24 – Aujourd'hui",
+        "role": "Lead Dev PHP",
+        "location": "Paris, Île-de-France, France · Hybride",
+        "tasks": [
+          "Développement et maintenance de produits internes stratégiques",
+          "Expertise et supervision d'équipes techniques",
+          "Développement PHP natif et solutions sur mesure",
+          "Utilisation de Symfony et API Platform pour des applications robustes",
+          "Mise en place d'environnements Docker",
+          "Conception et développement d'outils internes",
+          "Veille technologique et accompagnement des équipes",
+          "Collaboration avec les équipes produit",
+          "Garantie de la qualité du code et respect des bonnes pratiques"
+        ]
+      },
+      {
+        "company": "KEYTCHENS",
+        "period": "09/18 – 08/24",
+        "role": "Développeur Full Stack (Tech Lead)",
+        "tasks": [
+          "Développement avec Symfony, ReactJS et Ionic Capacitor",
+          "Migration Symfony 2.8 → 6.4",
+          "Gestion d'une équipe de 4 développeurs",
+          "Configuration des environnements PROD/DEV",
+          "Intégration des imprimantes Cloud/Bluetooth et API Uber/Deliveroo",
+          "Gestion en temps réel des commandes avec JIRA"
+        ],
+        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-5.4, MySQL, Docker, Redis, GraphQL, Sentry",
+        "website": "https://keytchens.com"
+      },
+      {
+        "company": "MANYMORE / MATALTO",
+        "period": "07/19 – 07/20",
+        "role": "Développeur Symfony",
+        "tasks": [
+          "Migration Symfony 2.8 → 3.4",
+          "Implémentation de GraphQL",
+          "Maintenance corrective et résolution de bugs (TMA)"
+        ]
+      }
+    ]
+  },
+  "skills": {
+    "title": "Compétences",
+    "backend": "Back-end",
+    "frontend": "Front-end",
+    "mobile": "Mobile",
+    "devops": "DevOps",
+    "testing": "Tests",
+    "other": "Autres"
+  },
+  "projects": {
+    "title": "Projets",
+    "github": {
+      "title": "Projets GitHub",
+      "viewOn": "Voir sur",
+      "items": [
+        {
+          "name": "UberEat PHP SDK",
+          "icon": "🍽️",
+          "description": "SDK PHP pour l'intégration de l'API UberEat",
+          "tasks": [
+            "Intégration complète de l'API UberEat",
+            "Gestion des commandes et des menus",
+            "Documentation détaillée et exemples"
+          ],
+          "url": "https://github.com/BenMacha/ubereat-php"
+        },
+        {
+          "name": "Symfony CRUD Template Bundle",
+          "icon": "🖥",
+          "description": "Bundle Symfony pour générer rapidement des interfaces CRUD",
+          "url": "https://github.com/BenMacha/Templatebundle"
+        },
+        {
+          "name": "Symfony Mouse Tracker",
+          "icon": "🖱",
+          "description": "Bundle pour le suivi des interactions utilisateur",
+          "url": "https://github.com/BenMacha/mouseTracker"
+        },
+        {
+          "name": "Symfony Diagram Bundle",
+          "icon": "📊",
+          "description": "Générateur de diagrammes pour projets Symfony",
+          "url": "https://github.com/BenMacha/diagram-bundle"
+        }
+      ]
+    }
+  },
+  "education": {
+    "title": "Formation",
+    "items": [
+      {
+        "school": "ISI",
+        "type": "Université",
+        "period": "2012 – 2016",
+        "skills": [
+          "Génie Logiciel",
+          "Programmation Orientée Objet",
+          "Sécurité Informatique",
+          "Bases de données avancées",
+          "Architecture logicielle",
+          "Développement mobile"
+        ]
+      },
+      {
+        "school": "AHD JADID",
+        "type": "Lycée",
+        "period": "2008 – 2012",
+        "skills": [
+          "Baccalauréat Informatique",
+          "Mention Très Bien",
+          "Spécialisation en programmation"
+        ]
+      }
+    ],
+    "internships": {
+      "title": "Stages & Bénévolat",
+      "items": [
+        {
+          "company": "TUNINFO",
+          "period": "07/15 – 09/15",
+          "role": "Stagiaire",
+          "skills": [
+            "Sécurité Web",
+            "Administration Système Linux",
+            "Développement PHP/Symfony",
+            "Tests de pénétration"
+          ]
+        },
+        {
+          "company": "GLINSE",
+          "period": "07/14 – 08/14",
+          "role": "Stagiaire",
+          "skills": [
+            "Formation PHP/Laravel 4.2",
+            "Développement d'APIs RESTful",
+            "Intégration de services tiers"
+          ]
+        }
+      ]
+    },
+    "interests": {
+      "title": "Centres d'intérêt",
+      "items": {
+        "sports": {
+          "title": "🏊 Sports",
+          "items": [
+            "Natation",
+            "Course",
+            "Pêche",
+            "Camping"
+          ]
+        },
+        "associations": {
+          "title": "🌍 Associations",
+          "items": [
+            "Amnesty International",
+            "Club de développement local",
+            "Association de protection de l'environnement"
+          ]
+        }
+      }
+    }
+  },
+  "404": {
+    "title": "Page non trouvée",
+    "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "back": "Retour à l'accueil"
+  },
+  "footer": {
+    "rights": "Tous droits réservés."
+  }
+}

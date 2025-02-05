@@ -1,0 +1,192 @@
+{
+  "nav": {
+    "experience": "Experience",
+    "skills": "Skills",
+    "projects": "Projects",
+    "education": "Education"
+  },
+  "home": {
+    "title": "Full Stack Developer",
+    "description": "Passionate about web and mobile development, specialized in Symfony, React and Vue.js. Technical leader with strong experience in team management and software architecture.",
+    "contact": "Contact",
+    "download": "Download CV"
+  },
+  "experience": {
+    "title": "Professional Experience",
+    "items": [
+      {
+        "company": "CCM BENCHMARK",
+        "period": "09/24 – Present",
+        "role": "Lead PHP Developer",
+        "location": "Paris, Île-de-France, France · Hybrid",
+        "tasks": [
+          "Development and maintenance of strategic internal products",
+          "Technical expertise and team supervision",
+          "Native PHP development and custom solutions",
+          "Using Symfony and API Platform for robust applications",
+          "Docker environment setup",
+          "Design and development of internal tools",
+          "Technology watch and team support",
+          "Collaboration with product teams",
+          "Code quality assurance and best practices enforcement"
+        ]
+      },
+      {
+        "company": "KEYTCHENS",
+        "period": "09/18 – 08/24",
+        "role": "Full Stack Developer (Tech Lead)",
+        "tasks": [
+          "Development with Symfony, ReactJS and Ionic Capacitor",
+          "Migration from Symfony 2.8 to 6.4",
+          "Management of a team of 4 developers",
+          "Configuration of PROD/DEV environments",
+          "Integration of Cloud/Bluetooth printers and Uber/Deliveroo APIs",
+          "Real-time order management with JIRA"
+        ],
+        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-5.4, MySQL, Docker, Redis, GraphQL, Sentry",
+        "website": "https://keytchens.com"
+      },
+      {
+        "company": "MANYMORE / MATALTO",
+        "period": "07/19 – 07/20",
+        "role": "Symfony Developer",
+        "tasks": [
+          "Migration from Symfony 2.8 to 3.4",
+          "GraphQL implementation",
+          "Corrective maintenance and bug fixing"
+        ]
+      }
+    ]
+  },
+  "skills": {
+    "title": "Skills",
+    "backend": "Back-end",
+    "frontend": "Front-end",
+    "mobile": "Mobile",
+    "devops": "DevOps",
+    "testing": "Testing",
+    "other": "Other"
+  },
+  "projects": {
+    "title": "Projects",
+    "github": {
+      "title": "GitHub Projects",
+      "viewOn": "View on",
+      "items": [
+        {
+          "name": "UberEat PHP SDK",
+          "icon": "🍽️",
+          "description": "PHP SDK for UberEat API integration",
+          "tasks": [
+            "Complete UberEat API integration",
+            "Order and menu management",
+            "Detailed documentation and examples"
+          ],
+          "url": "https://github.com/BenMacha/ubereat-php"
+        },
+        {
+          "name": "Symfony CRUD Template Bundle",
+          "icon": "🖥",
+          "description": "Bundle for quickly generating CRUD interfaces",
+          "url": "https://github.com/BenMacha/Templatebundle"
+        },
+        {
+          "name": "Symfony Mouse Tracker",
+          "icon": "🖱",
+          "description": "Bundle for tracking user interactions",
+          "url": "https://github.com/BenMacha/mouseTracker"
+        },
+        {
+          "name": "Symfony Diagram Bundle",
+          "icon": "📊",
+          "description": "Diagram generator for Symfony projects",
+          "url": "https://github.com/BenMacha/diagram-bundle"
+        }
+      ]
+    }
+  },
+  "education": {
+    "title": "Education",
+    "items": [
+      {
+        "school": "ISI",
+        "type": "University",
+        "period": "2012 – 2016",
+        "skills": [
+          "Software Engineering",
+          "Object-Oriented Programming",
+          "Information Security",
+          "Advanced Databases",
+          "Software Architecture",
+          "Mobile Development"
+        ]
+      },
+      {
+        "school": "AHD JADID",
+        "type": "High School",
+        "period": "2008 – 2012",
+        "skills": [
+          "Computer Science Baccalaureate",
+          "Highest Honors",
+          "Programming Specialization"
+        ]
+      }
+    ],
+    "internships": {
+      "title": "Internships & Volunteering",
+      "items": [
+        {
+          "company": "TUNINFO",
+          "period": "07/15 – 09/15",
+          "role": "Intern",
+          "skills": [
+            "Web Security",
+            "Linux System Administration",
+            "PHP/Symfony Development",
+            "Penetration Testing"
+          ]
+        },
+        {
+          "company": "GLINSE",
+          "period": "07/14 – 08/14",
+          "role": "Intern",
+          "skills": [
+            "PHP/Laravel 4.2 Training",
+            "RESTful API Development",
+            "Third-party Service Integration"
+          ]
+        }
+      ]
+    },
+    "interests": {
+      "title": "Interests",
+      "items": {
+        "sports": {
+          "title": "🏊 Sports",
+          "items": [
+            "Swimming",
+            "Running",
+            "Fishing",
+            "Camping"
+          ]
+        },
+        "associations": {
+          "title": "🌍 Associations",
+          "items": [
+            "Amnesty International",
+            "Local Development Club",
+            "Environmental Protection Association"
+          ]
+        }
+      }
+    }
+  },
+  "404": {
+    "title": "Page Not Found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "back": "Back to Home"
+  },
+  "footer": {
+    "rights": "All rights reserved."
+  }
+}
