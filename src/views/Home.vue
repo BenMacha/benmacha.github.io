@@ -1,26 +1,13 @@
 <script setup lang="ts">
-import { useMotion } from '@vueuse/motion'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Github, Globe, Linkedin } from 'lucide-vue-next'
-import CvGenerator from '../components/CvGenerator.vue'
+import { Github, Globe, Linkedin, FileText } from 'lucide-vue-next'
 import { socialLinks } from '../constants'
 
 const avatar = ref(null)
 const content = ref(null)
 const { t } = useI18n()
 
-const avatarMotion = useMotion(avatar, {
-  initial: { scale: 0, opacity: 0 },
-  enter: { scale: 1, opacity: 1 },
-  transition: { type: 'spring', stiffness: 100, damping: 15 }
-})
-
-const contentMotion = useMotion(content, {
-  initial: { y: 50, opacity: 0 },
-  enter: { y: 0, opacity: 1 },
-  transition: { delay: 200 }
-})
 </script>
 
 <template>
@@ -40,13 +27,6 @@ const contentMotion = useMotion(content, {
           {{ t('home.description') }}
         </p>
         
-        <div class="mb-8">
-          <h3 class="text-xl font-semibold mb-4 text-foreground">{{ t('home.contact') }}</h3>
-          <p class="text-foreground">
-            <a :href="'mailto:' + socialLinks.email" class="hover:text-primary">{{ socialLinks.email }}</a>
-          </p>
-        </div>
-
         <div class="flex justify-center gap-6 mb-8">
           <a :href="socialLinks.github" target="_blank" class="text-foreground hover:text-primary transition-colors">
             <Github class="w-6 h-6" />
@@ -57,9 +37,10 @@ const contentMotion = useMotion(content, {
           <a :href="socialLinks.website" target="_blank" class="text-foreground hover:text-primary transition-colors">
             <Globe class="w-6 h-6" />
           </a>
+          <router-link to="/cv" class="text-foreground hover:text-primary transition-colors">
+            <FileText class="w-6 h-6" />
+          </router-link>
         </div>
-
-        <CvGenerator />
       </div>
     </div>
   </div>

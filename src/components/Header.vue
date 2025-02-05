@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useToggle } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { Sun, Moon, Briefcase, Code2, FolderGit2, GraduationCap, Menu, X } from 'lucide-vue-next'
 import { ref, onMounted, watch } from 'vue'

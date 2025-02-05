@@ -10,21 +10,17 @@ const app = createApp(App)
 const head = createHead()
 
 // SEO handling for each route
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const { t } = i18n.global
   const defaultTitle = 'Ben Mecha Ali - ' + t('home.title')
   const defaultDescription = t('home.description')
 
-  // Update meta tags based on route
-  head.updateDOM({
-    title: to.meta.title ? `${to.meta.title} - ${defaultTitle}` : defaultTitle,
-    meta: [
-      {
-        name: 'description',
-        content: to.meta.description || defaultDescription
-      }
-    ]
-  })
+  // Update document title and meta description
+  document.title = to.meta.title ? `${to.meta.title} - ${defaultTitle}` : defaultTitle
+  const metaDescription = document.querySelector('meta[name="description"]')
+  if (metaDescription) {
+    metaDescription.setAttribute('content', (to.meta.description as string) || defaultDescription)
+  }
 
   next()
 })

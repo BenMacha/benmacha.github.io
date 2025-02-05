@@ -3,18 +3,19 @@ import { useMotion } from '@vueuse/motion'
 import { GraduationCap } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
+import type { Education, Internship, Category } from '../types/i18n'
 
 const content = ref(null)
 const { t, tm } = useI18n()
 
-const contentMotion = useMotion(content, {
+useMotion(content, {
   initial: { y: 50, opacity: 0 },
   enter: { y: 0, opacity: 1 }
 })
 
-const education = tm('education.items')
-const internships = tm('education.internships.items')
-const interests = tm('education.interests.items')
+const education = tm('education.items') as Education[]   || []
+const internships = tm('education.internships.items') as Internship[]  || []
+const interests = tm('education.interests.items') as Record<string, Category>
 </script>
 
 <template>

@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { useMotion } from '@vueuse/motion'
 import { Code2 } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { skillSections } from '../constants'
 
 const content = ref(null)
 
-const contentMotion = useMotion(content, {
-  initial: { y: 50, opacity: 0 },
-  enter: { y: 0, opacity: 1 }
-})
 </script>
 
 <template>

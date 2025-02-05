@@ -47,6 +47,42 @@
         "website": "https://keytchens.com"
       },
       {
+        "company": "UKN",
+        "period": "01/18 – 08/18",
+        "role": "Développeur Full Stack",
+        "tasks": [
+          "Développement d'applications web avec Symfony 4",
+          "Création d'interfaces utilisateur avec React",
+          "Intégration de systèmes de paiement",
+          "Optimisation des performances",
+          "Mise en place de tests automatisés"
+        ]
+      },
+      {
+        "company": "ARGOLIFE",
+        "period": "03/17 – 12/17",
+        "role": "Développeur PHP",
+        "tasks": [
+          "Développement de solutions e-commerce",
+          "Intégration de passerelles de paiement",
+          "Optimisation SEO",
+          "Maintenance et amélioration des performances",
+          "Support technique client"
+        ]
+      },
+      {
+        "company": "PIXEL TRADE",
+        "period": "09/16 – 02/17",
+        "role": "Développeur Web Junior",
+        "tasks": [
+          "Développement de sites web avec WordPress",
+          "Création de thèmes personnalisés",
+          "Intégration de maquettes",
+          "Maintenance de sites existants",
+          "Support client"
+        ]
+      },
+      {
         "company": "MANYMORE / MATALTO",
         "period": "07/19 – 07/20",
         "role": "Développeur Symfony",

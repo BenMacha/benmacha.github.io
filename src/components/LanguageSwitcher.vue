@@ -2,9 +2,9 @@
 import { useI18n } from 'vue-i18n'
 import { Languages } from 'lucide-vue-next'
 import { SUPPORTED_LOCALES } from '../i18n'
-import { watch, onMounted } from 'vue'
+import { onMounted } from 'vue'
 
-const { locale, t } = useI18n()
+const { locale } = useI18n()
 
 const localeNames = {
   en: 'English',

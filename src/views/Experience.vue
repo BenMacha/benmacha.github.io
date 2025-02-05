@@ -3,16 +3,17 @@ import { useMotion } from '@vueuse/motion'
 import { Briefcase, MapPin } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
+import type { Experience } from '../types/i18n'
 
 const content = ref(null)
 const { t, tm } = useI18n()
 
-const contentMotion = useMotion(content, {
+const experiences = tm('experience.items') as Experience[]  || []
+
+useMotion(content, {
   initial: { y: 50, opacity: 0 },
   enter: { y: 0, opacity: 1 }
 })
-
-const experiences = tm('experience.items')
 </script>
 
 <template>

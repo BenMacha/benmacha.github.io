@@ -3,17 +3,20 @@ import { useMotion } from '@vueuse/motion'
 import { FolderGit2, ExternalLink } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
+import type { Project, GithubProject } from '../types/i18n'
 
 const content = ref(null)
 const { t, tm } = useI18n()
 
-const contentMotion = useMotion(content, {
+useMotion(content, {
   initial: { y: 50, opacity: 0 },
   enter: { y: 0, opacity: 1 }
 })
 
-const projects = tm('projects.items')
-const githubProjects = tm('projects.github.items')
+const projects = tm('projects.items') as Project[] || []
+const githubProjects = tm('projects.github.items') as GithubProject[] || []
+
+
 </script>
 
 <template>
@@ -30,14 +33,14 @@ const githubProjects = tm('projects.github.items')
             {{ project.name }}
           </h2>
           <p class="text-muted-foreground mb-4">{{ project.description }}</p>
-          <ul class="list-disc list-inside space-y-2 mb-4 text-foreground">
+          <ul v-if="project.tasks" class="list-disc list-inside space-y-2 mb-4 text-foreground">
             <li v-for="task in project.tasks" :key="task">{{ task }}</li>
           </ul>
-          <a 
-            v-if="project.website" 
-            :href="project.website" 
-            target="_blank" 
-            class="text-primary hover:underline inline-flex items-center gap-2"
+          <a
+              v-if="project.website"
+              :href="project.website"
+              target="_blank"
+              class="text-primary hover:underline inline-flex items-center gap-2"
           >
             {{ project.website.replace('https://', '') }}
             <ExternalLink class="h-4 w-4" />
@@ -57,11 +60,10 @@ const githubProjects = tm('projects.github.items')
             <ul v-if="project.tasks" class="list-disc list-inside space-y-2 mt-2 text-foreground">
               <li v-for="task in project.tasks" :key="task">{{ task }}</li>
             </ul>
-            <a 
-              v-if="project.url" 
-              :href="project.url" 
-              target="_blank" 
-              class="text-primary hover:underline inline-flex items-center gap-2 mt-2"
+            <a
+                :href="project.url"
+                target="_blank"
+                class="text-primary hover:underline inline-flex items-center gap-2 mt-2"
             >
               {{ t('projects.github.viewOn') }} GitHub
               <ExternalLink class="h-4 w-4" />
