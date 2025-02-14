@@ -12,7 +12,8 @@ autoinstall:
     version: 2
   storage:
     layout:
-      name: lvm
+      name: lvm  # Utilisation de LVM sans chiffrement
+    wipe: true  # Efface tout le disque avant l'installation
   ssh:
     install-server: true
     allow-pw: true
@@ -23,13 +24,16 @@ autoinstall:
     - nano
     - docker.io
     - google-chrome-stable
-    - plymouth-themes  # Installe Plymouth pour gérer l'animation de démarrage
+    - openjdk-17-jdk  # Java JDK 17 + JVM
+    - plymouth-themes  # Pour personnaliser le logo de démarrage
+    - gparted  # Outil de gestion des partitions
   late-commands:
     - curtin in-target -- apt update && apt upgrade -y
     - curtin in-target -- apt install -y snapd ubuntu-restricted-extras
     - curtin in-target -- snap install phpstorm --classic
     - curtin in-target -- snap install android-studio --classic
     - curtin in-target -- snap install webstorm --classic
+    - curtin in-target -- snap install flutter --classic  # Installation de Flutter
     - curtin in-target -- apt install -y apt-transport-https ca-certificates software-properties-common
     - curtin in-target -- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/trusted.gpg.d/docker.asc
     - curtin in-target -- add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
@@ -38,14 +42,22 @@ autoinstall:
     - curtin in-target -- apt install -y /tmp/docker-desktop.deb
     - curtin in-target -- systemctl enable --now docker
     - curtin in-target -- usermod -aG docker $USER
+    - curtin in-target -- curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - curtin in-target -- curl -sS https://get.symfony.com/cli/installer | bash
+    - curtin in-target -- mv /root/.symfony5/bin/symfony /usr/local/bin/symfony
+    # Installation de Node.js, PNPM, Yarn et `n`
+    - curtin in-target -- curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    - curtin in-target -- apt install -y nodejs
+    - curtin in-target -- npm install -g pnpm yarn n
+    - curtin in-target -- n stable  # Installe la dernière version stable de Node.js
     # Personnalisation du logo Plymouth
     - curtin in-target -- mkdir -p /usr/share/plymouth/themes/custom-logo
-    - curtin in-target -- curl -o /usr/share/plymouth/themes/custom-logo/logo.jpeg https://benmacha.tn/logo.jpeg
+    - curtin in-target -- curl -o /usr/share/plymouth/themes/custom-logo/logo.png https://URL_DE_TON_LOGO/logo.png
     - curtin in-target -- echo "[Plymouth Theme]" > /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
     - curtin in-target -- echo "Name=Custom Logo" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
     - curtin in-target -- echo "ImageDir=/usr/share/plymouth/themes/custom-logo" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
     - curtin in-target -- echo "ScriptFile=/usr/share/plymouth/themes/custom-logo/custom-logo.script" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
-    - curtin in-target -- echo 'Image { Filename "logo.jpeg"; Center = "true"; }' > /usr/share/plymouth/themes/custom-logo/custom-logo.script
+    - curtin in-target -- echo 'Image { Filename "logo.png"; Center = "true"; }' > /usr/share/plymouth/themes/custom-logo/custom-logo.script
     - curtin in-target -- plymouth-set-default-theme -R custom-logo
     - curtin in-target -- update-initramfs -u
     - echo "Installation terminée" > /target/root/install-log.txt
