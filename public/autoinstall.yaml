@@ -1,0 +1,51 @@
+#cloud-config
+autoinstall:
+  version: 1
+  third-party: true  # Active l'installation des outils tiers d'Ubuntu
+  keyboard:
+    layout: fr
+  locale: fr_FR.UTF-8
+  network:
+    ethernets:
+      ens160:
+        dhcp4: true
+    version: 2
+  storage:
+    layout:
+      name: lvm
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - htop
+    - curl
+    - git
+    - nano
+    - docker.io
+    - google-chrome-stable
+    - plymouth-themes  # Installe Plymouth pour gérer l'animation de démarrage
+  late-commands:
+    - curtin in-target -- apt update && apt upgrade -y
+    - curtin in-target -- apt install -y snapd ubuntu-restricted-extras
+    - curtin in-target -- snap install phpstorm --classic
+    - curtin in-target -- snap install android-studio --classic
+    - curtin in-target -- snap install webstorm --classic
+    - curtin in-target -- apt install -y apt-transport-https ca-certificates software-properties-common
+    - curtin in-target -- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/trusted.gpg.d/docker.asc
+    - curtin in-target -- add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    - curtin in-target -- apt update && apt install -y docker-ce docker-ce-cli containerd.io
+    - curtin in-target -- curl -fsSL https://desktop.docker.com/linux/main/amd64/docker-desktop.deb -o /tmp/docker-desktop.deb
+    - curtin in-target -- apt install -y /tmp/docker-desktop.deb
+    - curtin in-target -- systemctl enable --now docker
+    - curtin in-target -- usermod -aG docker $USER
+    # Personnalisation du logo Plymouth
+    - curtin in-target -- mkdir -p /usr/share/plymouth/themes/custom-logo
+    - curtin in-target -- curl -o /usr/share/plymouth/themes/custom-logo/logo.png https://benmacha.tn/logo.png
+    - curtin in-target -- echo "[Plymouth Theme]" > /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
+    - curtin in-target -- echo "Name=Custom Logo" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
+    - curtin in-target -- echo "ImageDir=/usr/share/plymouth/themes/custom-logo" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
+    - curtin in-target -- echo "ScriptFile=/usr/share/plymouth/themes/custom-logo/custom-logo.script" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
+    - curtin in-target -- echo 'Image { Filename "logo.png"; Center = "true"; }' > /usr/share/plymouth/themes/custom-logo/custom-logo.script
+    - curtin in-target -- plymouth-set-default-theme -R custom-logo
+    - curtin in-target -- update-initramfs -u
+    - echo "Installation terminée" > /target/root/install-log.txt
