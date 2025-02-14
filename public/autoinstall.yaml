@@ -40,12 +40,12 @@ autoinstall:
     - curtin in-target -- usermod -aG docker $USER
     # Personnalisation du logo Plymouth
     - curtin in-target -- mkdir -p /usr/share/plymouth/themes/custom-logo
-    - curtin in-target -- curl -o /usr/share/plymouth/themes/custom-logo/logo.png https://benmacha.tn/logo.png
+    - curtin in-target -- curl -o /usr/share/plymouth/themes/custom-logo/logo.jpeg https://benmacha.tn/logo.jpeg
     - curtin in-target -- echo "[Plymouth Theme]" > /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
     - curtin in-target -- echo "Name=Custom Logo" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
     - curtin in-target -- echo "ImageDir=/usr/share/plymouth/themes/custom-logo" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
     - curtin in-target -- echo "ScriptFile=/usr/share/plymouth/themes/custom-logo/custom-logo.script" >> /usr/share/plymouth/themes/custom-logo/custom-logo.plymouth
-    - curtin in-target -- echo 'Image { Filename "logo.png"; Center = "true"; }' > /usr/share/plymouth/themes/custom-logo/custom-logo.script
+    - curtin in-target -- echo 'Image { Filename "logo.jpeg"; Center = "true"; }' > /usr/share/plymouth/themes/custom-logo/custom-logo.script
     - curtin in-target -- plymouth-set-default-theme -R custom-logo
     - curtin in-target -- update-initramfs -u
     - echo "Installation terminée" > /target/root/install-log.txt
