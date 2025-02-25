@@ -2,6 +2,8 @@
 
 Un portfolio professionnel multilingue développé avec Vue.js 3, TypeScript et Tailwind CSS.
 
+![Support Palestine](https://img.shields.io/badge/🇵🇸%20Support-Palestine-008000?style=flat&logo=data:image/svg+xml;base64,...)
+
 ## 🌟 Fonctionnalités
 
 - 🌍 Support multilingue (Français, Anglais, Arabe)
