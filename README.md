@@ -192,4 +192,4 @@ MIT
 
 - Site web : [benmacha.tn](https://benmacha.tn)
 - GitHub : [@BenMacha](https://github.com/BenMacha)
-- LinkedIn : [Ben Mecha Ali](https://www.linkedin.com/in/ben-mecha-ali)
+- LinkedIn : [Ben Mecha Ali](https://www.linkedin.com/in/benmacha/)
