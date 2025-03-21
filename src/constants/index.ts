@@ -42,7 +42,7 @@ export const skillSections = [
 
 export const socialLinks = {
   github: 'https://github.com/BenMacha',
-  linkedin: 'https://www.linkedin.com/in/ben-mecha-ali',
+  linkedin: 'https://www.linkedin.com/in/benmacha/',
   email: 'contact@benmacha.tn',
   website: 'https://benmacha.tn'
 }
