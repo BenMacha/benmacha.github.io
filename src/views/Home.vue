@@ -15,7 +15,7 @@ const { t } = useI18n()
     <div class="flex flex-col items-center justify-center text-center">
       <div ref="avatar" class="mb-8">
         <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ben"
+          src="https://avatars.githubusercontent.com/u/5999976"
           alt="Ben Mecha Ali"
           class="w-48 h-48 rounded-full border-4 border-primary bg-background"
         />
