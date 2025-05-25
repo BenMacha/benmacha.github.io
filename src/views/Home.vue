@@ -37,7 +37,7 @@ const { t } = useI18n()
           <a :href="socialLinks.website" target="_blank" class="text-foreground hover:text-primary transition-colors">
             <Globe class="w-6 h-6" />
           </a>
-          <router-link to="/cv" class="text-foreground hover:text-primary transition-colors">
+          <router-link to="/CV.pdf" class="text-foreground hover:text-primary transition-colors">
             <FileText class="w-6 h-6" />
           </router-link>
         </div>
