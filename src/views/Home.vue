@@ -3,13 +3,10 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Github, Globe, Linkedin, FileText } from 'lucide-vue-next'
 import { socialLinks } from '../constants'
-
 const avatar = ref(null)
 const content = ref(null)
 const { t } = useI18n()
-
 </script>
-
 <template>
   <div class="container mx-auto px-4 py-16">
     <div class="flex flex-col items-center justify-center text-center">
@@ -37,7 +34,7 @@ const { t } = useI18n()
           <a :href="socialLinks.website" target="_blank" class="text-foreground hover:text-primary transition-colors">
             <Globe class="w-6 h-6" />
           </a>
-          <router-link to="/CV.pdf" class="text-foreground hover:text-primary transition-colors">
+          <router-link to="/CV.pdf" target="_blank" class="text-foreground hover:text-primary transition-colors">
             <FileText class="w-6 h-6" />
           </router-link>
         </div>
