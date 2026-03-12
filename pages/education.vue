@@ -118,34 +118,38 @@
 <script setup lang="ts">
 import { GraduationCap, Briefcase, Heart } from 'lucide-vue-next'
 
-const { t, tm } = useI18n()
+const { t, tm, rt } = useI18n()
 
 useScrollReveal()
 
 const educationItems = computed(() => {
-  return tm('education.items') as Array<{
-    school: string
-    type: string
-    period: string
-    skills: string[]
-  }>
+  const raw = tm('education.items') as any[]
+  return raw.map((item: any) => ({
+    school: rt(item.school),
+    type: rt(item.type),
+    period: rt(item.period),
+    skills: (item.skills || []).map((s: any) => rt(s)),
+  }))
 })
 
 const internships = computed(() => {
-  return tm('education.internships.items') as Array<{
-    company: string
-    period: string
-    role: string
-    skills: string[]
-  }>
+  const raw = tm('education.internships.items') as any[]
+  return raw.map((item: any) => ({
+    company: rt(item.company),
+    period: rt(item.period),
+    role: rt(item.role),
+    skills: (item.skills || []).map((s: any) => rt(s)),
+  }))
 })
 
 const sportsItems = computed(() => {
-  return tm('education.interests.items.sports.items') as string[]
+  const raw = tm('education.interests.items.sports.items') as any[]
+  return raw.map((item: any) => rt(item))
 })
 
 const associationItems = computed(() => {
-  return tm('education.interests.items.associations.items') as string[]
+  const raw = tm('education.interests.items.associations.items') as any[]
+  return raw.map((item: any) => rt(item))
 })
 
 useHead({

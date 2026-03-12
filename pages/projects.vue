@@ -55,18 +55,19 @@
 <script setup lang="ts">
 import { ExternalLink, Github } from 'lucide-vue-next'
 
-const { t, tm } = useI18n()
+const { t, tm, rt } = useI18n()
 
 useScrollReveal()
 
 const projects = computed(() => {
-  return tm('projects.github.items') as Array<{
-    name: string
-    icon: string
-    description: string
-    url: string
-    tasks?: string[]
-  }>
+  const raw = tm('projects.github.items') as any[]
+  return raw.map((item: any) => ({
+    name: rt(item.name),
+    icon: rt(item.icon),
+    description: rt(item.description),
+    url: rt(item.url),
+    tasks: item.tasks ? (item.tasks as any[]).map((task: any) => rt(task)) : undefined,
+  }))
 })
 
 useHead({

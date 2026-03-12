@@ -75,18 +75,19 @@ import { MapPin, ExternalLink } from 'lucide-vue-next'
 
 useScrollReveal()
 
-const { t, tm } = useI18n()
+const { t, tm, rt } = useI18n()
 
 const experiences = computed(() => {
-  return tm('experience.items') as Array<{
-    company: string
-    period: string
-    role: string
-    location?: string
-    tasks: string[]
-    stack?: string
-    website?: string
-  }>
+  const raw = tm('experience.items') as any[]
+  return raw.map((item: any) => ({
+    company: rt(item.company),
+    period: rt(item.period),
+    role: rt(item.role),
+    location: item.location ? rt(item.location) : undefined,
+    tasks: (item.tasks || []).map((task: any) => rt(task)),
+    stack: item.stack ? rt(item.stack) : undefined,
+    website: item.website ? rt(item.website) : undefined,
+  }))
 })
 
 useHead({

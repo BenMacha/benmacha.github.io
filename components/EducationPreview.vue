@@ -45,14 +45,15 @@
 <script setup lang="ts">
 import { GraduationCap, ArrowRight } from 'lucide-vue-next'
 
-const { tm } = useI18n()
+const { tm, rt } = useI18n()
 
 const educationItems = computed(() => {
-  return tm('education.items') as Array<{
-    school: string
-    type: string
-    period: string
-    skills: string[]
-  }>
+  const raw = tm('education.items') as any[]
+  return raw.map((item: any) => ({
+    school: rt(item.school),
+    type: rt(item.type),
+    period: rt(item.period),
+    skills: (item.skills || []).map((s: any) => rt(s)),
+  }))
 })
 </script>

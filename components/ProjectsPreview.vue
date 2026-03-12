@@ -44,14 +44,15 @@
 <script setup lang="ts">
 import { ExternalLink, Github, FolderGit2, ArrowRight } from 'lucide-vue-next'
 
-const { tm } = useI18n()
+const { tm, rt } = useI18n()
 
 const projects = computed(() => {
-  return tm('projects.github.items') as Array<{
-    name: string
-    icon: string
-    description: string
-    url: string
-  }>
+  const raw = tm('projects.github.items') as any[]
+  return raw.map((item: any) => ({
+    name: rt(item.name),
+    icon: rt(item.icon),
+    description: rt(item.description),
+    url: rt(item.url),
+  }))
 })
 </script>

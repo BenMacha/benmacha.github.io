@@ -46,15 +46,15 @@
 <script setup lang="ts">
 import { Briefcase, ArrowRight } from 'lucide-vue-next'
 
-const { t, tm } = useI18n()
+const { tm, rt } = useI18n()
 
 const previewItems = computed(() => {
-  const items = tm('experience.items') as Array<{
-    company: string
-    period: string
-    role: string
-    tasks: string[]
-  }>
-  return items.slice(0, 3)
+  const raw = tm('experience.items') as any[]
+  return raw.slice(0, 3).map((item: any) => ({
+    company: rt(item.company),
+    period: rt(item.period),
+    role: rt(item.role),
+    tasks: (item.tasks || []).map((t: any) => rt(t)),
+  }))
 })
 </script>
