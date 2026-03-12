@@ -6,8 +6,8 @@
     "education": "Education"
   },
   "home": {
-    "title": "Full Stack Developer",
-    "description": "Passionate about web and mobile development, specialized in Symfony, React and Vue.js. Technical leader with strong experience in team management and software architecture.",
+    "title": "Tech Lead & Full Stack Developer",
+    "description": "Passionate and creative Tech Lead, specialized in designing and developing web and mobile solutions. With over 8 years of experience, I have contributed to optimizing various systems using modern technologies to create high-performance and intuitive applications. With my team, I have worked on integrating connected technologies, real-time order management, custom notification systems, and data analysis. Constantly seeking new challenges to simplify and improve the end-user experience.",
     "contact": "Contact",
     "download": "Download CV"
   },
@@ -15,45 +15,114 @@
     "title": "Professional Experience",
     "items": [
       {
+        "company": "ORPI",
+        "period": "09/25 – Present",
+        "role": "IT Project Manager",
+        "location": "Clichy, Île-de-France, France · Hybrid",
+        "tasks": [
+          "Maintain and evolve the commercial management dashboard",
+          "Collect, clean and aggregate data (mandates, sales, leads, etc.)",
+          "Develop new metrics or KPIs per management requirements",
+          "Ensure data reliability from CRMs (Sweepbright, JEMS, etc.)",
+          "Write functional documentation and user guides",
+          "Ensure GDPR compliance in data processing",
+          "Monitor technical evolutions of Orpi tools and partners",
+          "Identify relevant innovations (AI, automation, data visualization)",
+          "Propose Proof of Concepts (POC) and new technical architectures",
+          "Continuously improve application performance and internal processes",
+          "Gather requirements from business teams (commercial, marketing, agencies)",
+          "Analyze data flows between tools (Sweepbright, Ubiflow, EDD, Digitaleo, ActiveCampaign, Modelo, etc.)",
+          "Map business processes and data flows",
+          "Identify friction points or duplicates between existing systems",
+          "Propose improvements or automations (via Zapier, internal APIs, or custom connectors)",
+          "Define the technical project roadmap (schedule, deliverables, priorities)"
+        ],
+        "stack": "PHP, Zapier, Sweepbright, JEMS, Ubiflow, Digitaleo, ActiveCampaign, Modelo, REST API",
+        "website": "https://www.orpi.com"
+      },
+      {
         "company": "CCM BENCHMARK",
-        "period": "09/24 – Present",
+        "period": "09/24 – 08/25",
         "role": "Lead PHP Developer",
         "location": "Paris, Île-de-France, France · Hybrid",
         "tasks": [
-          "Development and maintenance of strategic internal products",
-          "Technical expertise and team supervision",
-          "Native PHP development and custom solutions",
-          "Using Symfony and API Platform for robust applications",
-          "Docker environment setup",
-          "Design and development of internal tools",
-          "Technology watch and team support",
-          "Collaboration with product teams",
-          "Code quality assurance and best practices enforcement"
-        ]
+          "Development and maintenance of essential internal products",
+          "Mentoring and supporting other technical teams",
+          "Native PHP development, fully leveraging its capabilities for custom solutions",
+          "Using various Symfony versions and API Platform for robust, scalable applications",
+          "Setting up Docker environments for deployment and continuous integration",
+          "Designing and developing internal tools to optimize process efficiency",
+          "Technology watch to propose innovative solutions"
+        ],
+        "stack": "PHP, Symfony, API Platform, Docker, MySQL",
+        "website": "https://www.commentcamarche.net"
       },
       {
         "company": "KEYTCHENS",
         "period": "09/18 – 08/24",
-        "role": "Full Stack Developer (Tech Lead)",
+        "role": "Technical Lead PHP/Symfony, ReactJS, GraphQL",
+        "location": "Paris, Île-de-France, France · Hybrid",
         "tasks": [
-          "Development with Symfony, ReactJS and Ionic Capacitor",
-          "Migration from Symfony 2.8 to 6.4",
-          "Management of a team of 4 developers",
-          "Configuration of PROD/DEV environments",
-          "Integration of Cloud/Bluetooth printers and Uber/Deliveroo APIs",
-          "Real-time order management with JIRA"
+          "Developed applications with Symfony, ReactJS and Ionic Capacitor",
+          "Led Symfony migration from version 2.8 to 6.4 without service interruption",
+          "Optimized PROD/DEV environment configuration",
+          "Integrated CLOUD and Bluetooth printing systems, and Uber/Deliveroo APIs",
+          "Led a team of 4 developers, fostering collaboration and innovation",
+          "Supervised real-time order management on delivery platforms",
+          "Managed a distributed environment across multiple servers with high traffic",
+          "Assigned tasks via JIRA and reviewed code to ensure quality",
+          "Configured operational environments on Debian/Ubuntu with Jenkins, Postfix, Apache2"
         ],
-        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-5.4, MySQL, Docker, Redis, GraphQL, Sentry",
+        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-6.4, MySQL, Docker, Redis, GraphQL, Sentry, JIRA",
         "website": "https://keytchens.com"
       },
       {
         "company": "MANYMORE / MATALTO",
-        "period": "07/19 – 07/20",
-        "role": "Symfony Developer",
+        "period": "05/19 – 09/20",
+        "role": "PHP Symfony Consultant",
+        "location": "Paris & Nanterre, Île-de-France, France",
         "tasks": [
-          "Migration from Symfony 2.8 to 3.4",
-          "GraphQL implementation",
-          "Corrective maintenance and bug fixing"
+          "PHP / Symfony consulting at Manymore",
+          "Symfony migration from version 2.8 to 3.4",
+          "Bug fixing and corrective maintenance (TMA)",
+          "Implemented GraphQL for optimized data management"
+        ],
+        "stack": "PHP, Symfony, GraphQL, Git"
+      },
+      {
+        "company": "UKN",
+        "period": "01/18 – 08/18",
+        "role": "Full Stack Developer",
+        "tasks": [
+          "Web application development with Symfony 4",
+          "User interface creation with React",
+          "Payment system integration",
+          "Performance optimization",
+          "Automated testing implementation"
+        ]
+      },
+      {
+        "company": "ARGOLIFE",
+        "period": "03/17 – 12/17",
+        "role": "PHP Developer",
+        "tasks": [
+          "E-commerce solution development",
+          "Payment gateway integration",
+          "SEO optimization",
+          "Performance maintenance and improvement",
+          "Client technical support"
+        ]
+      },
+      {
+        "company": "PIXEL TRADE",
+        "period": "09/16 – 02/17",
+        "role": "Junior Web Developer",
+        "tasks": [
+          "WordPress website development",
+          "Custom theme creation",
+          "Mockup integration",
+          "Existing site maintenance",
+          "Client support"
         ]
       }
     ]

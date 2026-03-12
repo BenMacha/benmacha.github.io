@@ -16,20 +16,20 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'fr' },
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      title: 'Ben Macha Ali - Full Stack Developer',
+      title: 'Ben Macha Ali - Tech Lead & Full Stack Developer',
       meta: [
         { name: 'description', content: 'Portfolio de Ben Macha Ali - Développeur Full Stack spécialisé en Symfony, React et Vue.js. Leader technique avec une forte expérience en gestion d\'équipe et en architecture logicielle.' },
         { name: 'author', content: 'Ben Macha Ali' },
         { name: 'keywords', content: 'Ben Macha Ali, développeur, full stack, PHP, Symfony, React, Vue.js, TypeScript, Node.js, Paris, France, lead developer, portfolio' },
         { name: 'robots', content: 'index, follow' },
         { property: 'og:type', content: 'website' },
-        { property: 'og:title', content: 'Ben Macha Ali - Full Stack Developer' },
+        { property: 'og:title', content: 'Ben Macha Ali - Tech Lead & Full Stack Developer' },
         { property: 'og:description', content: 'Portfolio de Ben Macha Ali - Développeur Full Stack spécialisé en Symfony, React et Vue.js.' },
         { property: 'og:image', content: 'https://avatars.githubusercontent.com/u/5999976' },
         { property: 'og:url', content: 'https://benmacha.tn' },
         { property: 'og:site_name', content: 'Ben Macha Ali Portfolio' },
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: 'Ben Macha Ali - Full Stack Developer' },
+        { name: 'twitter:title', content: 'Ben Macha Ali - Tech Lead & Full Stack Developer' },
         { name: 'twitter:description', content: 'Portfolio de Ben Macha Ali - Développeur Full Stack spécialisé en Symfony, React et Vue.js.' },
         { name: 'twitter:image', content: 'https://avatars.githubusercontent.com/u/5999976' },
       ],
@@ -75,7 +75,7 @@ export default defineNuxtConfig({
 
   site: {
     url: 'https://benmacha.tn',
-    name: 'Ben Macha Ali - Full Stack Developer Portfolio',
+    name: 'Ben Macha Ali - Tech Lead & Full Stack Developer Portfolio',
   },
 
   sitemap: {

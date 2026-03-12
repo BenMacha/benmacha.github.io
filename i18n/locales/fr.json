@@ -6,8 +6,8 @@
     "education": "Formation"
   },
   "home": {
-    "title": "Développeur Full Stack",
-    "description": "Passionné par le développement web et mobile, spécialisé en Symfony, React et Vue.js. Leader technique avec une forte expérience en gestion d'équipe et en architecture logicielle.",
+    "title": "Tech Lead & Développeur Full Stack",
+    "description": "Tech Lead passionné et créatif, spécialisé dans la conception et le développement de solutions web et mobiles. Fort de plus de 8 ans d'expérience, j'ai contribué à l'optimisation de systèmes variés, en utilisant des technologies modernes pour créer des applications performantes et intuitives. Avec mon équipe, j'ai travaillé sur l'intégration de technologies connectées, la gestion en temps réel de commandes, la création de systèmes de notifications personnalisés, et l'analyse de données. Constamment à la recherche de nouveaux défis pour simplifier et améliorer la vie des utilisateurs finaux.",
     "contact": "Contact",
     "download": "Télécharger mon CV"
   },
@@ -15,36 +15,79 @@
     "title": "Expériences professionnelles",
     "items": [
       {
+        "company": "ORPI",
+        "period": "09/25 – Aujourd'hui",
+        "role": "Chef de projet SI",
+        "location": "Clichy, Île-de-France, France · Hybride",
+        "tasks": [
+          "Maintenir et faire évoluer le tableau de pilotage commercial",
+          "Collecter, nettoyer et agréger les données (mandats, ventes, leads, etc.)",
+          "Développer de nouvelles métriques ou KPI selon les demandes de la direction",
+          "Assurer la fiabilité des données issues des CRM (Sweepbright, JEMS, etc.)",
+          "Rédiger la documentation fonctionnelle et les guides utilisateurs",
+          "Veiller à la conformité RGPD dans les traitements de données",
+          "Suivre les évolutions techniques des outils Orpi et des partenaires",
+          "Identifier les innovations pertinentes (IA, automatisation, data-visualisation)",
+          "Proposer des Proof of Concept (POC) et de nouvelles architectures techniques",
+          "Améliorer en continu la performance des applications et des processus internes",
+          "Recueillir les besoins auprès des équipes métier (direction commerciale, marketing, GIE, agences locales)",
+          "Analyser les flux entre les différents outils (Sweepbright, Ubiflow, EDD, Digitaleo, ActiveCampaign, Modelo, etc.)",
+          "Cartographier les processus métier et les flux de données",
+          "Identifier les points de friction ou doublons entre les systèmes existants",
+          "Proposer des améliorations ou automatisations (via Zapier, API internes, ou connecteurs personnalisés)",
+          "Définir la feuille de route des projets techniques (planning, livrables, priorités)"
+        ],
+        "stack": "PHP, Zapier, Sweepbright, JEMS, Ubiflow, Digitaleo, ActiveCampaign, Modelo, API REST",
+        "website": "https://www.orpi.com"
+      },
+      {
         "company": "CCM BENCHMARK",
-        "period": "09/24 – Aujourd'hui",
+        "period": "09/24 – 08/25",
         "role": "Lead Dev PHP",
         "location": "Paris, Île-de-France, France · Hybride",
         "tasks": [
-          "Développement et maintenance de produits internes stratégiques",
-          "Expertise et supervision d'équipes techniques",
-          "Développement PHP natif et solutions sur mesure",
-          "Utilisation de Symfony et API Platform pour des applications robustes",
-          "Mise en place d'environnements Docker",
-          "Conception et développement d'outils internes",
-          "Veille technologique et accompagnement des équipes",
-          "Collaboration avec les équipes produit",
-          "Garantie de la qualité du code et respect des bonnes pratiques"
-        ]
+          "Développement et maintenance de produits internes essentiels à l'entreprise",
+          "Encadrement et soutien d'autres équipes techniques",
+          "Développement PHP natif, exploitant pleinement ses capacités pour des solutions personnalisées",
+          "Utilisation de différentes versions de Symfony et API Platform pour des applications robustes et évolutives",
+          "Mise en place d'environnements Docker pour le déploiement et l'intégration continue",
+          "Conception et développement d'outils internes pour optimiser l'efficacité des processus",
+          "Veille technologique pour proposer des solutions innovantes et accompagner les avancées"
+        ],
+        "stack": "PHP, Symfony, API Platform, Docker, MySQL",
+        "website": "https://www.commentcamarche.net"
       },
       {
         "company": "KEYTCHENS",
         "period": "09/18 – 08/24",
-        "role": "Développeur Full Stack (Tech Lead)",
+        "role": "Technical Lead PHP/Symfony, ReactJS, GraphQL",
+        "location": "Paris, Île-de-France, France · Hybride",
         "tasks": [
-          "Développement avec Symfony, ReactJS et Ionic Capacitor",
-          "Migration Symfony 2.8 → 6.4",
-          "Gestion d'une équipe de 4 développeurs",
-          "Configuration des environnements PROD/DEV",
-          "Intégration des imprimantes Cloud/Bluetooth et API Uber/Deliveroo",
-          "Gestion en temps réel des commandes avec JIRA"
+          "Développement d'applications avec Symfony, ReactJS et Ionic Capacitor",
+          "Migration de Symfony de la version 2.8 vers la version 6.4 sans interruption de service",
+          "Optimisation de la configuration des environnements PROD/DEV",
+          "Intégration de systèmes d'impression CLOUD et Bluetooth, et des APIs Uber et Deliveroo",
+          "Direction d'une équipe de 4 développeurs, encourageant la collaboration et l'innovation",
+          "Supervision de la gestion en temps réel des commandes sur les plateformes de livraison",
+          "Gestion d'un environnement distribué sur plusieurs serveurs avec trafic élevé",
+          "Attribution des tâches via JIRA et vérification du code pour garantir la qualité",
+          "Configuration d'un environnement opérationnel sur Debian/Ubuntu avec Jenkins, Postfix, Apache2"
         ],
-        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-5.4, MySQL, Docker, Redis, GraphQL, Sentry",
+        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-6.4, MySQL, Docker, Redis, GraphQL, Sentry, JIRA",
         "website": "https://keytchens.com"
+      },
+      {
+        "company": "MANYMORE / MATALTO",
+        "period": "05/19 – 09/20",
+        "role": "Consultant PHP Symfony",
+        "location": "Paris & Nanterre, Île-de-France, France",
+        "tasks": [
+          "Consultation PHP / Symfony chez Manymore",
+          "Migration de Symfony de la version 2.8 vers la version 3.4",
+          "Résolution de bugs et maintenance corrective (TMA)",
+          "Mise en œuvre de GraphQL pour une gestion optimisée des données"
+        ],
+        "stack": "PHP, Symfony, GraphQL, Git"
       },
       {
         "company": "UKN",
@@ -80,16 +123,6 @@
           "Intégration de maquettes",
           "Maintenance de sites existants",
           "Support client"
-        ]
-      },
-      {
-        "company": "MANYMORE / MATALTO",
-        "period": "07/19 – 07/20",
-        "role": "Développeur Symfony",
-        "tasks": [
-          "Migration Symfony 2.8 → 3.4",
-          "Implémentation de GraphQL",
-          "Maintenance corrective et résolution de bugs (TMA)"
         ]
       }
     ]

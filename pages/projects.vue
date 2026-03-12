@@ -16,7 +16,7 @@
           <!-- Header -->
           <div class="flex items-start justify-between mb-4">
             <span class="text-3xl">{{ project.icon }}</span>
-            <div class="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent group-hover:text-dark transition-colors">
+            <div class="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white transition-colors">
               <ExternalLink class="w-4 h-4" />
             </div>
           </div>

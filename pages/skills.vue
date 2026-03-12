@@ -12,7 +12,7 @@
         >
           <!-- Header -->
           <div class="flex items-center gap-4 mb-6">
-            <div class="p-3 rounded-xl bg-accent/10 text-accent group-hover:bg-accent group-hover:text-dark transition-colors duration-300">
+            <div class="p-3 rounded-xl bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white transition-colors duration-300">
               <component :is="getIcon(section.icon)" class="w-6 h-6" />
             </div>
             <h3 class="font-heading font-bold text-xl">{{ $t(`skills.${section.key}`) }}</h3>

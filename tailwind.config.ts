@@ -14,9 +14,9 @@ export default {
     extend: {
       colors: {
         accent: {
-          DEFAULT: '#00ff88',
-          dark: '#00cc6a',
-          light: '#33ffaa',
+          DEFAULT: '#4F8EF7',
+          dark: '#3A6FD8',
+          light: '#6FA4FF',
         },
         dark: {
           DEFAULT: '#0a0a0a',
@@ -58,8 +58,8 @@ export default {
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
         glow: {
-          '0%': { boxShadow: '0 0 20px rgba(0, 255, 136, 0.1)' },
-          '100%': { boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)' },
+          '0%': { boxShadow: '0 0 20px rgba(79, 142, 247, 0.1)' },
+          '100%': { boxShadow: '0 0 30px rgba(79, 142, 247, 0.3)' },
         },
         gradient: {
           '0%, 100%': { backgroundPosition: '0% 50%' },
