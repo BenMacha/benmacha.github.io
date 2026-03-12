@@ -22,7 +22,7 @@
       <div class="mb-8 reveal">
         <div class="relative inline-block">
           <img
-            src="/logo.jpeg"
+            src="https://avatars.githubusercontent.com/u/5999976?v=4"
             alt="Ben Macha Ali"
             class="w-28 h-28 sm:w-36 sm:h-36 rounded-full ring-4 ring-accent/30 shadow-2xl shadow-accent/10"
             loading="eager"
