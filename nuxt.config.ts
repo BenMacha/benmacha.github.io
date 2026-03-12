@@ -64,7 +64,7 @@ export default defineNuxtConfig({
       { code: 'ar', name: 'العربية', file: 'ar.json', dir: 'rtl' },
     ],
     defaultLocale: 'fr',
-    langDir: 'i18n/locales',
+    langDir: 'locales',
     strategy: 'no_prefix',
     detectBrowserLanguage: {
       useCookie: true,
