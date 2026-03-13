@@ -109,15 +109,15 @@
 
 /* Hero animated gradient background */
 .hero-gradient {
-  background: radial-gradient(ellipse at 20% 50%, rgba(79, 142, 247, 0.08) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 20%, rgba(58, 111, 216, 0.06) 0%, transparent 50%),
-              radial-gradient(ellipse at 50% 80%, rgba(79, 142, 247, 0.04) 0%, transparent 50%);
+  background: radial-gradient(ellipse at 20% 50%, rgba(239, 68, 68, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(220, 38, 38, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(239, 68, 68, 0.04) 0%, transparent 50%);
 }
 
 .dark .hero-gradient {
-  background: radial-gradient(ellipse at 20% 50%, rgba(79, 142, 247, 0.12) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 20%, rgba(58, 111, 216, 0.08) 0%, transparent 50%),
-              radial-gradient(ellipse at 50% 80%, rgba(79, 142, 247, 0.05) 0%, transparent 50%);
+  background: radial-gradient(ellipse at 20% 50%, rgba(239, 68, 68, 0.12) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(220, 38, 38, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(239, 68, 68, 0.05) 0%, transparent 50%);
 }
 
 /* Blog article prose styling */
