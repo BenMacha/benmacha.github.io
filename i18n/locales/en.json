@@ -3,7 +3,8 @@
     "experience": "Experience",
     "skills": "Skills",
     "projects": "Projects",
-    "education": "Education"
+    "education": "Education",
+    "blog": "Blog"
   },
   "home": {
     "title": "Tech Lead & Full Stack Developer",
@@ -254,6 +255,26 @@
     "title": "Page Not Found",
     "description": "The page you're looking for doesn't exist or has been moved.",
     "back": "Back to Home"
+  },
+  "blog": {
+    "title": "Tech Blog",
+    "subtitle": "Articles and insights on web development, DevOps and modern technologies",
+    "readMore": "Read article",
+    "allArticles": "All articles",
+    "backToBlog": "Back to blog",
+    "readTime": "min read",
+    "publishedOn": "Published on",
+    "previousArticle": "Previous article",
+    "nextArticle": "Next article",
+    "categories": {
+      "all": "All",
+      "docker": "Docker",
+      "linux": "Linux",
+      "php": "PHP / Symfony",
+      "devops": "DevOps"
+    },
+    "noArticles": "No articles found in this category.",
+    "articleNotFound": "Article not found."
   },
   "footer": {
     "rights": "All rights reserved."

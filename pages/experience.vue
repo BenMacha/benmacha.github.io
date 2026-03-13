@@ -91,9 +91,10 @@ const experiences = computed(() => {
 })
 
 useHead({
-  title: `${t('experience.title')} - Ben Macha Ali`,
+  title: `${t('experience.title')} - Ben Macha Ali | ORPI, CCM Benchmark, Keytchens, Matalto`,
   meta: [
-    { name: 'description', content: 'Expériences professionnelles de Ben Macha Ali - Lead PHP Developer, Full Stack Developer. Symfony, React, Vue.js.' },
+    { name: 'description', content: 'Expériences professionnelles de Ben Macha Ali - Chef de projet SI chez ORPI, Lead Dev PHP chez CCM Benchmark, Tech Lead chez Keytchens, Consultant chez Matalto/Manymore. Symfony, React, Vue.js, Docker, GraphQL.' },
+    { name: 'keywords', content: 'Ben Macha Ali expérience, ORPI chef de projet SI, CCM Benchmark lead dev PHP, Keytchens tech lead, Matalto consultant Symfony, Manymore développeur, Pixel Trade, Argolife, UKN' },
   ],
 })
 </script>

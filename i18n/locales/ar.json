@@ -3,7 +3,8 @@
     "experience": "الخبرة المهنية",
     "skills": "المهارات",
     "projects": "المشاريع",
-    "education": "التعليم"
+    "education": "التعليم",
+    "blog": "المدونة"
   },
   "home": {
     "title": "قائد تقني ومطور ويب شامل",
@@ -254,6 +255,26 @@
     "title": "الصفحة غير موجودة",
     "description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
     "back": "العودة إلى الصفحة الرئيسية"
+  },
+  "blog": {
+    "title": "المدونة التقنية",
+    "subtitle": "مقالات وتجارب حول تطوير الويب والتقنيات الحديثة",
+    "readMore": "قراءة المقال",
+    "allArticles": "جميع المقالات",
+    "backToBlog": "العودة إلى المدونة",
+    "readTime": "دقيقة قراءة",
+    "publishedOn": "نشر في",
+    "previousArticle": "المقال السابق",
+    "nextArticle": "المقال التالي",
+    "categories": {
+      "all": "الكل",
+      "docker": "Docker",
+      "linux": "Linux",
+      "php": "PHP / Symfony",
+      "devops": "DevOps"
+    },
+    "noArticles": "لم يتم العثور على مقالات في هذه الفئة.",
+    "articleNotFound": "المقال غير موجود."
   },
   "footer": {
     "rights": "جميع الحقوق محفوظة."

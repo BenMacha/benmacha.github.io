@@ -3,7 +3,8 @@
     "experience": "Expérience",
     "skills": "Compétences",
     "projects": "Projets",
-    "education": "Formation"
+    "education": "Formation",
+    "blog": "Blog"
   },
   "home": {
     "title": "Tech Lead & Développeur Full Stack",
@@ -254,6 +255,26 @@
     "title": "Page non trouvée",
     "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
     "back": "Retour à l'accueil"
+  },
+  "blog": {
+    "title": "Blog Technique",
+    "subtitle": "Articles et retours d'expérience sur le développement web, DevOps et les technologies modernes",
+    "readMore": "Lire l'article",
+    "allArticles": "Tous les articles",
+    "backToBlog": "Retour au blog",
+    "readTime": "min de lecture",
+    "publishedOn": "Publié le",
+    "previousArticle": "Article précédent",
+    "nextArticle": "Article suivant",
+    "categories": {
+      "all": "Tous",
+      "docker": "Docker",
+      "linux": "Linux",
+      "php": "PHP / Symfony",
+      "devops": "DevOps"
+    },
+    "noArticles": "Aucun article trouvé dans cette catégorie.",
+    "articleNotFound": "Article non trouvé."
   },
   "footer": {
     "rights": "Tous droits réservés."

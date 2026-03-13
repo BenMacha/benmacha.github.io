@@ -92,6 +92,7 @@ const navLinks = [
   { to: '/skills', label: 'nav.skills' },
   { to: '/projects', label: 'nav.projects' },
   { to: '/education', label: 'nav.education' },
+  { to: '/blog', label: 'nav.blog' },
 ]
 
 function handleScroll() {
