@@ -26,7 +26,7 @@
               class="flex items-center gap-3 font-mono"
             >
               <span class="text-accent/40 text-xs">&gt;</span>
-              <span class="text-xs text-gray-500 dark:text-green-400/60 group-hover:text-green-400/80 transition-colors">
+              <span class="text-xs text-gray-500 dark:text-green-400/60 group-hover:text-gray-700 dark:group-hover:text-green-400/80 transition-colors">
                 {{ skill }}
               </span>
             </div>
