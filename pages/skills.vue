@@ -26,7 +26,7 @@
               class="flex items-center gap-3 font-mono"
             >
               <span class="text-accent/40 text-xs">&gt;</span>
-              <span class="text-xs text-green-400/60 group-hover:text-green-400/80 transition-colors">
+              <span class="text-xs text-gray-500 dark:text-green-400/60 group-hover:text-green-400/80 transition-colors">
                 {{ skill }}
               </span>
             </div>
@@ -34,7 +34,7 @@
 
           <!-- Count badge -->
           <div class="mt-5 pt-3 border-t border-accent/10">
-            <span class="text-[10px] text-green-400/25 font-mono">
+            <span class="text-[10px] text-gray-300 dark:text-green-400/25 font-mono">
               // {{ section.skills.length }} modules loaded
             </span>
           </div>

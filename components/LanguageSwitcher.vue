@@ -20,13 +20,13 @@
     >
       <div
         v-if="isOpen"
-        class="absolute right-0 mt-1 w-36 py-1 bg-dark-100 border border-accent/20 shadow-xl shadow-accent/5 z-50"
+        class="absolute right-0 mt-1 w-36 py-1 bg-white dark:bg-dark-100 border border-accent/20 shadow-xl shadow-accent/5 z-50"
       >
         <button
           v-for="loc in availableLocales"
           :key="loc.code"
           @click="switchLocale(loc.code)"
-          class="w-full px-3 py-1.5 text-xs font-mono text-left text-green-400/50 hover:bg-accent/5 hover:text-accent transition-colors flex items-center gap-2"
+          class="w-full px-3 py-1.5 text-xs font-mono text-left text-gray-400 dark:text-green-400/50 hover:bg-accent/5 hover:text-accent transition-colors flex items-center gap-2"
           :class="{ 'text-accent font-semibold': locale === loc.code }"
         >
           <span class="text-accent/30">$</span> {{ loc.name }}

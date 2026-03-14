@@ -21,7 +21,7 @@
                 </div>
                 <div>
                   <h3 class="font-mono font-bold text-base text-accent">{{ item.school }}</h3>
-                  <p class="text-[10px] text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
+                  <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
                 </div>
               </div>
               <div class="flex flex-wrap gap-1.5">
@@ -56,13 +56,13 @@
                   <h4 class="font-mono font-bold text-sm text-accent">{{ item.company }}</h4>
                   <p class="text-xs text-accent/50 font-mono">{{ item.role }}</p>
                 </div>
-                <span class="text-[10px] text-green-400/25 font-mono">{{ item.period }}</span>
+                <span class="text-[10px] text-gray-300 dark:text-green-400/25 font-mono">{{ item.period }}</span>
               </div>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="skill in item.skills"
                   :key="skill"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-green-400/50 border border-accent/10"
+                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-gray-400 dark:text-green-400/50 border border-accent/10"
                 >
                   {{ skill }}
                 </span>
@@ -81,7 +81,7 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <!-- Sports -->
             <div class="reveal glass-card glow-border p-5 reveal-delay-1">
-              <h4 class="font-mono font-semibold text-sm mb-3 text-green-400/70">
+              <h4 class="font-mono font-semibold text-sm mb-3 text-gray-600 dark:text-green-400/70">
                 {{ $t('education.interests.items.sports.title') }}
               </h4>
               <div class="flex flex-wrap gap-1.5">
@@ -97,7 +97,7 @@
 
             <!-- Associations -->
             <div class="reveal glass-card glow-border p-5 reveal-delay-2">
-              <h4 class="font-mono font-semibold text-sm mb-3 text-green-400/70">
+              <h4 class="font-mono font-semibold text-sm mb-3 text-gray-600 dark:text-green-400/70">
                 {{ $t('education.interests.items.associations.title') }}
               </h4>
               <div class="flex flex-wrap gap-1.5">

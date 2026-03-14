@@ -3,14 +3,14 @@
     class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
     :class="[
       scrolled
-        ? 'bg-dark/95 backdrop-blur-sm border-b border-accent/20'
+        ? 'bg-white/90 dark:bg-dark/95 backdrop-blur-sm border-b border-gray-200 dark:border-accent/20'
         : 'bg-transparent'
     ]"
   >
     <nav class="section-container flex items-center justify-between h-14 sm:h-16">
       <!-- Logo - Terminal style -->
       <NuxtLink to="/" class="flex items-center gap-2 group">
-        <span class="text-accent font-mono text-sm sm:text-base font-bold">
+        <span class="text-accent dark:text-accent font-mono text-sm sm:text-base font-bold">
           <span class="text-accent/50">~/</span><span class="group-hover:glow-text transition-all">benmacha</span><span class="animate-blink">_</span>
         </span>
       </NuxtLink>
@@ -21,7 +21,7 @@
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="text-xs font-mono px-3 py-1.5 text-green-400/70 hover:text-accent hover:bg-accent/10
+          class="text-xs font-mono px-3 py-1.5 text-gray-600 dark:text-green-400/70 hover:text-accent hover:bg-accent/10
                  border border-transparent hover:border-accent/20 transition-all duration-200"
           active-class="text-accent border-accent/30 bg-accent/5"
         >
@@ -57,14 +57,14 @@
     >
       <div
         v-if="mobileMenuOpen"
-        class="md:hidden bg-dark/98 backdrop-blur-sm border-t border-accent/10"
+        class="md:hidden bg-white/98 dark:bg-dark/98 backdrop-blur-sm border-t border-gray-200 dark:border-accent/10"
       >
         <div class="section-container py-3 flex flex-col gap-0.5">
           <NuxtLink
             v-for="link in navLinks"
             :key="link.to"
             :to="link.to"
-            class="px-4 py-2.5 text-xs font-mono text-green-400/70 hover:text-accent hover:bg-accent/5 transition-colors border-l-2 border-transparent hover:border-accent"
+            class="px-4 py-2.5 text-xs font-mono text-gray-600 dark:text-green-400/70 hover:text-accent hover:bg-accent/5 transition-colors border-l-2 border-transparent hover:border-accent"
             active-class="text-accent border-accent bg-accent/5"
             @click="mobileMenuOpen = false"
           >

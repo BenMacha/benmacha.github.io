@@ -23,7 +23,7 @@
               <h3 class="font-mono font-bold text-base text-accent">{{ item.company }}</h3>
               <p class="text-accent/60 text-xs font-mono">{{ item.role }}</p>
             </div>
-            <span class="text-[10px] text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap">
+            <span class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap">
               {{ item.period }}
             </span>
           </div>
@@ -31,7 +31,7 @@
             <li
               v-for="task in item.tasks.slice(0, 3)"
               :key="task"
-              class="text-xs text-green-400/60 flex items-start gap-2 font-mono"
+              class="text-xs text-gray-500 dark:text-green-400/60 flex items-start gap-2 font-mono"
             >
               <span class="text-accent mt-0.5">&gt;</span>
               {{ task }}

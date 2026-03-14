@@ -15,7 +15,7 @@
             <span class="text-accent/30">&gt; </span>{{ $t('home.contact') }}
           </h2>
           <div class="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent mb-4" />
-          <p class="text-green-400/40 mb-8 font-mono text-sm">
+          <p class="text-gray-400 dark:text-green-400/40 mb-8 font-mono text-sm">
             // {{ $t('home.description') }}
           </p>
 

@@ -22,10 +22,10 @@
           </div>
 
           <!-- Content -->
-          <h3 class="font-mono font-bold text-base mb-2 text-green-400/80 group-hover:text-accent transition-colors">
+          <h3 class="font-mono font-bold text-base mb-2 text-gray-700 dark:text-green-400/80 group-hover:text-accent transition-colors">
             {{ project.name }}
           </h3>
-          <p class="text-xs text-green-400/40 leading-relaxed mb-4 font-mono">
+          <p class="text-xs text-gray-400 dark:text-green-400/40 leading-relaxed mb-4 font-mono">
             {{ project.description }}
           </p>
 
@@ -34,7 +34,7 @@
             <li
               v-for="task in project.tasks"
               :key="task"
-              class="text-[10px] text-green-400/30 flex items-start gap-2 font-mono"
+              class="text-[10px] text-gray-400 dark:text-green-400/30 flex items-start gap-2 font-mono"
             >
               <span class="text-accent/40 mt-0.5">&gt;</span>
               {{ task }}

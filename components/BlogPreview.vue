@@ -25,17 +25,17 @@
           </span>
 
           <!-- Title -->
-          <h3 class="font-mono text-sm font-bold text-green-400/80 mb-2 group-hover:text-accent transition-colors duration-300 line-clamp-2">
+          <h3 class="font-mono text-sm font-bold text-gray-700 dark:text-green-400/80 mb-2 group-hover:text-accent transition-colors duration-300 line-clamp-2">
             {{ article.title }}
           </h3>
 
           <!-- Description -->
-          <p class="text-green-400/35 text-xs mb-4 line-clamp-2 font-mono">
+          <p class="text-gray-400 dark:text-green-400/35 text-xs mb-4 line-clamp-2 font-mono">
             {{ article.description }}
           </p>
 
           <!-- Meta -->
-          <div class="flex items-center gap-3 text-green-400/25 text-[10px] font-mono mb-3">
+          <div class="flex items-center gap-3 text-gray-300 dark:text-green-400/25 text-[10px] font-mono mb-3">
             <span class="flex items-center gap-1">
               <Calendar class="w-3 h-3" />
               {{ article.date }}

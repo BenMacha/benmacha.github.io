@@ -30,13 +30,13 @@
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
               <div>
                 <h3 class="font-mono font-bold text-lg text-accent">{{ item.company }}</h3>
-                <p class="text-sm font-mono font-semibold mt-1 text-green-400/70">{{ item.role }}</p>
-                <p v-if="item.location" class="text-[10px] text-green-400/30 flex items-center gap-1 mt-1 font-mono">
+                <p class="text-sm font-mono font-semibold mt-1 text-gray-600 dark:text-green-400/70">{{ item.role }}</p>
+                <p v-if="item.location" class="text-[10px] text-gray-400 dark:text-green-400/30 flex items-center gap-1 mt-1 font-mono">
                   <MapPin class="w-3 h-3" />
                   {{ item.location }}
                 </p>
               </div>
-              <span class="text-[10px] text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap self-start">
+              <span class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap self-start">
                 {{ item.period }}
               </span>
             </div>
@@ -46,7 +46,7 @@
               <li
                 v-for="task in item.tasks"
                 :key="task"
-                class="text-xs text-green-400/50 flex items-start gap-2 font-mono"
+                class="text-xs text-gray-400 dark:text-green-400/50 flex items-start gap-2 font-mono"
               >
                 <span class="text-accent mt-0.5 shrink-0">&gt;</span>
                 {{ task }}
@@ -55,7 +55,7 @@
 
             <!-- Stack -->
             <div v-if="item.stack" class="pt-3 border-t border-accent/10">
-              <p class="text-[10px] text-green-400/30 font-mono">
+              <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">
                 <span class="text-accent/60 font-medium">$ stack:</span> {{ item.stack }}
               </p>
             </div>

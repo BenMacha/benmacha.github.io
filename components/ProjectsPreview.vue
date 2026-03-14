@@ -15,12 +15,12 @@
         >
           <div class="flex items-start justify-between mb-3">
             <span class="text-xl">{{ project.icon }}</span>
-            <ExternalLink class="w-3.5 h-3.5 text-green-400/30 group-hover:text-accent transition-colors" />
+            <ExternalLink class="w-3.5 h-3.5 text-gray-400 dark:text-green-400/30 group-hover:text-accent transition-colors" />
           </div>
-          <h3 class="font-mono font-bold text-sm mb-2 text-green-400/80 group-hover:text-accent transition-colors">
+          <h3 class="font-mono font-bold text-sm mb-2 text-gray-700 dark:text-green-400/80 group-hover:text-accent transition-colors">
             {{ project.name }}
           </h3>
-          <p class="text-xs text-green-400/40 leading-relaxed font-mono">
+          <p class="text-xs text-gray-400 dark:text-green-400/40 leading-relaxed font-mono">
             {{ project.description }}
           </p>
           <div class="mt-3 flex items-center gap-2 text-[10px] text-accent/50 font-mono">

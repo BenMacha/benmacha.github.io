@@ -2,7 +2,7 @@
   <canvas
     ref="canvas"
     class="fixed inset-0 z-0 pointer-events-none"
-    :style="{ opacity: 0.4 }"
+    :style="{ opacity: 0.35 }"
   />
 </template>
 
@@ -34,43 +34,55 @@ onMounted(() => {
     drops[i] = Math.random() * -100
   }
 
-  function draw() {
-    ctx!.fillStyle = 'rgba(13, 2, 8, 0.05)'
+  // Slow down: only update every ~80ms instead of every frame (60fps = 16ms)
+  let lastTime = 0
+  const frameInterval = 80
+
+  function draw(timestamp: number) {
+    animationId = requestAnimationFrame(draw)
+
+    const delta = timestamp - lastTime
+    if (delta < frameInterval) return
+    lastTime = timestamp - (delta % frameInterval)
+
+    // Slower fade = longer trails
+    ctx!.fillStyle = 'rgba(13, 2, 8, 0.04)'
     ctx!.fillRect(0, 0, c!.width, c!.height)
 
-    ctx!.fillStyle = '#00FF41'
     ctx!.font = `${fontSize}px "Fira Code", monospace`
-    ctx!.shadowBlur = 2
-    ctx!.shadowColor = '#00FF41'
 
     for (let i = 0; i < drops.length; i++) {
+      // Only update some columns each frame for more organic feel
+      if (Math.random() > 0.6) continue
+
       const char = chars[Math.floor(Math.random() * chars.length)]
 
       // Vary brightness
       const brightness = Math.random()
       if (brightness > 0.95) {
         ctx!.fillStyle = '#FFFFFF'
-        ctx!.shadowBlur = 8
+        ctx!.shadowBlur = 10
+        ctx!.shadowColor = '#00FF41'
       } else if (brightness > 0.8) {
         ctx!.fillStyle = '#00FF41'
         ctx!.shadowBlur = 4
+        ctx!.shadowColor = '#00FF41'
       } else {
-        ctx!.fillStyle = `rgba(0, 255, 65, ${0.3 + brightness * 0.5})`
-        ctx!.shadowBlur = 1
+        ctx!.fillStyle = `rgba(0, 255, 65, ${0.2 + brightness * 0.4})`
+        ctx!.shadowBlur = 0
+        ctx!.shadowColor = 'transparent'
       }
 
       ctx!.fillText(char, i * fontSize, drops[i] * fontSize)
 
-      if (drops[i] * fontSize > c!.height && Math.random() > 0.975) {
+      if (drops[i] * fontSize > c!.height && Math.random() > 0.99) {
         drops[i] = 0
       }
       drops[i]++
     }
-
-    animationId = requestAnimationFrame(draw)
   }
 
-  draw()
+  animationId = requestAnimationFrame(draw)
 
   onUnmounted(() => {
     cancelAnimationFrame(animationId)

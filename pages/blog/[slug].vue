@@ -28,7 +28,7 @@
         </h1>
 
         <!-- Meta -->
-        <div class="flex flex-wrap items-center gap-4 text-green-400/30 text-xs font-mono mb-5">
+        <div class="flex flex-wrap items-center gap-4 text-gray-400 dark:text-green-400/30 text-xs font-mono mb-5">
           <span class="flex items-center gap-1.5">
             <Calendar class="w-3.5 h-3.5" />
             {{ article.date }}
@@ -65,11 +65,11 @@
           :to="`/blog/${prevArticle.slug}`"
           class="glass-card glow-border p-4 group hover:border-accent/40 transition-all duration-300"
         >
-          <span class="flex items-center gap-1 text-[10px] text-green-400/25 mb-2 font-mono">
+          <span class="flex items-center gap-1 text-[10px] text-gray-300 dark:text-green-400/25 mb-2 font-mono">
             <ArrowLeft class="w-3 h-3" />
             {{ $t('blog.previousArticle') }}
           </span>
-          <span class="font-mono text-sm font-semibold text-green-400/60 group-hover:text-accent transition-colors duration-300">
+          <span class="font-mono text-sm font-semibold text-gray-500 dark:text-green-400/60 group-hover:text-accent transition-colors duration-300">
             {{ prevArticle.title }}
           </span>
         </NuxtLink>
@@ -80,11 +80,11 @@
           :to="`/blog/${nextArticle.slug}`"
           class="glass-card glow-border p-4 group hover:border-accent/40 transition-all duration-300 text-right"
         >
-          <span class="flex items-center justify-end gap-1 text-[10px] text-green-400/25 mb-2 font-mono">
+          <span class="flex items-center justify-end gap-1 text-[10px] text-gray-300 dark:text-green-400/25 mb-2 font-mono">
             {{ $t('blog.nextArticle') }}
             <ArrowRight class="w-3 h-3" />
           </span>
-          <span class="font-mono text-sm font-semibold text-green-400/60 group-hover:text-accent transition-colors duration-300">
+          <span class="font-mono text-sm font-semibold text-gray-500 dark:text-green-400/60 group-hover:text-accent transition-colors duration-300">
             {{ nextArticle.title }}
           </span>
         </NuxtLink>
@@ -92,7 +92,7 @@
     </template>
 
     <!-- Not Found -->
-    <div v-else class="text-center py-20 text-green-400/30">
+    <div v-else class="text-center py-20 text-gray-400 dark:text-green-400/30">
       <BookOpen class="w-12 h-12 mx-auto mb-4 opacity-50" />
       <p class="font-mono text-sm">{{ $t('blog.articleNotFound') }}</p>
     </div>

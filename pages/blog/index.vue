@@ -14,7 +14,7 @@
           'px-3 py-1.5 text-xs font-mono transition-all duration-300 border',
           selectedCategory === cat.key
             ? 'bg-accent/15 text-accent border-accent/40'
-            : 'bg-transparent border-accent/10 text-green-400/40 hover:text-accent hover:border-accent/25'
+            : 'bg-transparent border-accent/10 text-gray-400 dark:text-green-400/40 hover:text-accent hover:border-accent/25'
         ]"
         @click="selectedCategory = cat.key"
       >
@@ -42,17 +42,17 @@
           </span>
 
           <!-- Title -->
-          <h2 class="font-mono text-base font-bold text-green-400/80 mb-2 group-hover:text-accent transition-colors duration-300">
+          <h2 class="font-mono text-base font-bold text-gray-700 dark:text-green-400/80 mb-2 group-hover:text-accent transition-colors duration-300">
             {{ article.title }}
           </h2>
 
           <!-- Description -->
-          <p class="text-green-400/35 text-xs mb-4 line-clamp-3 font-mono">
+          <p class="text-gray-400 dark:text-green-400/35 text-xs mb-4 line-clamp-3 font-mono">
             {{ article.description }}
           </p>
 
           <!-- Meta -->
-          <div class="flex items-center gap-4 text-green-400/25 text-[10px] font-mono mb-3">
+          <div class="flex items-center gap-4 text-gray-300 dark:text-green-400/25 text-[10px] font-mono mb-3">
             <span class="flex items-center gap-1">
               <Calendar class="w-3 h-3" />
               {{ article.date }}
@@ -79,7 +79,7 @@
     </div>
 
     <!-- Empty state -->
-    <div v-if="filteredArticles.length === 0" class="text-center py-20 text-green-400/30">
+    <div v-if="filteredArticles.length === 0" class="text-center py-20 text-gray-400 dark:text-green-400/30">
       <BookOpen class="w-12 h-12 mx-auto mb-4 opacity-50" />
       <p class="font-mono text-sm">{{ $t('blog.noArticles') }}</p>
     </div>

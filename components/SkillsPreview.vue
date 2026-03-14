@@ -21,7 +21,7 @@
               v-for="skill in section.skills"
               :key="skill"
               class="px-2 py-0.5 text-[10px] font-mono
-                     bg-accent/5 text-green-400/60 border border-accent/10
+                     bg-accent/5 text-gray-500 dark:text-green-400/60 border border-accent/10
                      group-hover:border-accent/20 group-hover:text-accent/70 transition-colors duration-300"
             >
               {{ skill }}

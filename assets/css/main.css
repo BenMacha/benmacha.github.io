@@ -7,13 +7,15 @@
     scroll-behavior: smooth;
   }
 
-  body {
+  /* Dark mode (default) */
+  html.dark body {
     @apply bg-dark text-green-400 font-mono transition-colors duration-300;
     text-shadow: 0 0 2px rgba(0, 255, 65, 0.3);
   }
 
-  .light body,
-  body:not(.dark) {
+  /* Light mode */
+  html.light body {
+    @apply bg-gray-100 text-gray-800 font-mono transition-colors duration-300;
     text-shadow: none;
   }
 
@@ -26,16 +28,24 @@
     width: 4px;
   }
 
-  ::-webkit-scrollbar-track {
+  html.dark ::-webkit-scrollbar-track {
     @apply bg-dark;
   }
 
-  ::-webkit-scrollbar-thumb {
+  html.dark ::-webkit-scrollbar-thumb {
     @apply bg-accent/40;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
+  html.dark ::-webkit-scrollbar-thumb:hover {
     @apply bg-accent/70;
+  }
+
+  html.light ::-webkit-scrollbar-track {
+    @apply bg-gray-200;
+  }
+
+  html.light ::-webkit-scrollbar-thumb {
+    @apply bg-accent/50;
   }
 }
 
@@ -270,24 +280,11 @@
     radial-gradient(ellipse at 50% 80%, rgba(0, 255, 65, 0.02) 0%, transparent 50%);
 }
 
-.dark .hero-gradient {
+html.dark .hero-gradient {
   background:
     radial-gradient(ellipse at 20% 50%, rgba(0, 255, 65, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(0, 204, 51, 0.05) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 80%, rgba(0, 255, 65, 0.03) 0%, transparent 50%);
-}
-
-/* CRT screen effect on body */
-.dark body {
-  animation: flicker 0.15s infinite;
-}
-
-/* Matrix rain text characters */
-.matrix-char {
-  font-family: 'Fira Code', monospace;
-  color: #00FF41;
-  text-shadow: 0 0 5px #00FF41;
-  opacity: 0.7;
 }
 
 /* Skill bar - loading style */
@@ -306,97 +303,199 @@
   100% { width: var(--skill-level, 80%); }
 }
 
-/* Blog article prose styling - terminal theme */
-.article-content h2 {
+/* Blog article prose styling - terminal theme (dark) */
+html.dark .article-content h2 {
   @apply text-2xl font-mono font-bold mt-10 mb-4 text-accent;
   text-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
 }
 
-.article-content h2::before {
+html.dark .article-content h2::before {
   content: '## ';
   @apply text-accent/50;
 }
 
-.article-content h3 {
+html.dark .article-content h3 {
   @apply text-xl font-mono font-semibold mt-8 mb-3 text-accent/80;
 }
 
-.article-content h3::before {
+html.dark .article-content h3::before {
   content: '### ';
   @apply text-accent/40;
 }
 
-.article-content p {
+html.dark .article-content p {
   @apply text-green-300/80 leading-relaxed mb-4;
 }
 
-.article-content ul, .article-content ol {
+html.dark .article-content ul, html.dark .article-content ol {
   @apply text-green-300/80 mb-4 pl-6;
 }
 
-.article-content ul {
+html.dark .article-content ul {
   @apply list-none;
 }
 
-.article-content ul li::before {
+html.dark .article-content ul li::before {
   content: '> ';
   @apply text-accent font-bold;
 }
 
-.article-content ol {
+html.dark .article-content ol {
   @apply list-decimal;
 }
 
-.article-content li {
+html.dark .article-content li {
   @apply mb-2 leading-relaxed;
 }
 
-.article-content pre {
+html.dark .article-content pre {
   @apply bg-black/80 text-green-400 border border-accent/20 p-4 mb-6 overflow-x-auto text-sm;
 }
 
-.article-content code {
+html.dark .article-content code {
   @apply bg-accent/10 text-accent px-1.5 py-0.5 text-sm border border-accent/20;
 }
 
-.article-content pre code {
+html.dark .article-content pre code {
   @apply bg-transparent text-green-400 p-0 border-0;
 }
 
-.article-content blockquote {
+html.dark .article-content blockquote {
   @apply border-l-2 border-accent/50 pl-4 text-green-400/60 my-4 italic;
 }
 
-.article-content a {
+html.dark .article-content a {
   @apply text-accent hover:underline;
   text-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
 }
 
-.article-content strong {
+html.dark .article-content strong {
   @apply font-semibold text-accent;
 }
 
-/* Light mode overrides */
-.light body,
-body:not(.dark) {
-  @apply bg-gray-100 text-gray-900;
+/* Blog article prose styling - light mode */
+html.light .article-content h2 {
+  @apply text-2xl font-mono font-bold mt-10 mb-4 text-gray-900;
 }
 
-.light .terminal-card,
-.light .glass-card {
-  @apply bg-white border-gray-300;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+html.light .article-content h2::before {
+  content: '## ';
+  @apply text-gray-400;
 }
 
-.light .article-content p,
-.light .article-content li {
-  @apply text-gray-700;
+html.light .article-content h3 {
+  @apply text-xl font-mono font-semibold mt-8 mb-3 text-gray-800;
 }
 
-.light .article-content h2 {
-  @apply text-gray-900;
+html.light .article-content h3::before {
+  content: '### ';
+  @apply text-gray-400;
 }
 
-.light .article-content h3 {
-  @apply text-gray-800;
+html.light .article-content p {
+  @apply text-gray-700 leading-relaxed mb-4;
+}
+
+html.light .article-content ul, html.light .article-content ol {
+  @apply text-gray-700 mb-4 pl-6;
+}
+
+html.light .article-content ul {
+  @apply list-none;
+}
+
+html.light .article-content ul li::before {
+  content: '> ';
+  @apply text-accent-dark font-bold;
+}
+
+html.light .article-content ol {
+  @apply list-decimal;
+}
+
+html.light .article-content li {
+  @apply mb-2 leading-relaxed;
+}
+
+html.light .article-content pre {
+  @apply bg-gray-900 text-green-400 border border-gray-300 p-4 mb-6 overflow-x-auto text-sm rounded;
+}
+
+html.light .article-content code {
+  @apply bg-gray-200 text-accent-dark px-1.5 py-0.5 text-sm border border-gray-300 rounded;
+}
+
+html.light .article-content pre code {
+  @apply bg-transparent text-green-400 p-0 border-0;
+}
+
+html.light .article-content blockquote {
+  @apply border-l-2 border-accent-dark/50 pl-4 text-gray-600 my-4 italic;
+}
+
+html.light .article-content a {
+  @apply text-accent-dark hover:underline;
+}
+
+html.light .article-content strong {
+  @apply font-semibold text-gray-900;
+}
+
+/* ===== LIGHT MODE COMPONENT OVERRIDES ===== */
+
+html.light .glass-card {
+  @apply bg-white/90 border-gray-200;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+html.light .glass-card:hover {
+  @apply border-accent-dark/40;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+html.light .terminal-card,
+html.light .terminal-card-header {
+  @apply bg-white border-gray-200;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+html.light .glow-border {
+  @apply border-gray-200 hover:border-accent-dark/40;
+}
+
+html.light .glow-border:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+html.light .glow-text {
+  color: #00CC33;
+  text-shadow: none;
+}
+
+html.light .glow-text-subtle {
+  color: #00CC33;
+  text-shadow: none;
+}
+
+html.light .btn-primary {
+  @apply bg-accent-dark/10 text-accent-dark border-accent-dark/50 hover:bg-accent-dark/20 hover:border-accent-dark;
+  text-shadow: none;
+}
+
+html.light .btn-secondary {
+  @apply border-accent-dark/30 text-accent-dark hover:bg-accent-dark/10 hover:border-accent-dark/60;
+}
+
+html.light .pixel-grid {
+  background-image: none;
+}
+
+html.light .claw-marks::before {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 204, 51, 0.1) 3px,
+    rgba(0, 204, 51, 0.1) 5px
+  );
 }

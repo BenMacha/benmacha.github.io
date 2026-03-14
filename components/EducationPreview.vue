@@ -16,7 +16,7 @@
             </div>
             <div>
               <h3 class="font-mono font-bold text-sm text-accent">{{ item.school }}</h3>
-              <p class="text-[10px] text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
+              <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
             </div>
           </div>
           <div class="flex flex-wrap gap-1.5">

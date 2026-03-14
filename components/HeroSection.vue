@@ -38,7 +38,7 @@
             <div class="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-accent" />
             <div class="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-accent" />
           </div>
-          <div class="absolute -bottom-3 -right-3 w-8 h-8 bg-dark border border-accent flex items-center justify-center">
+          <div class="absolute -bottom-3 -right-3 w-8 h-8 bg-white dark:bg-dark border border-accent flex items-center justify-center">
             <Terminal class="w-4 h-4 text-accent" />
           </div>
         </div>
@@ -53,21 +53,21 @@
           class="text-4xl sm:text-6xl lg:text-7xl font-mono font-bold mb-4 leading-tight glitch-text"
           data-text="Ben Macha Ali"
         >
-          <span class="text-green-400">Ben Macha</span>
+          <span class="text-gray-900 dark:text-green-400">Ben Macha</span>
           <span class="glow-text"> Ali</span>
         </h1>
       </div>
 
       <!-- Terminal-style description -->
       <div class="reveal reveal-delay-2 max-w-2xl mx-auto mb-10">
-        <div class="inline-block text-left bg-dark/80 border border-accent/15 p-4 sm:p-5">
+        <div class="inline-block text-left bg-white/80 dark:bg-dark/80 border border-gray-200 dark:border-accent/15 p-4 sm:p-5">
           <div class="flex items-center gap-2 mb-2 text-[10px] text-accent/40 border-b border-accent/10 pb-2">
             <span class="w-2 h-2 rounded-full bg-red-500/80" />
             <span class="w-2 h-2 rounded-full bg-yellow-500/80" />
             <span class="w-2 h-2 rounded-full bg-green-500/80" />
             <span class="ml-2">terminal — bash</span>
           </div>
-          <p class="text-green-400/70 text-sm sm:text-base leading-relaxed font-mono">
+          <p class="text-gray-700 dark:text-green-400/70 text-sm sm:text-base leading-relaxed font-mono">
             <span class="text-accent">$</span> {{ $t('home.description') }}<span class="animate-blink text-accent">█</span>
           </p>
         </div>
@@ -91,7 +91,7 @@
           :href="socialLinks.github"
           target="_blank"
           rel="noopener noreferrer"
-          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-green-400/60 hover:text-accent transition-all"
+          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-gray-400 dark:text-green-400/60 hover:text-accent transition-all"
           aria-label="GitHub"
         >
           <Github class="w-5 h-5" />
@@ -100,14 +100,14 @@
           :href="socialLinks.linkedin"
           target="_blank"
           rel="noopener noreferrer"
-          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-green-400/60 hover:text-accent transition-all"
+          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-gray-400 dark:text-green-400/60 hover:text-accent transition-all"
           aria-label="LinkedIn"
         >
           <Linkedin class="w-5 h-5" />
         </a>
         <a
           :href="`mailto:${socialLinks.email}`"
-          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-green-400/60 hover:text-accent transition-all"
+          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-gray-400 dark:text-green-400/60 hover:text-accent transition-all"
           aria-label="Email"
         >
           <Mail class="w-5 h-5" />

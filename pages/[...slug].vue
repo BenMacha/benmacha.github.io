@@ -9,7 +9,7 @@
         <h1 class="text-xl sm:text-2xl font-mono font-bold mb-3 text-accent">
           {{ $t('404.title') }}
         </h1>
-        <p class="text-green-400/40 font-mono text-sm">
+        <p class="text-gray-400 dark:text-green-400/40 font-mono text-sm">
           // {{ $t('404.description') }}
         </p>
       </div>
