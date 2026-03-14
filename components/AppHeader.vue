@@ -3,50 +3,45 @@
     class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
     :class="[
       scrolled
-        ? 'bg-white/80 dark:bg-dark/80 backdrop-blur-lg shadow-lg shadow-black/5 dark:shadow-black/20'
+        ? 'bg-dark/95 backdrop-blur-sm border-b border-accent/20'
         : 'bg-transparent'
     ]"
   >
-    <nav class="section-container flex items-center justify-between h-16 sm:h-20">
-      <!-- Logo -->
+    <nav class="section-container flex items-center justify-between h-14 sm:h-16">
+      <!-- Logo - Terminal style -->
       <NuxtLink to="/" class="flex items-center gap-2 group">
-        <img
-          src="/logo.jpeg"
-          alt="Ben Macha Ali"
-          class="w-8 h-8 sm:w-10 sm:h-10 rounded-full ring-2 ring-accent/30 group-hover:ring-accent transition-all"
-        />
-        <span class="font-heading font-bold text-lg sm:text-xl hidden sm:block">
-          <span class="text-accent">Ben</span>Macha
+        <span class="text-accent font-mono text-sm sm:text-base font-bold">
+          <span class="text-accent/50">~/</span><span class="group-hover:glow-text transition-all">benmacha</span><span class="animate-blink">_</span>
         </span>
       </NuxtLink>
 
-      <!-- Desktop Nav -->
-      <div class="hidden md:flex items-center gap-6">
+      <!-- Desktop Nav - Terminal commands -->
+      <div class="hidden md:flex items-center gap-1">
         <NuxtLink
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="text-sm font-medium hover:text-accent transition-colors duration-200 relative group"
-          active-class="text-accent"
+          class="text-xs font-mono px-3 py-1.5 text-green-400/70 hover:text-accent hover:bg-accent/10
+                 border border-transparent hover:border-accent/20 transition-all duration-200"
+          active-class="text-accent border-accent/30 bg-accent/5"
         >
-          {{ $t(link.label) }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all duration-300 group-hover:w-full" />
+          <span class="text-accent/40">./</span>{{ $t(link.label) }}
         </NuxtLink>
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-1 sm:gap-2">
+      <div class="flex items-center gap-1">
         <LanguageSwitcher />
         <ThemeToggle />
 
         <!-- Mobile menu button -->
         <button
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden p-2 rounded-lg hover:bg-gray-200/10 transition-colors"
+          class="md:hidden p-2 text-accent hover:bg-accent/10 border border-transparent hover:border-accent/20 transition-colors"
           aria-label="Toggle menu"
         >
-          <X v-if="mobileMenuOpen" class="w-5 h-5" />
-          <Menu v-else class="w-5 h-5" />
+          <X v-if="mobileMenuOpen" class="w-4 h-4" />
+          <Terminal v-else class="w-4 h-4" />
         </button>
       </div>
     </nav>
@@ -62,18 +57,18 @@
     >
       <div
         v-if="mobileMenuOpen"
-        class="md:hidden bg-white/95 dark:bg-dark-50/95 backdrop-blur-lg border-t border-gray-200/10 dark:border-white/5"
+        class="md:hidden bg-dark/98 backdrop-blur-sm border-t border-accent/10"
       >
-        <div class="section-container py-4 flex flex-col gap-1">
+        <div class="section-container py-3 flex flex-col gap-0.5">
           <NuxtLink
             v-for="link in navLinks"
             :key="link.to"
             :to="link.to"
-            class="px-4 py-3 rounded-xl text-sm font-medium hover:bg-accent/10 hover:text-accent transition-colors"
-            active-class="text-accent bg-accent/5"
+            class="px-4 py-2.5 text-xs font-mono text-green-400/70 hover:text-accent hover:bg-accent/5 transition-colors border-l-2 border-transparent hover:border-accent"
+            active-class="text-accent border-accent bg-accent/5"
             @click="mobileMenuOpen = false"
           >
-            {{ $t(link.label) }}
+            <span class="text-accent/40 mr-1">$</span> cd {{ $t(link.label) }}
           </NuxtLink>
         </div>
       </div>
@@ -82,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { Menu, X } from 'lucide-vue-next'
+import { Terminal, X } from 'lucide-vue-next'
 
 const mobileMenuOpen = ref(false)
 const scrolled = ref(false)

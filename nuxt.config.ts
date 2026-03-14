@@ -51,8 +51,8 @@ export default defineNuxtConfig({
 
   googleFonts: {
     families: {
-      Inter: [300, 400, 500, 600, 700, 800, 900],
-      'Space Grotesk': [400, 500, 600, 700],
+      'Fira Code': [300, 400, 500, 600, 700],
+      'JetBrains Mono': [400, 500, 600, 700],
     },
     display: 'swap',
   },

@@ -4,31 +4,31 @@
       <SectionTitle :title="$t('education.title')" />
 
       <!-- Education -->
-      <div class="max-w-3xl mx-auto space-y-16">
+      <div class="max-w-3xl mx-auto space-y-14">
 
         <!-- Formal Education -->
         <div>
-          <div class="grid gap-6">
+          <div class="grid gap-4">
             <div
               v-for="(item, index) in educationItems"
               :key="item.school"
-              class="reveal glass-card glow-border p-6 rounded-2xl"
+              class="reveal glass-card glow-border p-5"
               :class="`reveal-delay-${index + 1}`"
             >
-              <div class="flex items-center gap-4 mb-4">
-                <div class="p-3 rounded-xl bg-accent/10 text-accent">
-                  <GraduationCap class="w-6 h-6" />
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2.5 border border-accent/20 text-accent">
+                  <GraduationCap class="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 class="font-heading font-bold text-xl">{{ item.school }}</h3>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ item.type }} &bull; {{ item.period }}</p>
+                  <h3 class="font-mono font-bold text-base text-accent">{{ item.school }}</h3>
+                  <p class="text-[10px] text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
                 </div>
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="skill in item.skills"
                   :key="skill"
-                  class="px-3 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent"
+                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
                 >
                   {{ skill }}
                 </span>
@@ -39,29 +39,30 @@
 
         <!-- Internships -->
         <div>
-          <h3 class="reveal font-heading font-bold text-2xl mb-6 flex items-center gap-3">
-            <Briefcase class="w-6 h-6 text-accent" />
-            {{ $t('education.internships.title') }}
+          <h3 class="reveal font-mono font-bold text-xl mb-5 flex items-center gap-3">
+            <Briefcase class="w-5 h-5 text-accent" />
+            <span class="text-accent/30">&gt; </span>
+            <span class="text-accent">{{ $t('education.internships.title') }}</span>
           </h3>
-          <div class="grid gap-6">
+          <div class="grid gap-4">
             <div
               v-for="(item, index) in internships"
               :key="item.company"
-              class="reveal glass-card glow-border p-6 rounded-2xl"
+              class="reveal glass-card glow-border p-5"
               :class="`reveal-delay-${index + 1}`"
             >
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                 <div>
-                  <h4 class="font-heading font-bold text-lg">{{ item.company }}</h4>
-                  <p class="text-sm text-accent">{{ item.role }}</p>
+                  <h4 class="font-mono font-bold text-sm text-accent">{{ item.company }}</h4>
+                  <p class="text-xs text-accent/50 font-mono">{{ item.role }}</p>
                 </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ item.period }}</span>
+                <span class="text-[10px] text-green-400/25 font-mono">{{ item.period }}</span>
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="skill in item.skills"
                   :key="skill"
-                  class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300"
+                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-green-400/50 border border-accent/10"
                 >
                   {{ skill }}
                 </span>
@@ -72,21 +73,22 @@
 
         <!-- Interests -->
         <div>
-          <h3 class="reveal font-heading font-bold text-2xl mb-6 flex items-center gap-3">
-            <Heart class="w-6 h-6 text-accent" />
-            {{ $t('education.interests.title') }}
+          <h3 class="reveal font-mono font-bold text-xl mb-5 flex items-center gap-3">
+            <Heart class="w-5 h-5 text-accent" />
+            <span class="text-accent/30">&gt; </span>
+            <span class="text-accent">{{ $t('education.interests.title') }}</span>
           </h3>
-          <div class="grid sm:grid-cols-2 gap-6">
+          <div class="grid sm:grid-cols-2 gap-4">
             <!-- Sports -->
-            <div class="reveal glass-card glow-border p-6 rounded-2xl reveal-delay-1">
-              <h4 class="font-heading font-semibold mb-4">
+            <div class="reveal glass-card glow-border p-5 reveal-delay-1">
+              <h4 class="font-mono font-semibold text-sm mb-3 text-green-400/70">
                 {{ $t('education.interests.items.sports.title') }}
               </h4>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="item in sportsItems"
                   :key="item"
-                  class="px-3 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent"
+                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
                 >
                   {{ item }}
                 </span>
@@ -94,15 +96,15 @@
             </div>
 
             <!-- Associations -->
-            <div class="reveal glass-card glow-border p-6 rounded-2xl reveal-delay-2">
-              <h4 class="font-heading font-semibold mb-4">
+            <div class="reveal glass-card glow-border p-5 reveal-delay-2">
+              <h4 class="font-mono font-semibold text-sm mb-3 text-green-400/70">
                 {{ $t('education.interests.items.associations.title') }}
               </h4>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="item in associationItems"
                   :key="item"
-                  class="px-3 py-1 text-xs font-medium rounded-full bg-accent/10 text-accent"
+                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
                 >
                   {{ item }}
                 </span>

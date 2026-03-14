@@ -1,28 +1,28 @@
 <template>
-  <section class="py-20 bg-gray-50/50 dark:bg-dark-50/50">
+  <section class="py-20">
     <div class="section-container">
       <SectionTitle :title="$t('skills.title')" />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
         <div
           v-for="(section, index) in skillSections"
           :key="section.key"
-          class="reveal glass-card glow-border p-6 rounded-2xl group hover:scale-[1.02] transition-transform duration-300"
+          class="reveal glass-card glow-border p-5 group hover:border-accent/40 transition-all duration-300"
           :class="`reveal-delay-${index + 1}`"
         >
           <div class="flex items-center gap-3 mb-4">
-            <div class="p-2 rounded-lg bg-accent/10 text-accent">
-              <component :is="getIcon(section.icon)" class="w-5 h-5" />
+            <div class="p-2 border border-accent/20 text-accent group-hover:bg-accent/10 transition-colors">
+              <component :is="getIcon(section.icon)" class="w-4 h-4" />
             </div>
-            <h3 class="font-heading font-semibold">{{ $t(`skills.${section.key}`) }}</h3>
+            <h3 class="font-mono font-semibold text-sm text-accent">{{ $t(`skills.${section.key}`) }}</h3>
           </div>
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-1.5">
             <span
               v-for="skill in section.skills"
               :key="skill"
-              class="px-3 py-1 text-xs font-medium rounded-full
-                     bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300
-                     group-hover:bg-accent/10 group-hover:text-accent transition-colors duration-300"
+              class="px-2 py-0.5 text-[10px] font-mono
+                     bg-accent/5 text-green-400/60 border border-accent/10
+                     group-hover:border-accent/20 group-hover:text-accent/70 transition-colors duration-300"
             >
               {{ skill }}
             </span>

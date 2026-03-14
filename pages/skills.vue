@@ -3,39 +3,39 @@
     <div class="section-container">
       <SectionTitle :title="$t('skills.title')" />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
         <div
           v-for="(section, index) in skillSections"
           :key="section.key"
-          class="reveal glass-card glow-border p-8 rounded-2xl group hover:scale-[1.02] transition-all duration-300"
+          class="reveal glass-card glow-border p-6 group hover:border-accent/40 transition-all duration-300"
           :class="`reveal-delay-${Math.min(index + 1, 5)}`"
         >
           <!-- Header -->
-          <div class="flex items-center gap-4 mb-6">
-            <div class="p-3 rounded-xl bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white transition-colors duration-300">
-              <component :is="getIcon(section.icon)" class="w-6 h-6" />
+          <div class="flex items-center gap-3 mb-5">
+            <div class="p-2.5 border border-accent/20 text-accent group-hover:bg-accent/10 group-hover:border-accent/40 transition-all duration-300">
+              <component :is="getIcon(section.icon)" class="w-5 h-5" />
             </div>
-            <h3 class="font-heading font-bold text-xl">{{ $t(`skills.${section.key}`) }}</h3>
+            <h3 class="font-mono font-bold text-base text-accent">{{ $t(`skills.${section.key}`) }}</h3>
           </div>
 
           <!-- Skills list -->
-          <div class="space-y-3">
+          <div class="space-y-2">
             <div
-              v-for="(skill, i) in section.skills"
+              v-for="skill in section.skills"
               :key="skill"
-              class="flex items-center gap-3"
+              class="flex items-center gap-3 font-mono"
             >
-              <div class="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-              <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-accent/80 transition-colors">
+              <span class="text-accent/40 text-xs">&gt;</span>
+              <span class="text-xs text-green-400/60 group-hover:text-green-400/80 transition-colors">
                 {{ skill }}
               </span>
             </div>
           </div>
 
           <!-- Count badge -->
-          <div class="mt-6 pt-4 border-t border-gray-200/10 dark:border-white/5">
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              {{ section.skills.length }} {{ $t(`skills.${section.key}`).toLowerCase() }}
+          <div class="mt-5 pt-3 border-t border-accent/10">
+            <span class="text-[10px] text-green-400/25 font-mono">
+              // {{ section.skills.length }} modules loaded
             </span>
           </div>
         </div>

@@ -3,47 +3,47 @@
     <div class="section-container">
       <SectionTitle :title="$t('projects.github.title')" />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
         <a
           v-for="(project, index) in projects"
           :key="project.name"
           :href="project.url"
           target="_blank"
           rel="noopener noreferrer"
-          class="reveal glass-card glow-border p-8 rounded-2xl group hover:scale-[1.02] transition-all duration-300 block"
+          class="reveal glass-card glow-border p-6 group hover:border-accent/40 transition-all duration-300 block"
           :class="`reveal-delay-${Math.min(index + 1, 5)}`"
         >
           <!-- Header -->
           <div class="flex items-start justify-between mb-4">
-            <span class="text-3xl">{{ project.icon }}</span>
-            <div class="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white transition-colors">
-              <ExternalLink class="w-4 h-4" />
+            <span class="text-2xl">{{ project.icon }}</span>
+            <div class="p-1.5 border border-accent/15 text-accent/40 group-hover:border-accent/40 group-hover:text-accent group-hover:bg-accent/5 transition-all">
+              <ExternalLink class="w-3.5 h-3.5" />
             </div>
           </div>
 
           <!-- Content -->
-          <h3 class="font-heading font-bold text-xl mb-3 group-hover:text-accent transition-colors">
+          <h3 class="font-mono font-bold text-base mb-2 text-green-400/80 group-hover:text-accent transition-colors">
             {{ project.name }}
           </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+          <p class="text-xs text-green-400/40 leading-relaxed mb-4 font-mono">
             {{ project.description }}
           </p>
 
           <!-- Tasks if available -->
-          <ul v-if="project.tasks?.length" class="space-y-1.5 mb-4">
+          <ul v-if="project.tasks?.length" class="space-y-1 mb-4">
             <li
               v-for="task in project.tasks"
               :key="task"
-              class="text-xs text-gray-500 dark:text-gray-400 flex items-start gap-2"
+              class="text-[10px] text-green-400/30 flex items-start gap-2 font-mono"
             >
-              <span class="text-accent mt-1 text-[5px]">&#9679;</span>
+              <span class="text-accent/40 mt-0.5">&gt;</span>
               {{ task }}
             </li>
           </ul>
 
           <!-- Footer -->
-          <div class="pt-4 border-t border-gray-200/10 dark:border-white/5 flex items-center gap-2 text-sm text-accent font-medium">
-            <Github class="w-4 h-4" />
+          <div class="pt-3 border-t border-accent/10 flex items-center gap-2 text-[10px] text-accent/50 font-mono">
+            <Github class="w-3.5 h-3.5" />
             {{ $t('projects.github.viewOn') }} GitHub
           </div>
         </a>

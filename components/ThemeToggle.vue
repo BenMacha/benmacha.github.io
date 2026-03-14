@@ -1,11 +1,11 @@
 <template>
   <button
     @click="toggleTheme"
-    class="p-2 rounded-lg hover:bg-gray-200/10 transition-colors duration-200"
+    class="p-2 text-accent/50 hover:text-accent border border-transparent hover:border-accent/20 hover:bg-accent/5 transition-all duration-200"
     :aria-label="colorMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
   >
-    <Sun v-if="colorMode.value === 'dark'" class="w-5 h-5 text-accent" />
-    <Moon v-else class="w-5 h-5 text-gray-700" />
+    <Sun v-if="colorMode.value === 'dark'" class="w-4 h-4" />
+    <Moon v-else class="w-4 h-4" />
   </button>
 </template>
 
