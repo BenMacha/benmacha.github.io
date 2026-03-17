@@ -13,15 +13,14 @@
           <!-- Header -->
           <div class="flex items-center gap-3 mb-5">
             <div
-              class="p-2 border-2"
-              :class="isDark
-                ? 'border-pixel-blue/40 text-pixel-blue bg-pixel-blue/10'
-                : 'border-pixel-blue/30 text-pixel-blue bg-pixel-blue/5'"
+              class="p-2 border-2
+                     border-pixel-blue/30 text-pixel-blue bg-pixel-blue/5
+                     dark:border-pixel-blue/40 dark:bg-pixel-blue/10"
               style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.3);"
             >
               <component :is="getIcon(section.icon)" class="w-5 h-5" />
             </div>
-            <h3 class="font-pixel text-[10px] sm:text-xs" :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'">
+            <h3 class="font-pixel text-[10px] sm:text-xs text-pixel-navy dark:text-pixel-yellow">
               {{ $t(`skills.${section.key}`) }}
             </h3>
           </div>
@@ -39,21 +38,15 @@
                 class="skill-logo w-6 h-6"
                 loading="lazy"
               >
-              <span
-                class="text-base"
-                :class="isDark ? 'text-pixel-gray' : 'text-pixel-navy'"
-              >
+              <span class="text-base text-pixel-navy dark:text-pixel-gray">
                 {{ skill.name }}
               </span>
             </div>
           </div>
 
           <!-- Count badge -->
-          <div
-            class="mt-5 pt-3 border-t-2 border-dashed"
-            :class="isDark ? 'border-pixel-navy' : 'border-pixel-navy/15'"
-          >
-            <span class="text-xs font-retro" :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/60'">
+          <div class="mt-5 pt-3 border-t-2 border-dashed border-pixel-navy/15 dark:border-pixel-navy">
+            <span class="text-xs font-retro text-pixel-darkgray/60 dark:text-pixel-gray/50">
               ♦ {{ section.skills.length }} skills unlocked
             </span>
           </div>
@@ -70,8 +63,6 @@ import {
 import { skillSections } from '~/data/skills'
 
 const { t } = useI18n()
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

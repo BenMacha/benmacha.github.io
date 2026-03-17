@@ -7,8 +7,7 @@
       <div class="relative max-w-3xl mx-auto">
         <!-- Pixel timeline line -->
         <div
-          class="absolute left-4 sm:left-8 top-0 bottom-0 w-1"
-          :class="isDark ? 'bg-pixel-navy' : 'bg-pixel-navy/15'"
+          class="absolute left-4 sm:left-8 top-0 bottom-0 w-1 bg-pixel-navy/15 dark:bg-pixel-navy"
           style="background-image: repeating-linear-gradient(180deg, currentColor 0px, currentColor 4px, transparent 4px, transparent 8px);"
         />
 
@@ -20,10 +19,7 @@
         >
           <!-- Pixel dot on timeline -->
           <div
-            class="absolute left-2.5 sm:left-6.5 top-1 w-4 h-4 border-2"
-            :class="isDark
-              ? 'bg-pixel-yellow border-pixel-orange'
-              : 'bg-pixel-yellow border-pixel-orange'"
+            class="absolute left-2.5 sm:left-6.5 top-1 w-4 h-4 border-2 bg-pixel-yellow border-pixel-orange"
             style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.4);"
           />
 
@@ -31,8 +27,9 @@
           <div class="pixel-card p-5">
             <!-- Quest header bar -->
             <div
-              class="flex items-center gap-2 mb-3 text-xs pb-2 border-b-2 border-dashed"
-              :class="isDark ? 'border-pixel-navy text-pixel-gray/50' : 'border-pixel-navy/15 text-pixel-darkgray/50'"
+              class="flex items-center gap-2 mb-3 text-xs pb-2 border-b-2 border-dashed
+                     border-pixel-navy/15 text-pixel-darkgray/50
+                     dark:border-pixel-navy dark:text-pixel-gray/50"
             >
               <span class="text-pixel-yellow">★</span>
               <span class="font-retro">QUEST #{{ String(experiences.length - index).padStart(2, '0') }}</span>
@@ -40,21 +37,18 @@
 
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
               <div>
-                <h3 class="font-pixel text-xs sm:text-sm" :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'">
+                <h3 class="font-pixel text-xs sm:text-sm text-pixel-navy dark:text-pixel-yellow">
                   {{ item.company }}
                 </h3>
-                <p class="font-retro text-lg mt-1" :class="isDark ? 'text-pixel-blue' : 'text-pixel-blue'">
+                <p class="font-retro text-lg mt-1 text-pixel-blue">
                   {{ item.role }}
                 </p>
-                <p v-if="item.location" class="text-sm font-retro flex items-center gap-1 mt-1" :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'">
+                <p v-if="item.location" class="text-sm font-retro flex items-center gap-1 mt-1 text-pixel-darkgray dark:text-pixel-gray/60">
                   <MapPin class="w-3 h-3" />
                   {{ item.location }}
                 </p>
               </div>
-              <span
-                class="pixel-tag whitespace-nowrap self-start text-xs font-retro"
-                :class="isDark ? 'text-pixel-green' : 'text-pixel-green'"
-              >
+              <span class="pixel-tag whitespace-nowrap self-start text-xs font-retro text-pixel-green">
                 {{ item.period }}
               </span>
             </div>
@@ -64,8 +58,7 @@
               <li
                 v-for="task in item.tasks"
                 :key="task"
-                class="text-sm font-retro flex items-start gap-2"
-                :class="isDark ? 'text-pixel-gray' : 'text-pixel-navy'"
+                class="text-sm font-retro flex items-start gap-2 text-pixel-navy dark:text-pixel-gray"
               >
                 <span class="text-pixel-green mt-0.5 shrink-0">■</span>
                 {{ task }}
@@ -73,8 +66,8 @@
             </ul>
 
             <!-- Stack -->
-            <div v-if="item.stack" class="pt-3 border-t-2 border-dashed" :class="isDark ? 'border-pixel-navy' : 'border-pixel-navy/15'">
-              <p class="text-xs font-retro" :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'">
+            <div v-if="item.stack" class="pt-3 border-t-2 border-dashed border-pixel-navy/15 dark:border-pixel-navy">
+              <p class="text-xs font-retro text-pixel-darkgray dark:text-pixel-gray/60">
                 <span class="text-pixel-blue font-bold">ITEMS:</span> {{ item.stack }}
               </p>
             </div>
@@ -99,9 +92,6 @@
 
 <script setup lang="ts">
 import { MapPin, ExternalLink } from 'lucide-vue-next'
-
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

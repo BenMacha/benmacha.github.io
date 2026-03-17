@@ -3,8 +3,8 @@
     <!-- Back Link -->
     <NuxtLink
       to="/blog"
-      class="inline-flex items-center gap-2 font-retro text-base mb-8 group transition-colors"
-      :class="isDark ? 'text-pixel-blue hover:text-pixel-cyan' : 'text-pixel-blue hover:text-accent-dark'"
+      class="inline-flex items-center gap-2 font-retro text-base mb-8 group transition-colors
+             text-pixel-blue hover:text-pixel-cyan"
     >
       <ArrowLeft class="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
       {{ $t('blog.backToBlog') }}
@@ -26,8 +26,8 @@
 
         <!-- Title -->
         <h1
-          class="font-pixel text-sm sm:text-base md:text-lg leading-relaxed mb-5"
-          :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'"
+          class="font-pixel text-sm sm:text-base md:text-lg leading-relaxed mb-5
+                 text-pixel-navy dark:text-pixel-yellow"
           style="text-shadow: 2px 2px 0 rgba(0,0,0,0.3);"
         >
           {{ article.title }}
@@ -35,8 +35,8 @@
 
         <!-- Meta -->
         <div
-          class="flex flex-wrap items-center gap-4 text-sm font-retro mb-5"
-          :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'"
+          class="flex flex-wrap items-center gap-4 text-sm font-retro mb-5
+                 text-pixel-darkgray dark:text-pixel-gray/60"
         >
           <span class="flex items-center gap-1.5">
             <Calendar class="w-3.5 h-3.5" />
@@ -74,15 +74,15 @@
           class="pixel-card p-4 group"
         >
           <span
-            class="flex items-center gap-1 text-xs font-retro mb-2"
-            :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/60'"
+            class="flex items-center gap-1 text-xs font-retro mb-2
+                   text-pixel-darkgray/60 dark:text-pixel-gray/50"
           >
             <ArrowLeft class="w-3 h-3" />
             {{ $t('blog.previousArticle') }}
           </span>
           <span
-            class="font-pixel text-[9px] sm:text-[10px] group-hover:text-pixel-blue transition-colors leading-relaxed"
-            :class="isDark ? 'text-pixel-white' : 'text-pixel-navy'"
+            class="font-pixel text-[9px] sm:text-[10px] group-hover:text-pixel-blue transition-colors leading-relaxed
+                   text-pixel-navy dark:text-pixel-white"
           >
             {{ prevArticle.title }}
           </span>
@@ -95,15 +95,15 @@
           class="pixel-card p-4 group text-right"
         >
           <span
-            class="flex items-center justify-end gap-1 text-xs font-retro mb-2"
-            :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/60'"
+            class="flex items-center justify-end gap-1 text-xs font-retro mb-2
+                   text-pixel-darkgray/60 dark:text-pixel-gray/50"
           >
             {{ $t('blog.nextArticle') }}
             <ArrowRight class="w-3 h-3" />
           </span>
           <span
-            class="font-pixel text-[9px] sm:text-[10px] group-hover:text-pixel-blue transition-colors leading-relaxed"
-            :class="isDark ? 'text-pixel-white' : 'text-pixel-navy'"
+            class="font-pixel text-[9px] sm:text-[10px] group-hover:text-pixel-blue transition-colors leading-relaxed
+                   text-pixel-navy dark:text-pixel-white"
           >
             {{ nextArticle.title }}
           </span>
@@ -114,8 +114,7 @@
     <!-- Not Found -->
     <div
       v-else
-      class="text-center py-20"
-      :class="isDark ? 'text-pixel-gray/40' : 'text-pixel-darkgray/40'"
+      class="text-center py-20 text-pixel-darkgray/40 dark:text-pixel-gray/40"
     >
       <BookOpen class="w-12 h-12 mx-auto mb-4 opacity-50" />
       <p class="font-pixel text-xs">{{ $t('blog.articleNotFound') }}</p>
@@ -131,8 +130,6 @@ import type { BlogArticle } from '~/data/blog'
 
 const { t: $t } = useI18n()
 const route = useRoute()
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 
 const slug = computed(() => route.params.slug as string)
 

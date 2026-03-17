@@ -20,10 +20,10 @@
               <span class="text-2xl">{{ project.icon }}</span>
             </div>
             <div
-              class="p-1.5 border-2"
-              :class="isDark
-                ? 'border-pixel-navy text-pixel-gray/40 group-hover:border-pixel-blue group-hover:text-pixel-blue'
-                : 'border-pixel-navy/20 text-pixel-darkgray/40 group-hover:border-pixel-blue group-hover:text-pixel-blue'"
+              class="p-1.5 border-2
+                     border-pixel-navy/20 text-pixel-darkgray/40
+                     dark:border-pixel-navy dark:text-pixel-gray/40
+                     group-hover:border-pixel-blue group-hover:text-pixel-blue"
               style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.2);"
             >
               <ExternalLink class="w-3.5 h-3.5" />
@@ -32,14 +32,14 @@
 
           <!-- Content -->
           <h3
-            class="font-pixel text-[10px] sm:text-xs mb-2 group-hover:text-pixel-blue transition-colors"
-            :class="isDark ? 'text-pixel-white' : 'text-pixel-navy'"
+            class="font-pixel text-[10px] sm:text-xs mb-2 group-hover:text-pixel-blue transition-colors
+                   text-pixel-navy dark:text-pixel-white"
           >
             {{ project.name }}
           </h3>
           <p
-            class="text-sm font-retro leading-relaxed mb-4"
-            :class="isDark ? 'text-pixel-gray/70' : 'text-pixel-darkgray'"
+            class="text-sm font-retro leading-relaxed mb-4
+                   text-pixel-darkgray dark:text-pixel-gray/70"
           >
             {{ project.description }}
           </p>
@@ -49,8 +49,8 @@
             <li
               v-for="task in project.tasks"
               :key="task"
-              class="text-xs font-retro flex items-start gap-2"
-              :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/70'"
+              class="text-xs font-retro flex items-start gap-2
+                     text-pixel-darkgray/70 dark:text-pixel-gray/50"
             >
               <span class="text-pixel-green mt-0.5">■</span>
               {{ task }}
@@ -59,8 +59,9 @@
 
           <!-- Footer -->
           <div
-            class="pt-3 border-t-2 border-dashed flex items-center gap-2 text-xs font-retro"
-            :class="isDark ? 'border-pixel-navy text-pixel-blue/60' : 'border-pixel-navy/15 text-pixel-blue'"
+            class="pt-3 border-t-2 border-dashed flex items-center gap-2 text-xs font-retro
+                   border-pixel-navy/15 text-pixel-blue
+                   dark:border-pixel-navy dark:text-pixel-blue/60"
           >
             <Github class="w-3.5 h-3.5" />
             {{ $t('projects.github.viewOn') }} GitHub
@@ -75,8 +76,6 @@
 import { ExternalLink, Github } from 'lucide-vue-next'
 
 const { t, tm, rt } = useI18n()
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

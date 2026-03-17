@@ -1,21 +1,21 @@
 <template>
   <div
-    class="min-h-screen flex flex-col relative"
-    :class="isDark ? 'bg-pixel-black bg-pixel-grid bg-[size:8px_8px]' : 'bg-pixel-cream'"
+    class="min-h-screen flex flex-col relative bg-pixel-cream dark:bg-pixel-black dark:bg-pixel-grid dark:bg-[size:8px_8px]"
   >
     <!-- Pixel Background (dark mode only) -->
     <ClientOnly>
-      <PixelBackground v-if="isDark" />
+      <PixelBackground />
     </ClientOnly>
 
     <!-- Spider webs in corners -->
-    <PixelSpiderWeb position="top-left" class="z-40" />
-    <PixelSpiderWeb position="top-right" class="z-40" />
+    <ClientOnly>
+      <PixelSpiderWeb position="top-left" class="z-40" />
+      <PixelSpiderWeb position="top-right" class="z-40" />
+    </ClientOnly>
 
     <!-- CRT scanline overlay (dark mode only) -->
     <div
-      v-if="isDark"
-      class="fixed inset-0 pointer-events-none z-[1] opacity-[0.06]"
+      class="fixed inset-0 pointer-events-none z-[1] opacity-0 dark:opacity-[0.06]"
       style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px);"
     />
 
@@ -31,6 +31,4 @@
 </template>
 
 <script setup lang="ts">
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 </script>

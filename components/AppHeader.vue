@@ -1,11 +1,8 @@
 <template>
   <header
-    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b-2"
-    :class="[
-      colorMode.value === 'dark'
-        ? 'bg-pixel-black/95 border-pixel-navy'
-        : 'bg-pixel-cream/95 border-pixel-navy/20'
-    ]"
+    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b-2
+           bg-pixel-cream/95 border-pixel-navy/20
+           dark:bg-pixel-black/95 dark:border-pixel-navy"
   >
     <nav class="section-container flex items-center justify-between h-14 sm:h-16">
       <!-- Logo - Pixel arcade style -->
@@ -70,12 +67,9 @@
     >
       <div
         v-if="mobileMenuOpen"
-        class="md:hidden border-t-2"
-        :class="[
-          colorMode.value === 'dark'
-            ? 'bg-pixel-black/98 border-pixel-navy'
-            : 'bg-pixel-cream/98 border-pixel-navy/20'
-        ]"
+        class="md:hidden border-t-2
+               bg-pixel-cream/98 border-pixel-navy/20
+               dark:bg-pixel-black/98 dark:border-pixel-navy"
       >
         <div class="section-container py-3 flex flex-col gap-0.5">
           <!-- Menu header -->
@@ -110,7 +104,6 @@
 </template>
 
 <script setup lang="ts">
-const colorMode = useColorMode()
 const mobileMenuOpen = ref(false)
 
 const navLinks = [
