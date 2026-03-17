@@ -96,7 +96,7 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <!-- Sports -->
             <div class="reveal pixel-card p-5 reveal-delay-1">
-              <h4 class="font-pixel text-[10px] mb-3" :class="isDark ? 'text-pixel-green' : 'text-pixel-navy'">
+              <h4 class="font-pixel text-[10px] mb-3" :class="isDark ? 'text-pixel-red' : 'text-pixel-navy'">
                 {{ $t('education.interests.items.sports.title') }}
               </h4>
               <div class="flex flex-wrap gap-1.5">

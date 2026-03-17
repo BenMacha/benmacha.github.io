@@ -13,7 +13,7 @@
         <span class="font-pixel text-[8px] sm:text-xs tracking-wider">
           <span class="text-pixel-yellow animate-pixel-blink">&#9654;</span>
           <span
-            class="dark:text-pixel-green text-pixel-navy group-hover:text-pixel-blue transition-colors"
+            class="dark:text-pixel-red text-pixel-navy group-hover:text-pixel-blue transition-colors"
           >BEN_MACHA</span>
         </span>
       </NuxtLink>
@@ -47,7 +47,7 @@
         <!-- Mobile menu button -->
         <button
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden p-2 font-pixel text-[10px] dark:text-pixel-green text-pixel-navy
+          class="md:hidden p-2 font-pixel text-[10px] dark:text-pixel-red text-pixel-navy
                  border-2 dark:border-pixel-navy border-pixel-navy/30
                  hover:bg-pixel-blue hover:text-pixel-white hover:border-pixel-blue
                  transition-colors"

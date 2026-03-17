@@ -131,7 +131,7 @@ export default {
         'pixel-sm': '2px 2px 0 0 rgba(0,0,0,0.8)',
         'pixel-lg': '6px 6px 0 0 rgba(0,0,0,0.8)',
         'pixel-accent': '4px 4px 0 0 #29adff',
-        'pixel-green': '4px 4px 0 0 #00e436',
+        'pixel-red': '4px 4px 0 0 #ff004d',
         'pixel-red': '4px 4px 0 0 #ff004d',
         'pixel-yellow': '4px 4px 0 0 #ffec27',
         'pixel-inset': 'inset 2px 2px 0 0 rgba(0,0,0,0.3)',

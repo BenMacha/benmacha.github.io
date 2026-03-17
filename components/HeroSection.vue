@@ -5,11 +5,11 @@
       <span class="absolute top-24 left-[10%] font-pixel text-[8px] text-pixel-yellow/30 animate-star-twinkle">&#9733;</span>
       <span class="absolute top-32 right-[15%] font-pixel text-[6px] text-pixel-blue/25 animate-star-twinkle" style="animation-delay: 0.5s">&#9679;</span>
       <span class="absolute top-[40%] left-[5%] font-pixel text-[10px] text-pixel-red/20 animate-pixel-float">&#9829;</span>
-      <span class="absolute top-[30%] right-[8%] font-pixel text-[8px] text-pixel-green/25 animate-star-twinkle" style="animation-delay: 1s">&#9733;</span>
+      <span class="absolute top-[30%] right-[8%] font-pixel text-[8px] text-pixel-red/25 animate-star-twinkle" style="animation-delay: 1s">&#9733;</span>
       <span class="absolute bottom-[30%] left-[12%] font-pixel text-[6px] text-pixel-orange/20 animate-pixel-float" style="animation-delay: 0.7s">&#9632;</span>
       <span class="absolute bottom-[25%] right-[20%] font-pixel text-[8px] text-pixel-pink/20 animate-star-twinkle" style="animation-delay: 1.5s">&#9829;</span>
       <span class="absolute top-[55%] right-[5%] font-pixel text-[10px] text-pixel-yellow/15 animate-pixel-float" style="animation-delay: 0.3s">&#9733;</span>
-      <span class="absolute top-[20%] left-[30%] font-pixel text-[6px] text-pixel-green/20 animate-star-twinkle" style="animation-delay: 2s">&#9679;</span>
+      <span class="absolute top-[20%] left-[30%] font-pixel text-[6px] text-pixel-red/20 animate-star-twinkle" style="animation-delay: 2s">&#9679;</span>
     </div>
 
     <div class="section-container relative z-10 text-center pt-20">
@@ -34,7 +34,7 @@
           </div>
           <!-- Player indicator -->
           <div class="absolute -bottom-3 left-1/2 -translate-x-1/2
-                      font-pixel text-[6px] dark:text-pixel-green text-pixel-purple
+                      font-pixel text-[6px] dark:text-pixel-red text-pixel-purple
                       dark:bg-pixel-black bg-pixel-cream px-2 border-2 dark:border-pixel-navy border-pixel-navy/30">
             P1
           </div>
@@ -43,13 +43,13 @@
 
       <!-- Game HUD Stats -->
       <div class="flex items-center justify-center gap-4 sm:gap-6 mb-6 flex-wrap">
-        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-green text-pixel-navy">
+        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-red text-pixel-navy">
           LVL <span class="dark:text-pixel-yellow text-pixel-purple">99</span>
         </div>
-        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-green text-pixel-navy">
+        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-red text-pixel-navy">
           EXP: <span class="dark:text-pixel-yellow text-pixel-purple">10+ YRS</span>
         </div>
-        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-green text-pixel-navy">
+        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-red text-pixel-navy">
           HP: <span class="dark:text-pixel-red text-pixel-red">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span>
           <span class="dark:text-pixel-yellow text-pixel-purple"> 100%</span>
         </div>
@@ -76,7 +76,7 @@
       <div class="max-w-2xl mx-auto mb-8">
         <div class="dialog-box">
           <p class="font-retro text-base sm:text-lg leading-relaxed dark:text-pixel-gray text-pixel-navy/80">
-            {{ $t('home.description') }}<span class="animate-pixel-blink dark:text-pixel-green text-pixel-purple">&#9608;</span>
+            {{ $t('home.description') }}<span class="animate-pixel-blink dark:text-pixel-red text-pixel-purple">&#9608;</span>
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@
           :href="`mailto:${socialLinks.email}`"
           class="p-2.5 border-2 dark:border-pixel-navy border-pixel-navy/30
                  dark:text-pixel-gray text-pixel-navy/60
-                 hover:bg-pixel-green hover:text-pixel-black hover:border-pixel-green
+                 hover:bg-pixel-red hover:text-pixel-white hover:border-pixel-red
                  transition-all"
           aria-label="Email"
         >
@@ -142,7 +142,7 @@
           <span class="font-pixel text-[7px] dark:text-pixel-gray/40 text-pixel-navy/30 tracking-wider">
             {{ $t('home.scrollDown') }}
           </span>
-          <span class="font-pixel text-sm dark:text-pixel-green/50 text-pixel-purple/50 animate-pixel-bounce">
+          <span class="font-pixel text-sm dark:text-pixel-red/50 text-pixel-purple/50 animate-pixel-bounce">
             &#9660;
           </span>
         </div>

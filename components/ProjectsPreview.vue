@@ -37,7 +37,7 @@
               <span class="text-lg">{{ project.icon }}</span>
             </div>
             <div>
-              <h3 class="font-pixel text-xs text-pixel-green group-hover:text-pixel-yellow transition-colors leading-relaxed">
+              <h3 class="font-pixel text-xs text-pixel-red group-hover:text-pixel-yellow transition-colors leading-relaxed">
                 {{ project.name }}
               </h3>
               <p class="font-retro text-sm text-pixel-gray/70 mt-1 leading-relaxed line-clamp-2">
@@ -53,7 +53,7 @@
               :key="tIdx"
               class="flex items-center gap-2 font-retro text-xs text-pixel-gray/50"
             >
-              <span class="text-pixel-green">&#9632;</span>
+              <span class="text-pixel-red">&#9632;</span>
               <span>{{ task }}</span>
             </div>
           </div>

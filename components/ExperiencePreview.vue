@@ -40,7 +40,7 @@
           <!-- Quest title (role) -->
           <div class="mb-4">
             <span class="font-retro text-xs text-pixel-gray">MISSION:</span>
-            <h3 class="font-pixel text-xs text-pixel-green mt-1 leading-relaxed">{{ job.role }}</h3>
+            <h3 class="font-pixel text-xs text-pixel-red mt-1 leading-relaxed">{{ job.role }}</h3>
           </div>
 
           <!-- Quest objectives -->
@@ -51,7 +51,7 @@
               :key="tIndex"
               class="flex items-start gap-2 font-retro text-sm text-pixel-cream dark:text-pixel-cream/80 light:text-pixel-navy"
             >
-              <span class="text-pixel-green mt-0.5 flex-shrink-0">&#9632;</span>
+              <span class="text-pixel-red mt-0.5 flex-shrink-0">&#9632;</span>
               <span>{{ task }}</span>
             </div>
             <div
@@ -68,7 +68,7 @@
             <span class="font-pixel text-[8px] text-pixel-yellow/60">
               &#9733;&#9733;&#9733; REWARD: +{{ (index + 1) * 500 }} XP
             </span>
-            <span class="pixel-tag font-pixel text-[8px] bg-pixel-green/20 text-pixel-green border border-pixel-green/40">
+            <span class="pixel-tag font-pixel text-[8px] bg-pixel-red/20 text-pixel-red border border-pixel-red/40">
               STATUS: {{ index === 0 ? 'IN PROGRESS' : 'COMPLETE' }}
             </span>
           </div>

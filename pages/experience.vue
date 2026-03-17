@@ -53,7 +53,7 @@
               </div>
               <span
                 class="pixel-tag whitespace-nowrap self-start text-xs font-retro"
-                :class="isDark ? 'text-pixel-green' : 'text-pixel-green'"
+                :class="isDark ? 'text-pixel-red' : 'text-pixel-red'"
               >
                 {{ item.period }}
               </span>
@@ -67,7 +67,7 @@
                 class="text-sm font-retro flex items-start gap-2"
                 :class="isDark ? 'text-pixel-gray' : 'text-pixel-navy'"
               >
-                <span class="text-pixel-green mt-0.5 shrink-0">■</span>
+                <span class="text-pixel-red mt-0.5 shrink-0">■</span>
                 {{ task }}
               </li>
             </ul>
