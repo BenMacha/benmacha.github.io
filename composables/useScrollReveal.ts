@@ -35,5 +35,5 @@ export function useScrollReveal() {
     cleanup()
   })
 
-  return { initReveal, cleanup }
+  return { initReveal, setupReveal: initReveal, cleanup }
 }

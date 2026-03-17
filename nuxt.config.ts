@@ -116,6 +116,11 @@ export default defineNuxtConfig({
     ],
   },
 
+  sourcemap: {
+    server: true,
+    client: true,
+  },
+
   nitro: {
     prerender: {
       routes: [
