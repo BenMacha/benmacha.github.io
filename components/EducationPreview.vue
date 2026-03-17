@@ -73,7 +73,7 @@ const { setupReveal } = useScrollReveal()
 const educationItems = computed(() => {
   const raw = tm('education.items') as any[]
   return raw.map((item: any) => ({
-    name: rt(item.name),
+    name: rt(item.school),
     type: rt(item.type),
     period: rt(item.period),
     skills: (item.skills || []).map((s: any) => rt(s)),
