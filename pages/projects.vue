@@ -52,7 +52,7 @@
               class="text-xs font-retro flex items-start gap-2"
               :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/70'"
             >
-              <span class="text-pixel-red mt-0.5">■</span>
+              <span class="text-pixel-green mt-0.5">■</span>
               {{ task }}
             </li>
           </ul>

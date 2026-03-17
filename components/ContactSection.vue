@@ -24,7 +24,7 @@
 
           <div class="pixel-separator mx-auto max-w-xs mb-4" />
 
-          <p class="font-pixel text-[10px] text-pixel-red mb-2">
+          <p class="font-pixel text-[10px] text-pixel-green mb-2">
             {{ $t('contact.title') }}
           </p>
           <p class="font-retro text-sm text-pixel-gray/70 mb-8 max-w-md mx-auto leading-relaxed">

@@ -5,7 +5,7 @@
       <div class="flex-1 bg-pixel-red"></div>
       <div class="flex-1 bg-pixel-orange"></div>
       <div class="flex-1 bg-pixel-yellow"></div>
-      <div class="flex-1 bg-pixel-red"></div>
+      <div class="flex-1 bg-pixel-green"></div>
       <div class="flex-1 bg-pixel-blue"></div>
       <div class="flex-1 bg-pixel-purple"></div>
     </div>
@@ -79,7 +79,7 @@
               :href="`mailto:${socialLinks.email}`"
               class="p-2 border-2 dark:border-pixel-navy border-pixel-navy/30
                      dark:text-pixel-gray text-pixel-navy/60
-                     hover:bg-pixel-red hover:text-pixel-white hover:border-pixel-red
+                     hover:bg-pixel-green hover:text-pixel-black hover:border-pixel-green
                      transition-all font-pixel text-[8px]"
               aria-label="Email"
             >

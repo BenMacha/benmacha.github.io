@@ -54,7 +54,7 @@
           </div>
 
           <!-- Read more -->
-          <span class="font-pixel text-[8px] text-pixel-red group-hover:text-pixel-yellow transition-colors">
+          <span class="font-pixel text-[8px] text-pixel-green group-hover:text-pixel-yellow transition-colors">
             &gt; READ SCROLL...
           </span>
         </NuxtLink>
@@ -84,7 +84,7 @@ const latestArticles = computed(() => blogArticles.slice(0, 3))
 function categoryColor(category: string): string {
   const colors: Record<string, string> = {
     Docker: 'bg-pixel-blue/20 text-pixel-blue border-pixel-blue/40',
-    Linux: 'bg-pixel-lime/20 text-pixel-lime border-pixel-lime/40',
+    Linux: 'bg-pixel-green/20 text-pixel-green border-pixel-green/40',
     PHP: 'bg-pixel-purple/20 text-pixel-pink border-pixel-purple/40',
     DevOps: 'bg-pixel-orange/20 text-pixel-orange border-pixel-orange/40',
   }

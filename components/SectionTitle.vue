@@ -5,7 +5,7 @@
       <h2 class="font-pixel text-sm sm:text-base mb-3 dark:text-pixel-yellow text-pixel-navy">
         <span class="dark:text-pixel-blue text-pixel-purple">&gt;&gt;</span>
         LEVEL:
-        <span class="dark:text-pixel-red text-pixel-purple">{{ title }}</span>
+        <span class="dark:text-pixel-green text-pixel-purple">{{ title }}</span>
       </h2>
       <!-- Subtitle -->
       <p

@@ -245,7 +245,7 @@
 
   .hp-bar-fill {
     @apply h-full transition-all duration-500;
-    background: linear-gradient(180deg, #ff004d 0%, #b13e53 100%);
+    background: linear-gradient(180deg, #00e436 0%, #38b764 100%);
   }
 
   /* Pixel grid background */
@@ -370,7 +370,7 @@ html.dark .article-content h3 {
 
 html.dark .article-content h3::before {
   content: '> ';
-  @apply text-pixel-red;
+  @apply text-pixel-green;
 }
 
 html.dark .article-content p {
@@ -441,7 +441,7 @@ html.light .article-content h3 {
 
 html.light .article-content h3::before {
   content: '> ';
-  @apply text-pixel-red;
+  @apply text-pixel-green;
 }
 
 html.light .article-content p {

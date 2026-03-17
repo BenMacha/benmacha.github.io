@@ -31,7 +31,7 @@
                 <span class="font-pixel text-[8px] text-pixel-gray/40">// {{ item.period }}</span>
               </div>
             </div>
-            <span class="font-pixel text-[8px] text-pixel-red flex-shrink-0">LVL UP!</span>
+            <span class="font-pixel text-[8px] text-pixel-green flex-shrink-0">LVL UP!</span>
           </div>
 
           <!-- Skill points earned -->
