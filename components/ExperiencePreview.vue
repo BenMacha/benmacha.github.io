@@ -1,7 +1,7 @@
 <template>
   <section class="py-20">
     <div class="section-container">
-      <SectionTitle :title="$t('experience.sectionTitle')" />
+      <SectionTitle :title="$t('experience.title')" />
 
       <!-- QUEST LOG Header -->
       <div class="text-center mb-8">
@@ -93,7 +93,7 @@ const { tm, rt } = useI18n()
 const { setupReveal } = useScrollReveal()
 
 const previewJobs = computed(() => {
-  const raw = tm('experience.jobs') as any[]
+  const raw = tm('experience.items') as any[]
   return raw.slice(0, 3).map((item: any) => ({
     company: rt(item.company),
     role: rt(item.role),

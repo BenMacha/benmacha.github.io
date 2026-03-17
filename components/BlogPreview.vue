@@ -1,7 +1,7 @@
 <template>
   <section class="py-20">
     <div class="section-container">
-      <SectionTitle :title="$t('blog.sectionTitle')" />
+      <SectionTitle :title="$t('blog.title')" />
 
       <!-- NEWS SCROLL Header -->
       <div class="text-center mb-8">

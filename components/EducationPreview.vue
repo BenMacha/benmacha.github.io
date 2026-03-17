@@ -1,7 +1,7 @@
 <template>
   <section class="py-20">
     <div class="section-container">
-      <SectionTitle :title="$t('education.sectionTitle')" />
+      <SectionTitle :title="$t('education.title')" />
 
       <!-- TRAINING Header -->
       <div class="text-center mb-8">
@@ -71,7 +71,7 @@ const { tm, rt } = useI18n()
 const { setupReveal } = useScrollReveal()
 
 const educationItems = computed(() => {
-  const raw = tm('education.schools') as any[]
+  const raw = tm('education.items') as any[]
   return raw.map((item: any) => ({
     name: rt(item.name),
     type: rt(item.type),

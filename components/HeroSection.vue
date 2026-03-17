@@ -85,7 +85,7 @@
       <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
         <a href="/CV.pdf" target="_blank" class="btn-primary font-pixel text-[8px] sm:text-[10px]">
           <Download class="w-4 h-4" />
-          {{ $t('home.downloadCV') }}
+          {{ $t('home.download') }}
         </a>
         <a :href="`mailto:${socialLinks.email}`" class="btn-secondary font-pixel text-[8px] sm:text-[10px]">
           <Mail class="w-4 h-4" />

@@ -1,7 +1,7 @@
 <template>
   <section class="py-20">
     <div class="section-container">
-      <SectionTitle :title="$t('projects.sectionTitle')" />
+      <SectionTitle :title="$t('projects.title')" />
 
       <!-- ACHIEVEMENTS Header -->
       <div class="text-center mb-8">
@@ -80,7 +80,7 @@ import { ExternalLink } from 'lucide-vue-next'
 const { tm, rt } = useI18n()
 
 const projects = computed(() => {
-  const raw = tm('projects.list') as any[]
+  const raw = tm('projects.github.items') as any[]
   return raw.map((item: any) => ({
     name: rt(item.name),
     icon: rt(item.icon),

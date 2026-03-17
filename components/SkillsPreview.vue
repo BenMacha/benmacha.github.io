@@ -1,7 +1,7 @@
 <template>
   <section class="py-20">
     <div class="section-container">
-      <SectionTitle :title="$t('skills.sectionTitle')" />
+      <SectionTitle :title="$t('skills.title')" />
 
       <!-- INVENTORY Header -->
       <div class="text-center mb-8">
@@ -25,7 +25,7 @@
               <component :is="getIcon(section.icon)" class="w-4 h-4 text-pixel-blue" />
             </div>
             <div>
-              <h3 class="font-pixel text-[10px] text-pixel-blue">{{ $t(`skills.categories.${section.key}`) }}</h3>
+              <h3 class="font-pixel text-[10px] text-pixel-blue">{{ $t(`skills.${section.key}`) }}</h3>
               <span class="font-retro text-[10px] text-pixel-gray/60">{{ section.skills.length }} ITEMS</span>
             </div>
           </div>

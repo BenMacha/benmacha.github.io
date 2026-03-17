@@ -7,10 +7,17 @@
     "blog": "Blog"
   },
   "home": {
+    "greeting": "Bonjour, je suis",
+    "name": "Ben Macha Ali",
     "title": "Tech Lead & Développeur Full Stack",
     "description": "Tech Lead passionné et créatif, spécialisé dans la conception et le développement de solutions web et mobiles. Fort de plus de 8 ans d'expérience, j'ai contribué à l'optimisation de systèmes variés, en utilisant des technologies modernes pour créer des applications performantes et intuitives. Avec mon équipe, j'ai travaillé sur l'intégration de technologies connectées, la gestion en temps réel de commandes, la création de systèmes de notifications personnalisés, et l'analyse de données. Constamment à la recherche de nouveaux défis pour simplifier et améliorer la vie des utilisateurs finaux.",
     "contact": "Contact",
-    "download": "Télécharger mon CV"
+    "download": "Télécharger mon CV",
+    "scrollDown": "DEFILER VERS LE BAS"
+  },
+  "contact": {
+    "title": "Contactez-moi",
+    "description": "N'hésitez pas à me contacter pour discuter de vos projets ou pour toute collaboration."
   },
   "experience": {
     "title": "Expériences professionnelles",
