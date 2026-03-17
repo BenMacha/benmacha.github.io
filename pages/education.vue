@@ -3,7 +3,6 @@
     <div class="section-container">
       <SectionTitle :title="$t('education.title')" />
 
-      <!-- Education -->
       <div class="max-w-3xl mx-auto space-y-14">
 
         <!-- Formal Education -->
@@ -12,23 +11,33 @@
             <div
               v-for="(item, index) in educationItems"
               :key="item.school"
-              class="reveal glass-card glow-border p-5"
+              class="reveal pixel-card p-5"
               :class="`reveal-delay-${index + 1}`"
             >
               <div class="flex items-center gap-3 mb-4">
-                <div class="p-2.5 border border-accent/20 text-accent">
+                <div
+                  class="p-2 border-2"
+                  :class="isDark
+                    ? 'border-pixel-yellow/40 text-pixel-yellow bg-pixel-yellow/10'
+                    : 'border-pixel-orange/30 text-pixel-orange bg-pixel-orange/5'"
+                  style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.3);"
+                >
                   <GraduationCap class="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 class="font-mono font-bold text-base text-accent">{{ item.school }}</h3>
-                  <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
+                  <h3 class="font-pixel text-[10px] sm:text-xs" :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'">
+                    {{ item.school }}
+                  </h3>
+                  <p class="text-xs font-retro" :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'">
+                    {{ item.type }} // {{ item.period }}
+                  </p>
                 </div>
               </div>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="skill in item.skills"
                   :key="skill"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
+                  class="pixel-tag text-xs font-retro"
                 >
                   {{ skill }}
                 </span>
@@ -39,30 +48,35 @@
 
         <!-- Internships -->
         <div>
-          <h3 class="reveal font-mono font-bold text-xl mb-5 flex items-center gap-3">
-            <Briefcase class="w-5 h-5 text-accent" />
-            <span class="text-accent/30">&gt; </span>
-            <span class="text-accent">{{ $t('education.internships.title') }}</span>
+          <h3 class="reveal font-pixel text-[10px] sm:text-xs mb-5 flex items-center gap-3">
+            <Briefcase class="w-5 h-5 text-pixel-blue" />
+            <span :class="isDark ? 'text-pixel-blue' : 'text-pixel-navy'">
+              {{ $t('education.internships.title') }}
+            </span>
           </h3>
           <div class="grid gap-4">
             <div
               v-for="(item, index) in internships"
               :key="item.company"
-              class="reveal glass-card glow-border p-5"
+              class="reveal pixel-card p-5"
               :class="`reveal-delay-${index + 1}`"
             >
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                 <div>
-                  <h4 class="font-mono font-bold text-sm text-accent">{{ item.company }}</h4>
-                  <p class="text-xs text-accent/50 font-mono">{{ item.role }}</p>
+                  <h4 class="font-pixel text-[10px]" :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'">
+                    {{ item.company }}
+                  </h4>
+                  <p class="text-sm font-retro" :class="isDark ? 'text-pixel-blue' : 'text-pixel-blue'">
+                    {{ item.role }}
+                  </p>
                 </div>
-                <span class="text-[10px] text-gray-300 dark:text-green-400/25 font-mono">{{ item.period }}</span>
+                <span class="pixel-tag text-xs font-retro">{{ item.period }}</span>
               </div>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="skill in item.skills"
                   :key="skill"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-gray-400 dark:text-green-400/50 border border-accent/10"
+                  class="pixel-tag text-xs font-retro"
                 >
                   {{ skill }}
                 </span>
@@ -73,22 +87,23 @@
 
         <!-- Interests -->
         <div>
-          <h3 class="reveal font-mono font-bold text-xl mb-5 flex items-center gap-3">
-            <Heart class="w-5 h-5 text-accent" />
-            <span class="text-accent/30">&gt; </span>
-            <span class="text-accent">{{ $t('education.interests.title') }}</span>
+          <h3 class="reveal font-pixel text-[10px] sm:text-xs mb-5 flex items-center gap-3">
+            <Heart class="w-5 h-5 text-pixel-red" />
+            <span :class="isDark ? 'text-pixel-pink' : 'text-pixel-navy'">
+              {{ $t('education.interests.title') }}
+            </span>
           </h3>
           <div class="grid sm:grid-cols-2 gap-4">
             <!-- Sports -->
-            <div class="reveal glass-card glow-border p-5 reveal-delay-1">
-              <h4 class="font-mono font-semibold text-sm mb-3 text-gray-600 dark:text-green-400/70">
+            <div class="reveal pixel-card p-5 reveal-delay-1">
+              <h4 class="font-pixel text-[10px] mb-3" :class="isDark ? 'text-pixel-green' : 'text-pixel-navy'">
                 {{ $t('education.interests.items.sports.title') }}
               </h4>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="item in sportsItems"
                   :key="item"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
+                  class="pixel-tag text-xs font-retro"
                 >
                   {{ item }}
                 </span>
@@ -96,15 +111,15 @@
             </div>
 
             <!-- Associations -->
-            <div class="reveal glass-card glow-border p-5 reveal-delay-2">
-              <h4 class="font-mono font-semibold text-sm mb-3 text-gray-600 dark:text-green-400/70">
+            <div class="reveal pixel-card p-5 reveal-delay-2">
+              <h4 class="font-pixel text-[10px] mb-3" :class="isDark ? 'text-pixel-orange' : 'text-pixel-navy'">
                 {{ $t('education.interests.items.associations.title') }}
               </h4>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="item in associationItems"
                   :key="item"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
+                  class="pixel-tag text-xs font-retro"
                 >
                   {{ item }}
                 </span>
@@ -121,6 +136,8 @@
 import { GraduationCap, Briefcase, Heart } from 'lucide-vue-next'
 
 const { t, tm, rt } = useI18n()
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

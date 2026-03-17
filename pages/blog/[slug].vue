@@ -3,9 +3,10 @@
     <!-- Back Link -->
     <NuxtLink
       to="/blog"
-      class="inline-flex items-center gap-2 text-accent/60 hover:text-accent transition-colors duration-300 mb-8 group font-mono text-sm"
+      class="inline-flex items-center gap-2 font-retro text-base mb-8 group transition-colors"
+      :class="isDark ? 'text-pixel-blue hover:text-pixel-cyan' : 'text-pixel-blue hover:text-accent-dark'"
     >
-      <ArrowLeft class="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
+      <ArrowLeft class="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
       {{ $t('blog.backToBlog') }}
     </NuxtLink>
 
@@ -15,20 +16,28 @@
         <!-- Category Badge -->
         <span
           :class="[
-            'inline-block px-2 py-0.5 text-[10px] font-mono font-semibold mb-4 border',
+            'inline-block px-2 py-1 text-xs font-retro mb-4 border-2',
             categoryColor(article.category)
           ]"
+          style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.2);"
         >
           {{ article.category }}
         </span>
 
         <!-- Title -->
-        <h1 class="font-mono text-2xl md:text-3xl lg:text-4xl font-bold text-accent mb-5">
+        <h1
+          class="font-pixel text-sm sm:text-base md:text-lg leading-relaxed mb-5"
+          :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'"
+          style="text-shadow: 2px 2px 0 rgba(0,0,0,0.3);"
+        >
           {{ article.title }}
         </h1>
 
         <!-- Meta -->
-        <div class="flex flex-wrap items-center gap-4 text-gray-400 dark:text-green-400/30 text-xs font-mono mb-5">
+        <div
+          class="flex flex-wrap items-center gap-4 text-sm font-retro mb-5"
+          :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'"
+        >
           <span class="flex items-center gap-1.5">
             <Calendar class="w-3.5 h-3.5" />
             {{ article.date }}
@@ -44,9 +53,8 @@
           <span
             v-for="tag in article.tags"
             :key="tag"
-            class="flex items-center gap-1 text-[10px] font-mono bg-accent/5 text-accent/50 px-2 py-0.5 border border-accent/10"
+            class="pixel-tag text-xs font-retro"
           >
-            <Tag class="w-2.5 h-2.5" />
             {{ tag }}
           </span>
         </div>
@@ -54,7 +62,7 @@
 
       <!-- Article Content -->
       <article
-        class="article-content glass-card glow-border p-5 md:p-8 mb-10 max-w-none"
+        class="article-content pixel-card p-5 md:p-8 mb-10 max-w-none"
         v-html="article.content"
       />
 
@@ -63,13 +71,19 @@
         <NuxtLink
           v-if="prevArticle"
           :to="`/blog/${prevArticle.slug}`"
-          class="glass-card glow-border p-4 group hover:border-accent/40 transition-all duration-300"
+          class="pixel-card p-4 group"
         >
-          <span class="flex items-center gap-1 text-[10px] text-gray-300 dark:text-green-400/25 mb-2 font-mono">
+          <span
+            class="flex items-center gap-1 text-xs font-retro mb-2"
+            :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/60'"
+          >
             <ArrowLeft class="w-3 h-3" />
             {{ $t('blog.previousArticle') }}
           </span>
-          <span class="font-mono text-sm font-semibold text-gray-500 dark:text-green-400/60 group-hover:text-accent transition-colors duration-300">
+          <span
+            class="font-pixel text-[9px] sm:text-[10px] group-hover:text-pixel-blue transition-colors leading-relaxed"
+            :class="isDark ? 'text-pixel-white' : 'text-pixel-navy'"
+          >
             {{ prevArticle.title }}
           </span>
         </NuxtLink>
@@ -78,13 +92,19 @@
         <NuxtLink
           v-if="nextArticle"
           :to="`/blog/${nextArticle.slug}`"
-          class="glass-card glow-border p-4 group hover:border-accent/40 transition-all duration-300 text-right"
+          class="pixel-card p-4 group text-right"
         >
-          <span class="flex items-center justify-end gap-1 text-[10px] text-gray-300 dark:text-green-400/25 mb-2 font-mono">
+          <span
+            class="flex items-center justify-end gap-1 text-xs font-retro mb-2"
+            :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/60'"
+          >
             {{ $t('blog.nextArticle') }}
             <ArrowRight class="w-3 h-3" />
           </span>
-          <span class="font-mono text-sm font-semibold text-gray-500 dark:text-green-400/60 group-hover:text-accent transition-colors duration-300">
+          <span
+            class="font-pixel text-[9px] sm:text-[10px] group-hover:text-pixel-blue transition-colors leading-relaxed"
+            :class="isDark ? 'text-pixel-white' : 'text-pixel-navy'"
+          >
             {{ nextArticle.title }}
           </span>
         </NuxtLink>
@@ -92,21 +112,27 @@
     </template>
 
     <!-- Not Found -->
-    <div v-else class="text-center py-20 text-gray-400 dark:text-green-400/30">
+    <div
+      v-else
+      class="text-center py-20"
+      :class="isDark ? 'text-pixel-gray/40' : 'text-pixel-darkgray/40'"
+    >
       <BookOpen class="w-12 h-12 mx-auto mb-4 opacity-50" />
-      <p class="font-mono text-sm">{{ $t('blog.articleNotFound') }}</p>
+      <p class="font-pixel text-xs">{{ $t('blog.articleNotFound') }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Calendar, Clock, Tag, ArrowLeft, ArrowRight, BookOpen } from 'lucide-vue-next'
+import { Calendar, Clock, ArrowLeft, ArrowRight, BookOpen } from 'lucide-vue-next'
 import { blogArticles } from '~/data/blog'
 import type { BlogArticle } from '~/data/blog'
 
 const { t: $t } = useI18n()
 const route = useRoute()
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 
 const slug = computed(() => route.params.slug as string)
 
@@ -131,14 +157,8 @@ const nextArticle = computed<BlogArticle | undefined>(() =>
 useHead(() => ({
   title: article.value ? `${article.value.title} - Ben Macha Ali` : 'Blog - Ben Macha Ali',
   meta: [
-    {
-      name: 'description',
-      content: article.value?.description || ''
-    },
-    {
-      name: 'keywords',
-      content: article.value?.tags.join(', ') || ''
-    }
+    { name: 'description', content: article.value?.description || '' },
+    { name: 'keywords', content: article.value?.tags.join(', ') || '' },
   ],
   script: article.value
     ? [
@@ -152,23 +172,23 @@ useHead(() => ({
             datePublished: article.value.date,
             author: {
               '@type': 'Person',
-              name: 'Ben Macha Ali'
+              name: 'Ben Macha Ali',
             },
             keywords: article.value.tags.join(', '),
-            articleSection: article.value.category
-          })
-        }
+            articleSection: article.value.category,
+          }),
+        },
       ]
-    : []
+    : [],
 }))
 
 function categoryColor(category: string): string {
   const colors: Record<string, string> = {
-    Docker: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    Linux: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    PHP: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    DevOps: 'bg-accent/10 text-accent border-accent/20'
+    Docker: 'bg-pixel-blue/20 text-pixel-blue border-pixel-blue/40',
+    Linux: 'bg-pixel-green/20 text-pixel-green border-pixel-green/40',
+    PHP: 'bg-pixel-purple/20 text-pixel-pink border-pixel-purple/40',
+    DevOps: 'bg-pixel-orange/20 text-pixel-orange border-pixel-orange/40',
   }
-  return colors[category] || 'bg-accent/10 text-accent border-accent/20'
+  return colors[category] || 'bg-pixel-blue/20 text-pixel-blue border-pixel-blue/40'
 }
 </script>

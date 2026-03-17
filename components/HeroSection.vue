@@ -1,124 +1,150 @@
 <template>
   <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
-    <!-- Radial glow behind -->
-    <div class="absolute inset-0 hero-gradient" />
-
-    <!-- Claw marks decoration -->
-    <div class="absolute top-20 right-10 sm:right-20 opacity-20 pointer-events-none">
-      <svg width="120" height="120" viewBox="0 0 120 120" class="text-accent">
-        <line x1="20" y1="10" x2="80" y2="100" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <line x1="40" y1="5" x2="90" y2="95" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <line x1="60" y1="10" x2="100" y2="90" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
-    </div>
-
-    <div class="absolute bottom-20 left-5 sm:left-20 opacity-15 pointer-events-none rotate-180">
-      <svg width="80" height="80" viewBox="0 0 120 120" class="text-accent">
-        <line x1="20" y1="10" x2="80" y2="100" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <line x1="40" y1="5" x2="90" y2="95" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <line x1="60" y1="10" x2="100" y2="90" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
+    <!-- Decorative pixel stars scattered around -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+      <span class="absolute top-24 left-[10%] font-pixel text-[8px] text-pixel-yellow/30 animate-star-twinkle">&#9733;</span>
+      <span class="absolute top-32 right-[15%] font-pixel text-[6px] text-pixel-blue/25 animate-star-twinkle" style="animation-delay: 0.5s">&#9679;</span>
+      <span class="absolute top-[40%] left-[5%] font-pixel text-[10px] text-pixel-red/20 animate-pixel-float">&#9829;</span>
+      <span class="absolute top-[30%] right-[8%] font-pixel text-[8px] text-pixel-green/25 animate-star-twinkle" style="animation-delay: 1s">&#9733;</span>
+      <span class="absolute bottom-[30%] left-[12%] font-pixel text-[6px] text-pixel-orange/20 animate-pixel-float" style="animation-delay: 0.7s">&#9632;</span>
+      <span class="absolute bottom-[25%] right-[20%] font-pixel text-[8px] text-pixel-pink/20 animate-star-twinkle" style="animation-delay: 1.5s">&#9829;</span>
+      <span class="absolute top-[55%] right-[5%] font-pixel text-[10px] text-pixel-yellow/15 animate-pixel-float" style="animation-delay: 0.3s">&#9733;</span>
+      <span class="absolute top-[20%] left-[30%] font-pixel text-[6px] text-pixel-green/20 animate-star-twinkle" style="animation-delay: 2s">&#9679;</span>
     </div>
 
     <div class="section-container relative z-10 text-center pt-20">
-      <!-- Terminal-style avatar -->
-      <div class="mb-8 reveal">
+      <!-- Pixel Avatar -->
+      <div class="mb-8">
         <div class="relative inline-block">
-          <div class="relative">
+          <!-- Pixel frame -->
+          <div class="relative p-1 border-4 dark:border-pixel-yellow border-pixel-purple
+                      bg-pixel-navy/20 shadow-lg shadow-pixel-blue/10">
             <img
               src="https://avatars.githubusercontent.com/u/5999976?v=4"
               alt="Ben Macha Ali"
-              class="w-28 h-28 sm:w-36 sm:h-36 border-2 border-accent/50 shadow-lg shadow-accent/20 pixelated"
-              style="clip-path: polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%);"
+              class="w-28 h-28 sm:w-36 sm:h-36 pixel-avatar"
+              style="image-rendering: pixelated;"
               loading="eager"
             />
-            <!-- Corner brackets -->
-            <div class="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-accent" />
-            <div class="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-accent" />
-            <div class="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-accent" />
-            <div class="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-accent" />
+            <!-- Corner pixel decorations -->
+            <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-pixel-yellow dark:bg-pixel-yellow"></div>
+            <div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-pixel-yellow dark:bg-pixel-yellow"></div>
+            <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-pixel-yellow dark:bg-pixel-yellow"></div>
+            <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-pixel-yellow dark:bg-pixel-yellow"></div>
           </div>
-          <div class="absolute -bottom-3 -right-3 w-8 h-8 bg-white dark:bg-dark border border-accent flex items-center justify-center">
-            <Terminal class="w-4 h-4 text-accent" />
+          <!-- Player indicator -->
+          <div class="absolute -bottom-3 left-1/2 -translate-x-1/2
+                      font-pixel text-[6px] dark:text-pixel-green text-pixel-purple
+                      dark:bg-pixel-black bg-pixel-cream px-2 border-2 dark:border-pixel-navy border-pixel-navy/30">
+            P1
           </div>
         </div>
       </div>
 
-      <!-- Glitch Title -->
-      <div class="reveal reveal-delay-1">
-        <p class="text-accent/60 font-mono text-xs sm:text-sm mb-3 tracking-[0.3em] uppercase">
-          {{ $t('home.title') }}
+      <!-- Game HUD Stats -->
+      <div class="flex items-center justify-center gap-4 sm:gap-6 mb-6 flex-wrap">
+        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-green text-pixel-navy">
+          LVL <span class="dark:text-pixel-yellow text-pixel-purple">99</span>
+        </div>
+        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-green text-pixel-navy">
+          EXP: <span class="dark:text-pixel-yellow text-pixel-purple">10+ YRS</span>
+        </div>
+        <div class="font-pixel text-[7px] sm:text-[8px] dark:text-pixel-green text-pixel-navy">
+          HP: <span class="dark:text-pixel-red text-pixel-red">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span>
+          <span class="dark:text-pixel-yellow text-pixel-purple"> 100%</span>
+        </div>
+      </div>
+
+      <!-- Name - Pixel title -->
+      <div class="mb-2">
+        <p class="font-pixel text-[8px] sm:text-[10px] dark:text-pixel-blue text-pixel-blue mb-3 tracking-widest uppercase">
+          {{ $t('home.greeting') }}
         </p>
-        <h1
-          class="text-4xl sm:text-6xl lg:text-7xl font-mono font-bold mb-4 leading-tight glitch-text"
-          data-text="Ben Macha Ali"
-        >
-          <span class="text-gray-900 dark:text-green-400">Ben Macha</span>
-          <span class="glow-text"> Ali</span>
+        <h1 class="font-pixel text-lg sm:text-2xl lg:text-3xl mb-3 leading-relaxed pixel-title">
+          <span class="dark:text-pixel-white text-pixel-navy">{{ $t('home.name') }}</span>
         </h1>
       </div>
 
-      <!-- Terminal-style description -->
-      <div class="reveal reveal-delay-2 max-w-2xl mx-auto mb-10">
-        <div class="inline-block text-left bg-white/80 dark:bg-dark/80 border border-gray-200 dark:border-accent/15 p-4 sm:p-5">
-          <div class="flex items-center gap-2 mb-2 text-[10px] text-accent/40 border-b border-accent/10 pb-2">
-            <span class="w-2 h-2 rounded-full bg-red-500/80" />
-            <span class="w-2 h-2 rounded-full bg-yellow-500/80" />
-            <span class="w-2 h-2 rounded-full bg-green-500/80" />
-            <span class="ml-2">terminal — bash</span>
-          </div>
-          <p class="text-gray-700 dark:text-green-400/70 text-sm sm:text-base leading-relaxed font-mono">
-            <span class="text-accent">$</span> {{ $t('home.description') }}<span class="animate-blink text-accent">█</span>
+      <!-- Title -->
+      <div class="mb-6">
+        <p class="font-pixel text-[8px] sm:text-[10px] dark:text-pixel-yellow text-pixel-purple tracking-wider">
+          {{ $t('home.title') }}
+        </p>
+      </div>
+
+      <!-- Dialog box description -->
+      <div class="max-w-2xl mx-auto mb-8">
+        <div class="dialog-box">
+          <p class="font-retro text-base sm:text-lg leading-relaxed dark:text-pixel-gray text-pixel-navy/80">
+            {{ $t('home.description') }}<span class="animate-pixel-blink dark:text-pixel-green text-pixel-purple">&#9608;</span>
           </p>
         </div>
       </div>
 
-      <!-- CTAs -->
-      <div class="reveal reveal-delay-3 flex flex-wrap items-center justify-center gap-4">
-        <a href="/CV.pdf" target="_blank" class="btn-primary">
-          <FileDown class="w-4 h-4" />
-          {{ $t('home.download') }}
+      <!-- PRESS START CTAs -->
+      <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
+        <a href="/CV.pdf" target="_blank" class="btn-primary font-pixel text-[8px] sm:text-[10px]">
+          <Download class="w-4 h-4" />
+          {{ $t('home.downloadCV') }}
         </a>
-        <a :href="`mailto:${socialLinks.email}`" class="btn-secondary">
+        <a :href="`mailto:${socialLinks.email}`" class="btn-secondary font-pixel text-[8px] sm:text-[10px]">
           <Mail class="w-4 h-4" />
           {{ $t('home.contact') }}
         </a>
       </div>
 
-      <!-- Social links -->
-      <div class="reveal reveal-delay-4 flex items-center justify-center gap-3 mt-10">
+      <!-- PRESS START blink text -->
+      <div class="font-pixel text-[8px] dark:text-pixel-yellow text-pixel-purple animate-pixel-blink mb-8">
+        &#9654; PRESS START &#9664;
+      </div>
+
+      <!-- Social links - pixel icons -->
+      <div class="flex items-center justify-center gap-3 mb-10">
         <a
           :href="socialLinks.github"
           target="_blank"
           rel="noopener noreferrer"
-          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-gray-400 dark:text-green-400/60 hover:text-accent transition-all"
+          class="p-2.5 border-2 dark:border-pixel-navy border-pixel-navy/30
+                 dark:text-pixel-gray text-pixel-navy/60
+                 hover:bg-pixel-blue hover:text-pixel-white hover:border-pixel-blue
+                 transition-all"
           aria-label="GitHub"
         >
-          <Github class="w-5 h-5" />
+          <Github class="w-4 h-4" />
         </a>
         <a
           :href="socialLinks.linkedin"
           target="_blank"
           rel="noopener noreferrer"
-          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-gray-400 dark:text-green-400/60 hover:text-accent transition-all"
+          class="p-2.5 border-2 dark:border-pixel-navy border-pixel-navy/30
+                 dark:text-pixel-gray text-pixel-navy/60
+                 hover:bg-pixel-blue hover:text-pixel-white hover:border-pixel-blue
+                 transition-all"
           aria-label="LinkedIn"
         >
-          <Linkedin class="w-5 h-5" />
+          <Linkedin class="w-4 h-4" />
         </a>
         <a
           :href="`mailto:${socialLinks.email}`"
-          class="p-3 border border-accent/15 hover:border-accent/40 hover:bg-accent/5 text-gray-400 dark:text-green-400/60 hover:text-accent transition-all"
+          class="p-2.5 border-2 dark:border-pixel-navy border-pixel-navy/30
+                 dark:text-pixel-gray text-pixel-navy/60
+                 hover:bg-pixel-green hover:text-pixel-black hover:border-pixel-green
+                 transition-all"
           aria-label="Email"
         >
-          <Mail class="w-5 h-5" />
+          <Mail class="w-4 h-4" />
         </a>
       </div>
 
-      <!-- Scroll indicator -->
-      <div class="reveal reveal-delay-5 mt-16">
-        <div class="flex flex-col items-center gap-2 text-accent/30">
-          <span class="text-[10px] font-mono tracking-wider">SCROLL</span>
-          <ChevronDown class="w-4 h-4 animate-bounce" />
+      <!-- Scroll indicator - bouncing pixel arrow -->
+      <div class="mt-6">
+        <div class="flex flex-col items-center gap-2">
+          <span class="font-pixel text-[7px] dark:text-pixel-gray/40 text-pixel-navy/30 tracking-wider">
+            {{ $t('home.scrollDown') }}
+          </span>
+          <span class="font-pixel text-sm dark:text-pixel-green/50 text-pixel-purple/50 animate-pixel-bounce">
+            &#9660;
+          </span>
         </div>
       </div>
     </div>
@@ -126,6 +152,6 @@
 </template>
 
 <script setup lang="ts">
-import { Terminal, FileDown, Mail, Github, Linkedin, ChevronDown } from 'lucide-vue-next'
+import { Download, Mail, Github, Linkedin } from 'lucide-vue-next'
 import { socialLinks } from '~/data/skills'
 </script>

@@ -1,47 +1,60 @@
 <template>
   <header
-    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b-2"
     :class="[
-      scrolled
-        ? 'bg-white/90 dark:bg-dark/95 backdrop-blur-sm border-b border-gray-200 dark:border-accent/20'
-        : 'bg-transparent'
+      colorMode.value === 'dark'
+        ? 'bg-pixel-black/95 border-pixel-navy'
+        : 'bg-pixel-cream/95 border-pixel-navy/20'
     ]"
   >
     <nav class="section-container flex items-center justify-between h-14 sm:h-16">
-      <!-- Logo - Terminal style -->
+      <!-- Logo - Pixel arcade style -->
       <NuxtLink to="/" class="flex items-center gap-2 group">
-        <span class="text-accent dark:text-accent font-mono text-sm sm:text-base font-bold">
-          <span class="text-accent/50">~/</span><span class="group-hover:glow-text transition-all">benmacha</span><span class="animate-blink">_</span>
+        <span class="font-pixel text-[8px] sm:text-xs tracking-wider">
+          <span class="text-pixel-yellow animate-pixel-blink">&#9654;</span>
+          <span
+            class="dark:text-pixel-green text-pixel-navy group-hover:text-pixel-blue transition-colors"
+          >BEN_MACHA</span>
         </span>
       </NuxtLink>
 
-      <!-- Desktop Nav - Terminal commands -->
-      <div class="hidden md:flex items-center gap-1">
+      <!-- Desktop Nav - Arcade menu items -->
+      <div class="hidden md:flex items-center gap-0.5">
         <NuxtLink
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="text-xs font-mono px-3 py-1.5 text-gray-600 dark:text-green-400/70 hover:text-accent hover:bg-accent/10
-                 border border-transparent hover:border-accent/20 transition-all duration-200"
-          active-class="text-accent border-accent/30 bg-accent/5"
+          class="relative font-pixel text-[8px] px-3 py-1.5 transition-all duration-200
+                 dark:text-pixel-gray text-pixel-navy/70
+                 hover:text-pixel-white hover:bg-pixel-blue
+                 group/link"
+          active-class="!bg-pixel-blue !text-pixel-white"
         >
-          <span class="text-accent/40">./</span>{{ $t(link.label) }}
+          <span class="opacity-0 group-hover/link:opacity-100 transition-opacity mr-0.5 text-pixel-yellow">&#9654;</span>
+          {{ $t(link.label) }}
         </NuxtLink>
       </div>
 
       <!-- Actions -->
       <div class="flex items-center gap-1">
+        <!-- High score style -->
+        <span class="hidden sm:inline font-pixel text-[7px] dark:text-pixel-yellow text-pixel-purple mr-2 animate-pixel-blink">
+          HI-SCORE: 99999
+        </span>
         <LanguageSwitcher />
         <ThemeToggle />
 
         <!-- Mobile menu button -->
         <button
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden p-2 text-accent hover:bg-accent/10 border border-transparent hover:border-accent/20 transition-colors"
+          class="md:hidden p-2 font-pixel text-[10px] dark:text-pixel-green text-pixel-navy
+                 border-2 dark:border-pixel-navy border-pixel-navy/30
+                 hover:bg-pixel-blue hover:text-pixel-white hover:border-pixel-blue
+                 transition-colors"
           aria-label="Toggle menu"
         >
-          <X v-if="mobileMenuOpen" class="w-4 h-4" />
-          <Terminal v-else class="w-4 h-4" />
+          <span v-if="mobileMenuOpen">&#10005;</span>
+          <span v-else>&#9776;</span>
         </button>
       </div>
     </nav>
@@ -57,19 +70,39 @@
     >
       <div
         v-if="mobileMenuOpen"
-        class="md:hidden bg-white/98 dark:bg-dark/98 backdrop-blur-sm border-t border-gray-200 dark:border-accent/10"
+        class="md:hidden border-t-2"
+        :class="[
+          colorMode.value === 'dark'
+            ? 'bg-pixel-black/98 border-pixel-navy'
+            : 'bg-pixel-cream/98 border-pixel-navy/20'
+        ]"
       >
         <div class="section-container py-3 flex flex-col gap-0.5">
+          <!-- Menu header -->
+          <div class="font-pixel text-[7px] dark:text-pixel-yellow text-pixel-purple px-4 py-1 mb-1">
+            &#9472;&#9472; SELECT STAGE &#9472;&#9472;
+          </div>
           <NuxtLink
-            v-for="link in navLinks"
+            v-for="(link, index) in navLinks"
             :key="link.to"
             :to="link.to"
-            class="px-4 py-2.5 text-xs font-mono text-gray-600 dark:text-green-400/70 hover:text-accent hover:bg-accent/5 transition-colors border-l-2 border-transparent hover:border-accent"
-            active-class="text-accent border-accent bg-accent/5"
+            class="px-4 py-2.5 font-pixel text-[8px]
+                   dark:text-pixel-gray text-pixel-navy/70
+                   hover:text-pixel-white hover:bg-pixel-blue
+                   border-l-2 border-transparent hover:border-pixel-yellow
+                   transition-colors"
+            active-class="!text-pixel-white !bg-pixel-blue !border-pixel-yellow"
             @click="mobileMenuOpen = false"
           >
-            <span class="text-accent/40 mr-1">$</span> cd {{ $t(link.label) }}
+            <span class="dark:text-pixel-yellow text-pixel-purple mr-2">{{ index + 1 }}.</span>
+            {{ $t(link.label) }}
           </NuxtLink>
+          <!-- Mobile high score -->
+          <div class="px-4 pt-3 mt-2 border-t border-pixel-navy/20">
+            <span class="font-pixel text-[6px] dark:text-pixel-yellow text-pixel-purple animate-pixel-blink">
+              &#9733; HI-SCORE: 99999 &#9733;
+            </span>
+          </div>
         </div>
       </div>
     </Transition>
@@ -77,10 +110,8 @@
 </template>
 
 <script setup lang="ts">
-import { Terminal, X } from 'lucide-vue-next'
-
+const colorMode = useColorMode()
 const mobileMenuOpen = ref(false)
-const scrolled = ref(false)
 
 const navLinks = [
   { to: '/experience', label: 'nav.experience' },
@@ -89,17 +120,4 @@ const navLinks = [
   { to: '/education', label: 'nav.education' },
   { to: '/blog', label: 'nav.blog' },
 ]
-
-function handleScroll() {
-  scrolled.value = window.scrollY > 20
-}
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
 </script>

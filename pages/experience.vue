@@ -3,60 +3,79 @@
     <div class="section-container">
       <SectionTitle :title="$t('experience.title')" />
 
-      <!-- Timeline -->
+      <!-- Quest Log Timeline -->
       <div class="relative max-w-3xl mx-auto">
-        <!-- Timeline line - pixelated -->
-        <div class="absolute left-4 sm:left-8 top-0 bottom-0 w-px bg-accent/15" style="box-shadow: 0 0 5px rgba(0,255,65,0.1);" />
+        <!-- Pixel timeline line -->
+        <div
+          class="absolute left-4 sm:left-8 top-0 bottom-0 w-1"
+          :class="isDark ? 'bg-pixel-navy' : 'bg-pixel-navy/15'"
+          style="background-image: repeating-linear-gradient(180deg, currentColor 0px, currentColor 4px, transparent 4px, transparent 8px);"
+        />
 
         <div
           v-for="(item, index) in experiences"
           :key="item.company"
-          class="reveal relative pl-12 sm:pl-20 pb-10 last:pb-0"
+          class="reveal relative pl-14 sm:pl-20 pb-10 last:pb-0"
           :class="`reveal-delay-${Math.min(index + 1, 5)}`"
         >
-          <!-- Timeline dot -->
-          <div class="absolute left-3 sm:left-7 top-1 w-2.5 h-2.5 bg-accent border border-accent" style="box-shadow: 0 0 8px rgba(0,255,65,0.5);" />
+          <!-- Pixel dot on timeline -->
+          <div
+            class="absolute left-2.5 sm:left-6.5 top-1 w-4 h-4 border-2"
+            :class="isDark
+              ? 'bg-pixel-yellow border-pixel-orange'
+              : 'bg-pixel-yellow border-pixel-orange'"
+            style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.4);"
+          />
 
-          <!-- Card -->
-          <div class="glass-card glow-border p-5">
-            <!-- Terminal bar -->
-            <div class="flex items-center gap-2 mb-3 text-[10px] text-accent/25 border-b border-accent/10 pb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-accent/30" />
-              <span class="w-1.5 h-1.5 rounded-full bg-accent/20" />
-              <span class="w-1.5 h-1.5 rounded-full bg-accent/15" />
-              <span class="ml-1 font-mono">session://work</span>
+          <!-- Quest Card -->
+          <div class="pixel-card p-5">
+            <!-- Quest header bar -->
+            <div
+              class="flex items-center gap-2 mb-3 text-xs pb-2 border-b-2 border-dashed"
+              :class="isDark ? 'border-pixel-navy text-pixel-gray/50' : 'border-pixel-navy/15 text-pixel-darkgray/50'"
+            >
+              <span class="text-pixel-yellow">★</span>
+              <span class="font-retro">QUEST #{{ String(experiences.length - index).padStart(2, '0') }}</span>
             </div>
 
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
               <div>
-                <h3 class="font-mono font-bold text-lg text-accent">{{ item.company }}</h3>
-                <p class="text-sm font-mono font-semibold mt-1 text-gray-600 dark:text-green-400/70">{{ item.role }}</p>
-                <p v-if="item.location" class="text-[10px] text-gray-400 dark:text-green-400/30 flex items-center gap-1 mt-1 font-mono">
+                <h3 class="font-pixel text-xs sm:text-sm" :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'">
+                  {{ item.company }}
+                </h3>
+                <p class="font-retro text-lg mt-1" :class="isDark ? 'text-pixel-blue' : 'text-pixel-blue'">
+                  {{ item.role }}
+                </p>
+                <p v-if="item.location" class="text-sm font-retro flex items-center gap-1 mt-1" :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'">
                   <MapPin class="w-3 h-3" />
                   {{ item.location }}
                 </p>
               </div>
-              <span class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap self-start">
+              <span
+                class="pixel-tag whitespace-nowrap self-start text-xs font-retro"
+                :class="isDark ? 'text-pixel-green' : 'text-pixel-green'"
+              >
                 {{ item.period }}
               </span>
             </div>
 
-            <!-- Tasks -->
+            <!-- Quest objectives -->
             <ul class="space-y-1.5 mb-4">
               <li
                 v-for="task in item.tasks"
                 :key="task"
-                class="text-xs text-gray-400 dark:text-green-400/50 flex items-start gap-2 font-mono"
+                class="text-sm font-retro flex items-start gap-2"
+                :class="isDark ? 'text-pixel-gray' : 'text-pixel-navy'"
               >
-                <span class="text-accent mt-0.5 shrink-0">&gt;</span>
+                <span class="text-pixel-green mt-0.5 shrink-0">■</span>
                 {{ task }}
               </li>
             </ul>
 
             <!-- Stack -->
-            <div v-if="item.stack" class="pt-3 border-t border-accent/10">
-              <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">
-                <span class="text-accent/60 font-medium">$ stack:</span> {{ item.stack }}
+            <div v-if="item.stack" class="pt-3 border-t-2 border-dashed" :class="isDark ? 'border-pixel-navy' : 'border-pixel-navy/15'">
+              <p class="text-xs font-retro" :class="isDark ? 'text-pixel-gray/60' : 'text-pixel-darkgray'">
+                <span class="text-pixel-blue font-bold">ITEMS:</span> {{ item.stack }}
               </p>
             </div>
 
@@ -66,7 +85,7 @@
               :href="item.website"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 mt-3 text-[10px] text-accent/50 hover:text-accent font-mono transition-colors"
+              class="inline-flex items-center gap-1.5 mt-3 text-xs font-retro text-pixel-blue hover:text-pixel-cyan transition-colors"
             >
               <ExternalLink class="w-3 h-3" />
               {{ item.website }}
@@ -80,6 +99,9 @@
 
 <script setup lang="ts">
 import { MapPin, ExternalLink } from 'lucide-vue-next'
+
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

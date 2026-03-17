@@ -3,39 +3,58 @@
     <div class="section-container">
       <SectionTitle :title="$t('skills.title')" />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
         <div
           v-for="(section, index) in skillSections"
           :key="section.key"
-          class="reveal glass-card glow-border p-6 group hover:border-accent/40 transition-all duration-300"
+          class="reveal pixel-card p-5 group"
           :class="`reveal-delay-${Math.min(index + 1, 5)}`"
         >
           <!-- Header -->
           <div class="flex items-center gap-3 mb-5">
-            <div class="p-2.5 border border-accent/20 text-accent group-hover:bg-accent/10 group-hover:border-accent/40 transition-all duration-300">
+            <div
+              class="p-2 border-2"
+              :class="isDark
+                ? 'border-pixel-blue/40 text-pixel-blue bg-pixel-blue/10'
+                : 'border-pixel-blue/30 text-pixel-blue bg-pixel-blue/5'"
+              style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.3);"
+            >
               <component :is="getIcon(section.icon)" class="w-5 h-5" />
             </div>
-            <h3 class="font-mono font-bold text-base text-accent">{{ $t(`skills.${section.key}`) }}</h3>
+            <h3 class="font-pixel text-[10px] sm:text-xs" :class="isDark ? 'text-pixel-yellow' : 'text-pixel-navy'">
+              {{ $t(`skills.${section.key}`) }}
+            </h3>
           </div>
 
-          <!-- Skills list -->
-          <div class="space-y-2">
+          <!-- Skills list with logos -->
+          <div class="space-y-2.5">
             <div
               v-for="skill in section.skills"
-              :key="skill"
-              class="flex items-center gap-3 font-mono"
+              :key="skill.name"
+              class="flex items-center gap-3 font-retro"
             >
-              <span class="text-accent/40 text-xs">&gt;</span>
-              <span class="text-xs text-gray-500 dark:text-green-400/60 group-hover:text-gray-700 dark:group-hover:text-green-400/80 transition-colors">
-                {{ skill }}
+              <img
+                :src="skill.logo"
+                :alt="skill.name"
+                class="skill-logo w-6 h-6"
+                loading="lazy"
+              >
+              <span
+                class="text-base"
+                :class="isDark ? 'text-pixel-gray' : 'text-pixel-navy'"
+              >
+                {{ skill.name }}
               </span>
             </div>
           </div>
 
           <!-- Count badge -->
-          <div class="mt-5 pt-3 border-t border-accent/10">
-            <span class="text-[10px] text-gray-300 dark:text-green-400/25 font-mono">
-              // {{ section.skills.length }} modules loaded
+          <div
+            class="mt-5 pt-3 border-t-2 border-dashed"
+            :class="isDark ? 'border-pixel-navy' : 'border-pixel-navy/15'"
+          >
+            <span class="text-xs font-retro" :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/60'">
+              ♦ {{ section.skills.length }} skills unlocked
             </span>
           </div>
         </div>
@@ -51,6 +70,8 @@ import {
 import { skillSections } from '~/data/skills'
 
 const { t } = useI18n()
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

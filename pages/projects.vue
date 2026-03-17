@@ -3,29 +3,44 @@
     <div class="section-container">
       <SectionTitle :title="$t('projects.github.title')" />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
         <a
           v-for="(project, index) in projects"
           :key="project.name"
           :href="project.url"
           target="_blank"
           rel="noopener noreferrer"
-          class="reveal glass-card glow-border p-6 group hover:border-accent/40 transition-all duration-300 block"
+          class="reveal pixel-card p-5 group block"
           :class="`reveal-delay-${Math.min(index + 1, 5)}`"
         >
-          <!-- Header -->
+          <!-- Achievement header -->
           <div class="flex items-start justify-between mb-4">
-            <span class="text-2xl">{{ project.icon }}</span>
-            <div class="p-1.5 border border-accent/15 text-accent/40 group-hover:border-accent/40 group-hover:text-accent group-hover:bg-accent/5 transition-all">
+            <div class="flex items-center gap-2">
+              <span class="text-pixel-yellow text-lg">★</span>
+              <span class="text-2xl">{{ project.icon }}</span>
+            </div>
+            <div
+              class="p-1.5 border-2"
+              :class="isDark
+                ? 'border-pixel-navy text-pixel-gray/40 group-hover:border-pixel-blue group-hover:text-pixel-blue'
+                : 'border-pixel-navy/20 text-pixel-darkgray/40 group-hover:border-pixel-blue group-hover:text-pixel-blue'"
+              style="box-shadow: 2px 2px 0 0 rgba(0,0,0,0.2);"
+            >
               <ExternalLink class="w-3.5 h-3.5" />
             </div>
           </div>
 
           <!-- Content -->
-          <h3 class="font-mono font-bold text-base mb-2 text-gray-700 dark:text-green-400/80 group-hover:text-accent transition-colors">
+          <h3
+            class="font-pixel text-[10px] sm:text-xs mb-2 group-hover:text-pixel-blue transition-colors"
+            :class="isDark ? 'text-pixel-white' : 'text-pixel-navy'"
+          >
             {{ project.name }}
           </h3>
-          <p class="text-xs text-gray-400 dark:text-green-400/40 leading-relaxed mb-4 font-mono">
+          <p
+            class="text-sm font-retro leading-relaxed mb-4"
+            :class="isDark ? 'text-pixel-gray/70' : 'text-pixel-darkgray'"
+          >
             {{ project.description }}
           </p>
 
@@ -34,15 +49,19 @@
             <li
               v-for="task in project.tasks"
               :key="task"
-              class="text-[10px] text-gray-400 dark:text-green-400/30 flex items-start gap-2 font-mono"
+              class="text-xs font-retro flex items-start gap-2"
+              :class="isDark ? 'text-pixel-gray/50' : 'text-pixel-darkgray/70'"
             >
-              <span class="text-accent/40 mt-0.5">&gt;</span>
+              <span class="text-pixel-green mt-0.5">■</span>
               {{ task }}
             </li>
           </ul>
 
           <!-- Footer -->
-          <div class="pt-3 border-t border-accent/10 flex items-center gap-2 text-[10px] text-accent/50 font-mono">
+          <div
+            class="pt-3 border-t-2 border-dashed flex items-center gap-2 text-xs font-retro"
+            :class="isDark ? 'border-pixel-navy text-pixel-blue/60' : 'border-pixel-navy/15 text-pixel-blue'"
+          >
             <Github class="w-3.5 h-3.5" />
             {{ $t('projects.github.viewOn') }} GitHub
           </div>
@@ -56,6 +75,8 @@
 import { ExternalLink, Github } from 'lucide-vue-next'
 
 const { t, tm, rt } = useI18n()
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 
 useScrollReveal()
 

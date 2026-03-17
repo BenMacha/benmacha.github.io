@@ -1,61 +1,114 @@
 <template>
-  <footer class="border-t border-gray-200 dark:border-accent/10 mt-20 relative">
-    <div class="section-container py-10">
-      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-        <!-- Terminal style copyright -->
-        <div class="flex flex-col items-center md:items-start gap-2">
-          <div class="font-mono text-sm">
-            <span class="text-accent/50">root@</span><span class="text-accent">benmacha</span><span class="text-accent/50">:~#</span>
+  <footer class="relative mt-20">
+    <!-- Pixel decorative border -->
+    <div class="w-full h-2 flex">
+      <div class="flex-1 bg-pixel-red"></div>
+      <div class="flex-1 bg-pixel-orange"></div>
+      <div class="flex-1 bg-pixel-yellow"></div>
+      <div class="flex-1 bg-pixel-green"></div>
+      <div class="flex-1 bg-pixel-blue"></div>
+      <div class="flex-1 bg-pixel-purple"></div>
+    </div>
+
+    <div class="dark:bg-pixel-black bg-pixel-cream">
+      <div class="section-container py-10">
+        <!-- GAME OVER ASCII art -->
+        <div class="text-center mb-8 hidden sm:block">
+          <pre class="font-pixel text-[6px] sm:text-[8px] dark:text-pixel-red text-pixel-red/60 leading-relaxed inline-block text-left">
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;                                   &#9474;
+&#9474;    &#9733; &#9733;  GAME  OVER  &#9733; &#9733;         &#9474;
+&#9474;       THANKS FOR PLAYING         &#9474;
+&#9474;                                   &#9474;
+&#9474;      INSERT COIN TO CONTINUE      &#9474;
+&#9474;                                   &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</pre>
+        </div>
+
+        <!-- Mobile GAME OVER -->
+        <div class="text-center mb-6 sm:hidden">
+          <div class="font-pixel text-[8px] dark:text-pixel-red text-pixel-red/60 animate-pixel-blink">
+            &#9733; GAME OVER &#9733;
           </div>
-          <p class="text-xs text-gray-400 dark:text-green-400/40 font-mono">
-            &copy; {{ new Date().getFullYear() }} Ben Macha Ali // {{ $t('footer.rights') }}
-          </p>
+          <div class="font-retro text-xs dark:text-pixel-gray text-pixel-navy/50 mt-1">
+            THANKS FOR PLAYING
+          </div>
         </div>
 
-        <!-- Social Links - terminal style -->
-        <div class="flex items-center gap-2">
-          <a
-            :href="socialLinks.github"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="p-2 text-gray-400 dark:text-green-400/50 hover:text-accent border border-transparent hover:border-accent/20 hover:bg-accent/5 transition-all"
-            aria-label="GitHub"
-          >
-            <Github class="w-4 h-4" />
-          </a>
-          <a
-            :href="socialLinks.linkedin"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="p-2 text-gray-400 dark:text-green-400/50 hover:text-accent border border-transparent hover:border-accent/20 hover:bg-accent/5 transition-all"
-            aria-label="LinkedIn"
-          >
-            <Linkedin class="w-4 h-4" />
-          </a>
-          <a
-            :href="`mailto:${socialLinks.email}`"
-            class="p-2 text-gray-400 dark:text-green-400/50 hover:text-accent border border-transparent hover:border-accent/20 hover:bg-accent/5 transition-all"
-            aria-label="Email"
-          >
-            <Mail class="w-4 h-4" />
-          </a>
-          <a
-            :href="socialLinks.website"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="p-2 text-gray-400 dark:text-green-400/50 hover:text-accent border border-transparent hover:border-accent/20 hover:bg-accent/5 transition-all"
-            aria-label="Website"
-          >
-            <Globe class="w-4 h-4" />
-          </a>
-        </div>
-      </div>
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+          <!-- Copyright - retro style -->
+          <div class="flex flex-col items-center md:items-start gap-2">
+            <div class="font-pixel text-[8px] dark:text-pixel-yellow text-pixel-purple animate-pixel-blink">
+              &#9829; &#9829; &#9829; INSERT COIN &#9829; &#9829; &#9829;
+            </div>
+            <p class="font-pixel text-[6px] sm:text-[7px] dark:text-pixel-gray text-pixel-navy/50">
+              &copy; {{ new Date().getFullYear() }} BEN MACHA ALI // {{ $t('footer.rights') }}
+            </p>
+            <div class="font-retro text-xs dark:text-pixel-navy text-pixel-navy/30">
+              &#9632; &#9632; &#9632; &#9632; &#9632; &#9632; &#9632; &#9632;
+            </div>
+          </div>
 
-      <!-- ASCII art decoration -->
-      <div class="mt-6 text-center text-[10px] text-accent/15 font-mono leading-none hidden sm:block">
-        <pre>╔══════════════════════════════════════════════════════════╗
-║  &lt;/&gt; Built with code, coffee &amp; curiosity  //  v3.0.0   ║
-╚══════════════════════════════════════════════════════════╝</pre>
+          <!-- Social Links - pixel buttons -->
+          <div class="flex items-center gap-2">
+            <a
+              :href="socialLinks.github"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="p-2 border-2 dark:border-pixel-navy border-pixel-navy/30
+                     dark:text-pixel-gray text-pixel-navy/60
+                     hover:bg-pixel-blue hover:text-pixel-white hover:border-pixel-blue
+                     transition-all font-pixel text-[8px]"
+              aria-label="GitHub"
+            >
+              <Github class="w-4 h-4" />
+            </a>
+            <a
+              :href="socialLinks.linkedin"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="p-2 border-2 dark:border-pixel-navy border-pixel-navy/30
+                     dark:text-pixel-gray text-pixel-navy/60
+                     hover:bg-pixel-blue hover:text-pixel-white hover:border-pixel-blue
+                     transition-all font-pixel text-[8px]"
+              aria-label="LinkedIn"
+            >
+              <Linkedin class="w-4 h-4" />
+            </a>
+            <a
+              :href="`mailto:${socialLinks.email}`"
+              class="p-2 border-2 dark:border-pixel-navy border-pixel-navy/30
+                     dark:text-pixel-gray text-pixel-navy/60
+                     hover:bg-pixel-green hover:text-pixel-black hover:border-pixel-green
+                     transition-all font-pixel text-[8px]"
+              aria-label="Email"
+            >
+              <Mail class="w-4 h-4" />
+            </a>
+            <a
+              :href="socialLinks.website"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="p-2 border-2 dark:border-pixel-navy border-pixel-navy/30
+                     dark:text-pixel-gray text-pixel-navy/60
+                     hover:bg-pixel-yellow hover:text-pixel-black hover:border-pixel-yellow
+                     transition-all font-pixel text-[8px]"
+              aria-label="Website"
+            >
+              <Globe class="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        <!-- Bottom pixel decoration -->
+        <div class="mt-8 text-center">
+          <div class="font-retro text-sm dark:text-pixel-navy/40 text-pixel-navy/20 mb-2">
+            &#9733; BUILT WITH PIXELS &amp; PASSION &#9733;
+          </div>
+          <div class="font-pixel text-[6px] dark:text-pixel-navy/30 text-pixel-navy/15 tracking-widest">
+            &#9829; &#9733; &#9632; &#9679; &#9632; &#9733; &#9829;
+          </div>
+        </div>
       </div>
     </div>
   </footer>

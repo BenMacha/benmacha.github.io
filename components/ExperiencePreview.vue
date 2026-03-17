@@ -1,50 +1,87 @@
 <template>
   <section class="py-20">
     <div class="section-container">
-      <SectionTitle :title="$t('experience.title')" />
+      <SectionTitle :title="$t('experience.sectionTitle')" />
 
-      <div class="grid gap-4 max-w-3xl mx-auto">
-        <div
-          v-for="(item, index) in previewItems"
-          :key="item.company"
-          class="reveal glass-card glow-border p-5 claw-marks"
-          :class="`reveal-delay-${index + 1}`"
-        >
-          <!-- Terminal header bar -->
-          <div class="flex items-center gap-2 mb-3 text-[10px] text-accent/30 border-b border-accent/10 pb-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-accent/40" />
-            <span class="w-1.5 h-1.5 rounded-full bg-accent/30" />
-            <span class="w-1.5 h-1.5 rounded-full bg-accent/20" />
-            <span class="ml-1 font-mono">process://{{ item.company.toLowerCase().replace(/\s/g, '-') }}</span>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-            <div>
-              <h3 class="font-mono font-bold text-base text-accent">{{ item.company }}</h3>
-              <p class="text-accent/60 text-xs font-mono">{{ item.role }}</p>
-            </div>
-            <span class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap">
-              {{ item.period }}
-            </span>
-          </div>
-          <ul class="space-y-1">
-            <li
-              v-for="task in item.tasks.slice(0, 3)"
-              :key="task"
-              class="text-xs text-gray-500 dark:text-green-400/60 flex items-start gap-2 font-mono"
-            >
-              <span class="text-accent mt-0.5">&gt;</span>
-              {{ task }}
-            </li>
-          </ul>
+      <!-- QUEST LOG Header -->
+      <div class="text-center mb-8">
+        <div class="inline-block px-4 py-2 border-2 border-pixel-yellow bg-pixel-yellow/10">
+          <span class="font-pixel text-xs text-pixel-yellow animate-pixel-blink">
+            &#9733; QUEST LOG &#9733;
+          </span>
         </div>
       </div>
 
+      <div class="grid gap-6 max-w-3xl mx-auto">
+        <div
+          v-for="(job, index) in previewJobs"
+          :key="job.company"
+          class="reveal pixel-card relative overflow-hidden"
+          :class="`reveal-delay-${index + 1}`"
+        >
+          <!-- Quest number header bar -->
+          <div class="flex items-center gap-2 mb-4 pb-2 border-b-2 border-dashed border-pixel-yellow/40">
+            <span class="font-pixel text-[10px] text-pixel-yellow">
+              QUEST #{{ String(index + 1).padStart(2, '0') }}
+            </span>
+            <div class="flex-1" />
+            <span class="font-pixel text-[8px] text-pixel-gray animate-pixel-blink">
+              {{ index === 0 ? 'ACTIVE' : 'COMPLETE' }}
+            </span>
+            <span class="font-pixel text-[8px] text-pixel-gray/60">{{ job.period }}</span>
+          </div>
+
+          <!-- Quest giver (company) -->
+          <div class="mb-2 flex items-center gap-2">
+            <span class="font-retro text-xs text-pixel-gray">QUEST GIVER:</span>
+            <span class="font-pixel text-sm text-pixel-blue">{{ job.company }}</span>
+          </div>
+
+          <!-- Quest title (role) -->
+          <div class="mb-4">
+            <span class="font-retro text-xs text-pixel-gray">MISSION:</span>
+            <h3 class="font-pixel text-xs text-pixel-green mt-1 leading-relaxed">{{ job.role }}</h3>
+          </div>
+
+          <!-- Quest objectives -->
+          <div class="space-y-2">
+            <span class="font-retro text-xs text-pixel-yellow/80">OBJECTIVES:</span>
+            <div
+              v-for="(task, tIndex) in job.tasks.slice(0, 2)"
+              :key="tIndex"
+              class="flex items-start gap-2 font-retro text-sm text-pixel-cream dark:text-pixel-cream/80 light:text-pixel-navy"
+            >
+              <span class="text-pixel-green mt-0.5 flex-shrink-0">&#9632;</span>
+              <span>{{ task }}</span>
+            </div>
+            <div
+              v-if="job.tasks.length > 2"
+              class="flex items-start gap-2 font-retro text-sm text-pixel-gray/50"
+            >
+              <span class="mt-0.5 flex-shrink-0">&#9633;</span>
+              <span>+ {{ job.tasks.length - 2 }} more objectives...</span>
+            </div>
+          </div>
+
+          <!-- XP reward decoration -->
+          <div class="mt-4 flex justify-between items-center">
+            <span class="font-pixel text-[8px] text-pixel-yellow/60">
+              &#9733;&#9733;&#9733; REWARD: +{{ (index + 1) * 500 }} XP
+            </span>
+            <span class="pixel-tag font-pixel text-[8px] bg-pixel-green/20 text-pixel-green border border-pixel-green/40">
+              STATUS: {{ index === 0 ? 'IN PROGRESS' : 'COMPLETE' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- View all link -->
       <div class="text-center mt-10 reveal">
-        <NuxtLink to="/experience" class="btn-secondary">
-          <Briefcase class="w-4 h-4" />
-          {{ $t('nav.experience') }}
-          <ArrowRight class="w-4 h-4" />
+        <NuxtLink
+          to="/experience"
+          class="btn-primary font-pixel text-xs inline-flex items-center gap-2 animate-pixel-bounce"
+        >
+          VIEW ALL QUESTS &gt;&gt;
         </NuxtLink>
       </div>
     </div>
@@ -52,17 +89,20 @@
 </template>
 
 <script setup lang="ts">
-import { Briefcase, ArrowRight } from 'lucide-vue-next'
-
 const { tm, rt } = useI18n()
+const { setupReveal } = useScrollReveal()
 
-const previewItems = computed(() => {
-  const raw = tm('experience.items') as any[]
+const previewJobs = computed(() => {
+  const raw = tm('experience.jobs') as any[]
   return raw.slice(0, 3).map((item: any) => ({
     company: rt(item.company),
-    period: rt(item.period),
     role: rt(item.role),
+    period: rt(item.period),
     tasks: (item.tasks || []).map((t: any) => rt(t)),
   }))
+})
+
+onMounted(() => {
+  setupReveal()
 })
 </script>

@@ -51,8 +51,9 @@ export default defineNuxtConfig({
 
   googleFonts: {
     families: {
-      'Fira Code': [300, 400, 500, 600, 700],
-      'JetBrains Mono': [400, 500, 600, 700],
+      'Press Start 2P': [400],
+      'VT323': [400],
+      'Silkscreen': [400, 700],
     },
     display: 'swap',
   },

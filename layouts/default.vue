@@ -1,17 +1,22 @@
 <template>
-  <div class="min-h-screen flex flex-col relative"
-    :class="isDark ? 'bg-dark pixel-grid' : 'bg-gray-100'"
+  <div
+    class="min-h-screen flex flex-col relative"
+    :class="isDark ? 'bg-pixel-black bg-pixel-grid bg-[size:8px_8px]' : 'bg-pixel-cream'"
   >
-    <!-- Matrix Rain Background (dark mode only) -->
+    <!-- Pixel Background (dark mode only) -->
     <ClientOnly>
-      <MatrixRain v-if="isDark" />
+      <PixelBackground v-if="isDark" />
     </ClientOnly>
 
-    <!-- Scanline overlay (dark mode only) -->
+    <!-- Spider webs in corners -->
+    <PixelSpiderWeb position="top-left" class="z-40" />
+    <PixelSpiderWeb position="top-right" class="z-40" />
+
+    <!-- CRT scanline overlay (dark mode only) -->
     <div
       v-if="isDark"
-      class="fixed inset-0 pointer-events-none z-[1] opacity-30"
-      style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);"
+      class="fixed inset-0 pointer-events-none z-[1] opacity-[0.06]"
+      style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px);"
     />
 
     <!-- Content -->
