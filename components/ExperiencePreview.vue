@@ -93,7 +93,8 @@ const { tm, rt } = useI18n()
 const { setupReveal } = useScrollReveal()
 
 const previewJobs = computed(() => {
-  const raw = tm('experience.items') as any[]
+  const raw = tm('experience.items')
+  if (!Array.isArray(raw)) return []
   return raw.slice(0, 3).map((item: any) => ({
     company: rt(item.company),
     role: rt(item.role),

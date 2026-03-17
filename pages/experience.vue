@@ -108,7 +108,8 @@ useScrollReveal()
 const { t, tm, rt } = useI18n()
 
 const experiences = computed(() => {
-  const raw = tm('experience.items') as any[]
+  const raw = tm('experience.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => ({
     company: rt(item.company),
     period: rt(item.period),

@@ -71,7 +71,8 @@ const { tm, rt } = useI18n()
 const { setupReveal } = useScrollReveal()
 
 const educationItems = computed(() => {
-  const raw = tm('education.items') as any[]
+  const raw = tm('education.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => ({
     name: rt(item.school),
     type: rt(item.type),

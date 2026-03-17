@@ -142,7 +142,8 @@ const isDark = computed(() => colorMode.value === 'dark')
 useScrollReveal()
 
 const educationItems = computed(() => {
-  const raw = tm('education.items') as any[]
+  const raw = tm('education.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => ({
     school: rt(item.school),
     type: rt(item.type),
@@ -152,7 +153,8 @@ const educationItems = computed(() => {
 })
 
 const internships = computed(() => {
-  const raw = tm('education.internships.items') as any[]
+  const raw = tm('education.internships.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => ({
     company: rt(item.company),
     period: rt(item.period),
@@ -162,12 +164,14 @@ const internships = computed(() => {
 })
 
 const sportsItems = computed(() => {
-  const raw = tm('education.interests.items.sports.items') as any[]
+  const raw = tm('education.interests.items.sports.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => rt(item))
 })
 
 const associationItems = computed(() => {
-  const raw = tm('education.interests.items.associations.items') as any[]
+  const raw = tm('education.interests.items.associations.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => rt(item))
 })
 

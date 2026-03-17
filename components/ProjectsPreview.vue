@@ -80,7 +80,8 @@ import { ExternalLink } from 'lucide-vue-next'
 const { tm, rt } = useI18n()
 
 const projects = computed(() => {
-  const raw = tm('projects.github.items') as any[]
+  const raw = tm('projects.github.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => ({
     name: rt(item.name),
     icon: rt(item.icon),

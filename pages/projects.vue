@@ -81,7 +81,8 @@ const isDark = computed(() => colorMode.value === 'dark')
 useScrollReveal()
 
 const projects = computed(() => {
-  const raw = tm('projects.github.items') as any[]
+  const raw = tm('projects.github.items')
+  if (!Array.isArray(raw)) return []
   return raw.map((item: any) => ({
     name: rt(item.name),
     icon: rt(item.icon),
