@@ -1,195 +1,80 @@
-# Portfolio Vue.js - Ben Mecha Ali
+# Ben Macha Ali - Portfolio
 
-Un portfolio professionnel multilingue développé avec Vue.js 3, TypeScript et Tailwind CSS.
+Personal portfolio website built with **Nuxt 3**, featuring a modern dark/neon design, multilingual support, and smooth scroll animations.
 
-![Support Palestine](https://img.shields.io/badge/🇵🇸%20Support-Palestine-008000?style=flat&logo=data:image/svg+xml;base64,...)
+**Live:** [benmacha.tn](https://benmacha.tn)
 
-## 🌟 Fonctionnalités
+## Tech Stack
 
-- 🌍 Support multilingue (Français, Anglais, Arabe)
-- 🌓 Thème clair/sombre
-- 📱 Design responsive
-- ⚡ Animations fluides avec VueUse Motion
-- 🎨 UI moderne avec Tailwind CSS
-- 🔍 SEO optimisé
-- 🗺️ Génération automatique du sitemap
+- **Framework:** [Nuxt 3](https://nuxt.com) (Static Site Generation)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com) with custom dark/neon design system
+- **i18n:** [@nuxtjs/i18n](https://i18n.nuxtjs.org) — French (default), English, Arabic (RTL)
+- **Icons:** [Lucide Vue Next](https://lucide.dev)
+- **Fonts:** Inter + Space Grotesk via [@nuxtjs/google-fonts](https://google-fonts.nuxtjs.org)
+- **Dark Mode:** [@nuxtjs/color-mode](https://color-mode.nuxtjs.org) (dark by default)
+- **Deployment:** GitHub Pages via GitHub Actions
 
-## 🛠️ Technologies utilisées
+## Features
 
-- Vue.js 3
-- TypeScript
-- Tailwind CSS
-- Vue Router
-- Vue I18n
-- VueUse (Motion, Head, Core)
-- Lucide Icons
-- Vite
+- Dark/light mode with neon green accent theme
+- Trilingual support (FR / EN / AR) with full RTL layout for Arabic
+- Scroll-reveal animations using Intersection Observer
+- Particle canvas background on hero section
+- Responsive design with mobile navigation
+- Page transitions between routes
+- SEO optimized with meta tags, sitemap, and canonical URLs
+- Static site generation for fast loading
 
-## 📦 Installation
+## Pages
 
-1. Clonez le dépôt :
+| Route | Description |
+|-------|-------------|
+| `/` | Home — Hero, experience preview, skills, projects, education highlights |
+| `/experience` | Full work experience timeline |
+| `/skills` | Technical skills organized by category |
+| `/projects` | Open source projects showcase |
+| `/education` | Education, internships, and interests |
+
+## Prerequisites
+
+- **Node.js >= 20.12** (required — `node:util.styleText` is used by dependencies)
+- npm or pnpm
+
+## Setup
+
 ```bash
-git clone https://github.com/BenMacha/benmacha.github.io.git
-cd benmacha.github.io
+# Install dependencies
+npm install
+
+# Start dev server (http://localhost:3000)
+npm run dev
+
+# Generate static site
+npm run generate
+
+# Preview the generated site
+npm run preview
 ```
 
-2. Installez les dépendances avec pnpm :
-```bash
-pnpm install
-```
-
-3. Lancez le serveur de développement :
-```bash
-pnpm dev
-```
-
-## 🔧 Personnalisation
-
-### Structure du projet
+## Project Structure
 
 ```
-src/
-├── components/        # Composants réutilisables
-├── i18n/             # Fichiers de traduction
-│   └── locales/      # FR, EN, AR translations
-├── views/            # Pages de l'application
-├── router/           # Configuration des routes
-└── App.vue           # Composant racine
+├── assets/css/          # Global styles and CSS variables
+├── components/          # Vue components (header, footer, sections, UI)
+├── composables/         # Reusable composition functions (scroll reveal)
+├── data/                # Static data (skills, social links)
+├── i18n/locales/        # Translation files (en.json, fr.json, ar.json)
+├── layouts/             # Nuxt layouts (default with header/footer)
+├── pages/               # File-based routing
+├── public/              # Static assets (CV.pdf, logo.jpeg)
+├── nuxt.config.ts       # Nuxt configuration
+└── tailwind.config.ts   # Tailwind theme customization
 ```
 
-### Modification des informations
+## Deployment
 
-1. **Informations personnelles** : Modifiez les fichiers de traduction dans `src/i18n/locales/` :
-   - `fr.json` pour le français
-   - `en.json` pour l'anglais
-   - `ar.json` pour l'arabe
+The site auto-deploys to GitHub Pages on push to `main` via the workflow in `.github/workflows/deploy.yml`. It uses `nuxt generate` to produce static HTML files.
 
-2. **Expérience professionnelle** : Mettez à jour la section `experience.items` dans les fichiers de traduction.
-
-3. **Projets** : Modifiez la section `projects.items` et `projects.github.items` dans les fichiers de traduction.
-
-4. **Compétences** : Mettez à jour le composant `Skills.vue` avec vos compétences.
-
-### Personnalisation du thème
-
-Le thème est configurable dans `src/style.css` et `tailwind.config.js`. Vous pouvez modifier :
-
-- Les couleurs du thème
-- La typographie
-- Les espacements
-- Les animations
-
-## 📝 Scripts disponibles
-
-- `pnpm dev` : Lance le serveur de développement
-- `pnpm build` : Compile le projet pour la production
-- `pnpm preview` : Prévisualise la version de production
-- `pnpm sitemap` : Génère le sitemap
-
-## 🚀 Déploiement
-
-### GitHub Pages
-
-1. Créez un nouveau dépôt sur GitHub nommé `username.github.io` (remplacez `username` par votre nom d'utilisateur GitHub)
-
-2. Ajoutez le fichier `.github/workflows/deploy.yml` :
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-          
-      - name: Install Dependencies
-        run: pnpm install
-        
-      - name: Build
-        run: pnpm build
-        
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.1.5
-        with:
-          branch: gh-pages
-          folder: dist
-```
-
-3. Configurez la base URL dans `vite.config.ts` :
-```ts
-export default defineConfig({
-  base: '/',  // Si vous utilisez un domaine personnalisé
-  // OU
-  base: '/nom-du-repo/',  // Si vous utilisez username.github.io/nom-du-repo
-  plugins: [vue()]
-})
-```
-
-4. Poussez vos modifications :
-```bash
-git add .
-git commit -m "Configure GitHub Pages deployment"
-git push
-```
-
-5. Dans les paramètres du dépôt GitHub, activez GitHub Pages et sélectionnez la branche `gh-pages`.
-
-### Cloudflare Pages
-
-1. Connectez-vous à votre tableau de bord Cloudflare
-
-2. Allez dans "Pages" et cliquez sur "Create a project"
-
-3. Connectez votre dépôt GitHub
-
-4. Configurez les paramètres de build :
-   - Framework preset : Vue
-   - Build command : `pnpm build`
-   - Build output directory : `dist`
-   - Node.js version : 18
-
-5. Variables d'environnement (si nécessaire) :
-   ```
-   NODE_VERSION=18
-   ```
-
-6. Cliquez sur "Save and Deploy"
-
-7. (Optionnel) Configurez votre domaine personnalisé :
-   - Dans l'onglet "Custom domains"
-   - Cliquez sur "Set up a custom domain"
-   - Suivez les instructions pour configurer les enregistrements DNS
-
-### Configuration du routeur pour l'hébergement statique
-
-Pour que le routage fonctionne correctement sur les hébergements statiques, ajoutez un fichier `public/_redirects` (pour Netlify/Cloudflare) :
-```
-/* /index.html 200
-```
-
-Ou un fichier `public/404.html` qui redirige vers la racine pour GitHub Pages.
-
-## 📄 Licence
+## License
 
 MIT
-
-## 👤 Contact
-
-- Site web : [benmacha.tn](https://benmacha.tn)
-- GitHub : [@BenMacha](https://github.com/BenMacha)
-- LinkedIn : [Ben Mecha Ali](https://www.linkedin.com/in/benmacha/)

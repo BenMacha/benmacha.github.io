@@ -1,0 +1,282 @@
+{
+  "nav": {
+    "experience": "Experience",
+    "skills": "Skills",
+    "projects": "Projects",
+    "education": "Education",
+    "blog": "Blog"
+  },
+  "home": {
+    "title": "Tech Lead & Full Stack Developer",
+    "description": "Passionate and creative Tech Lead, specialized in designing and developing web and mobile solutions. With over 8 years of experience, I have contributed to optimizing various systems using modern technologies to create high-performance and intuitive applications. With my team, I have worked on integrating connected technologies, real-time order management, custom notification systems, and data analysis. Constantly seeking new challenges to simplify and improve the end-user experience.",
+    "contact": "Contact",
+    "download": "Download CV"
+  },
+  "experience": {
+    "title": "Professional Experience",
+    "items": [
+      {
+        "company": "ORPI",
+        "period": "09/25 – Present",
+        "role": "IT Project Manager",
+        "location": "Clichy, Île-de-France, France · Hybrid",
+        "tasks": [
+          "Maintain and evolve the commercial management dashboard",
+          "Collect, clean and aggregate data (mandates, sales, leads, etc.)",
+          "Develop new metrics or KPIs per management requirements",
+          "Ensure data reliability from CRMs (Sweepbright, JEMS, etc.)",
+          "Write functional documentation and user guides",
+          "Ensure GDPR compliance in data processing",
+          "Monitor technical evolutions of Orpi tools and partners",
+          "Identify relevant innovations (AI, automation, data visualization)",
+          "Propose Proof of Concepts (POC) and new technical architectures",
+          "Continuously improve application performance and internal processes",
+          "Gather requirements from business teams (commercial, marketing, agencies)",
+          "Analyze data flows between tools (Sweepbright, Ubiflow, EDD, Digitaleo, ActiveCampaign, Modelo, etc.)",
+          "Map business processes and data flows",
+          "Identify friction points or duplicates between existing systems",
+          "Propose improvements or automations (via Zapier, internal APIs, or custom connectors)",
+          "Define the technical project roadmap (schedule, deliverables, priorities)"
+        ],
+        "stack": "PHP, Zapier, Sweepbright, JEMS, Ubiflow, Digitaleo, ActiveCampaign, Modelo, REST API",
+        "website": "https://www.orpi.com"
+      },
+      {
+        "company": "CCM BENCHMARK",
+        "period": "09/24 – 08/25",
+        "role": "Lead PHP Developer",
+        "location": "Paris, Île-de-France, France · Hybrid",
+        "tasks": [
+          "Development and maintenance of essential internal products",
+          "Mentoring and supporting other technical teams",
+          "Native PHP development, fully leveraging its capabilities for custom solutions",
+          "Using various Symfony versions and API Platform for robust, scalable applications",
+          "Setting up Docker environments for deployment and continuous integration",
+          "Designing and developing internal tools to optimize process efficiency",
+          "Technology watch to propose innovative solutions"
+        ],
+        "stack": "PHP, Symfony, API Platform, Docker, MySQL",
+        "website": "https://www.commentcamarche.net"
+      },
+      {
+        "company": "KEYTCHENS",
+        "period": "09/18 – 08/24",
+        "role": "Technical Lead PHP/Symfony, ReactJS, GraphQL",
+        "location": "Paris, Île-de-France, France · Hybrid",
+        "tasks": [
+          "Developed applications with Symfony, ReactJS and Ionic Capacitor",
+          "Led Symfony migration from version 2.8 to 6.4 without service interruption",
+          "Optimized PROD/DEV environment configuration",
+          "Integrated CLOUD and Bluetooth printing systems, and Uber/Deliveroo APIs",
+          "Led a team of 4 developers, fostering collaboration and innovation",
+          "Supervised real-time order management on delivery platforms",
+          "Managed a distributed environment across multiple servers with high traffic",
+          "Assigned tasks via JIRA and reviewed code to ensure quality",
+          "Configured operational environments on Debian/Ubuntu with Jenkins, Postfix, Apache2"
+        ],
+        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-6.4, MySQL, Docker, Redis, GraphQL, Sentry, JIRA",
+        "website": "https://keytchens.com"
+      },
+      {
+        "company": "MANYMORE / MATALTO",
+        "period": "05/19 – 09/20",
+        "role": "PHP Symfony Consultant",
+        "location": "Paris & Nanterre, Île-de-France, France",
+        "tasks": [
+          "PHP / Symfony consulting at Manymore",
+          "Symfony migration from version 2.8 to 3.4",
+          "Bug fixing and corrective maintenance (TMA)",
+          "Implemented GraphQL for optimized data management"
+        ],
+        "stack": "PHP, Symfony, GraphQL, Git"
+      },
+      {
+        "company": "UKN",
+        "period": "01/18 – 08/18",
+        "role": "Full Stack Developer",
+        "tasks": [
+          "Web application development with Symfony 4",
+          "User interface creation with React",
+          "Payment system integration",
+          "Performance optimization",
+          "Automated testing implementation"
+        ]
+      },
+      {
+        "company": "ARGOLIFE",
+        "period": "03/17 – 12/17",
+        "role": "PHP Developer",
+        "tasks": [
+          "E-commerce solution development",
+          "Payment gateway integration",
+          "SEO optimization",
+          "Performance maintenance and improvement",
+          "Client technical support"
+        ]
+      },
+      {
+        "company": "PIXEL TRADE",
+        "period": "09/16 – 02/17",
+        "role": "Junior Web Developer",
+        "tasks": [
+          "WordPress website development",
+          "Custom theme creation",
+          "Mockup integration",
+          "Existing site maintenance",
+          "Client support"
+        ]
+      }
+    ]
+  },
+  "skills": {
+    "title": "Skills",
+    "backend": "Back-end",
+    "frontend": "Front-end",
+    "mobile": "Mobile",
+    "devops": "DevOps",
+    "testing": "Testing",
+    "other": "Other"
+  },
+  "projects": {
+    "title": "Projects",
+    "github": {
+      "title": "GitHub Projects",
+      "viewOn": "View on",
+      "items": [
+        {
+          "name": "UberEat PHP SDK",
+          "icon": "🍽️",
+          "description": "PHP SDK for UberEat API integration",
+          "tasks": [
+            "Complete UberEat API integration",
+            "Order and menu management",
+            "Detailed documentation and examples"
+          ],
+          "url": "https://github.com/BenMacha/ubereat-php"
+        },
+        {
+          "name": "Symfony CRUD Template Bundle",
+          "icon": "🖥",
+          "description": "Bundle for quickly generating CRUD interfaces",
+          "url": "https://github.com/BenMacha/Templatebundle"
+        },
+        {
+          "name": "Symfony Mouse Tracker",
+          "icon": "🖱",
+          "description": "Bundle for tracking user interactions",
+          "url": "https://github.com/BenMacha/mouseTracker"
+        },
+        {
+          "name": "Symfony Diagram Bundle",
+          "icon": "📊",
+          "description": "Diagram generator for Symfony projects",
+          "url": "https://github.com/BenMacha/diagram-bundle"
+        }
+      ]
+    }
+  },
+  "education": {
+    "title": "Education",
+    "items": [
+      {
+        "school": "ISI",
+        "type": "University",
+        "period": "2012 – 2016",
+        "skills": [
+          "Software Engineering",
+          "Object-Oriented Programming",
+          "Information Security",
+          "Advanced Databases",
+          "Software Architecture",
+          "Mobile Development"
+        ]
+      },
+      {
+        "school": "AHD JADID",
+        "type": "High School",
+        "period": "2008 – 2012",
+        "skills": [
+          "Computer Science Baccalaureate",
+          "Highest Honors",
+          "Programming Specialization"
+        ]
+      }
+    ],
+    "internships": {
+      "title": "Internships & Volunteering",
+      "items": [
+        {
+          "company": "TUNINFO",
+          "period": "07/15 – 09/15",
+          "role": "Intern",
+          "skills": [
+            "Web Security",
+            "Linux System Administration",
+            "PHP/Symfony Development",
+            "Penetration Testing"
+          ]
+        },
+        {
+          "company": "GLINSE",
+          "period": "07/14 – 08/14",
+          "role": "Intern",
+          "skills": [
+            "PHP/Laravel 4.2 Training",
+            "RESTful API Development",
+            "Third-party Service Integration"
+          ]
+        }
+      ]
+    },
+    "interests": {
+      "title": "Interests",
+      "items": {
+        "sports": {
+          "title": "🏊 Sports",
+          "items": [
+            "Swimming",
+            "Running",
+            "Fishing",
+            "Camping"
+          ]
+        },
+        "associations": {
+          "title": "🌍 Associations",
+          "items": [
+            "Amnesty International",
+            "Local Development Club",
+            "Environmental Protection Association"
+          ]
+        }
+      }
+    }
+  },
+  "404": {
+    "title": "Page Not Found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "back": "Back to Home"
+  },
+  "blog": {
+    "title": "Tech Blog",
+    "subtitle": "Articles and insights on web development, DevOps and modern technologies",
+    "readMore": "Read article",
+    "allArticles": "All articles",
+    "backToBlog": "Back to blog",
+    "readTime": "min read",
+    "publishedOn": "Published on",
+    "previousArticle": "Previous article",
+    "nextArticle": "Next article",
+    "categories": {
+      "all": "All",
+      "docker": "Docker",
+      "linux": "Linux",
+      "php": "PHP / Symfony",
+      "devops": "DevOps"
+    },
+    "noArticles": "No articles found in this category.",
+    "articleNotFound": "Article not found."
+  },
+  "footer": {
+    "rights": "All rights reserved."
+  }
+}
