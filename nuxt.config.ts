@@ -123,6 +123,11 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    // Common typo: /llm.txt → /llms.txt (the llmstxt.org standard name)
+    ...Object.fromEntries(['', '/en', '/ar'].flatMap(prefix => [
+      [`${prefix}/llm.txt`, { redirect: { to: `${prefix}/llms.txt`, statusCode: 301 } }],
+      [`${prefix}/llm-full.txt`, { redirect: { to: `${prefix}/llms-full.txt`, statusCode: 301 } }],
+    ])),
     '/**': {
       headers: {
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
