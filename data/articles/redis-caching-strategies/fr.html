@@ -15,7 +15,7 @@
         $cacheKey = "product:{$id}";
         $cached = $this-&gt;redis-&gt;get($cacheKey);
 
-        if ($cached !== null) {
+        if ($cached !== false) {
             return unserialize($cached);
         }
 
@@ -25,7 +25,7 @@
         return $product;
     }
 }</code></pre>
-<p>Deux remarques sur ce code. D'abord, la valeur renvoyée pour une clé absente dépend du client : <strong>Predis</strong> renvoie <code>null</code>, alors que l'extension <strong>phpredis</strong> renvoie <code>false</code>. Avec phpredis, le test <code>!== null</code> serait toujours vrai et <code>unserialize(false)</code> échouerait : adaptez la condition à votre client. Ensuite, sérialiser une entité Doctrine complète est fragile (proxies, collections chargées à la demande, changement de structure de la classe entre deux déploiements). Je recommande de mettre en cache un tableau ou un DTO simple plutôt que l'entité elle-même.</p>
+<p>Deux remarques sur ce code. D'abord, il utilise l'extension <strong>phpredis</strong>, qui renvoie <code>false</code> pour une clé absente ; avec <strong>Predis</strong>, qui renvoie <code>null</code>, testez plutôt <code>null</code>. Ensuite, sérialiser une entité Doctrine complète est fragile (proxies, collections chargées à la demande, changement de structure de la classe entre deux déploiements). Je recommande de mettre en cache un tableau ou un DTO simple plutôt que l'entité elle-même.</p>
 
 <h3>Write-Through</h3>
 <p>Ici, chaque écriture met à jour la base <strong>et</strong> le cache dans la même opération. Le cache reste chaud, et la lecture suivante n'a pas besoin de toucher la base.</p>
@@ -49,31 +49,9 @@ framework:
             app.cache.products:
                 adapter: cache.adapter.redis
                 default_lifetime: 3600
-                provider: 'redis://redis:6379'</code></pre>
-<pre><code>class ProductController
-{
-    public function list(CacheInterface $productsCache): Response
-    {
-        $products = $productsCache-&gt;get('products_list', function (ItemInterface $item) {
-            $item-&gt;expiresAfter(3600);
-            $item-&gt;tag(['products']);
-            return $this-&gt;repository-&gt;findAll();
-        });
-
-        return $this-&gt;json($products);
-    }
-}</code></pre>
-<p>La méthode <code>get()</code> implémente le cache-aside à votre place : la fonction de rappel n'est exécutée qu'en cas d'absence de la clé. Elle protège aussi contre le <strong>cache stampede</strong> (des dizaines de requêtes qui recalculent la même valeur au même instant, juste après son expiration) grâce à un verrou et à une expiration anticipée probabiliste, réglable avec le troisième argument <code>$beta</code>.</p>
-<p>Attention toutefois : pour utiliser <code>$item-&gt;tag()</code>, le pool doit être compatible avec les tags, sinon Symfony lève une exception. Il faut ajouter <code>tags: true</code> au pool et injecter un <code>TagAwareCacheInterface</code>. L'attribut <code>#[Target]</code> permet de choisir explicitement le pool :</p>
-<pre><code># config/packages/cache.yaml
-framework:
-    cache:
-        pools:
-            app.cache.products:
-                adapter: cache.adapter.redis
-                default_lifetime: 3600
                 provider: 'redis://redis:6379'
                 tags: true</code></pre>
+<p>L'option <code>tags: true</code> rend le pool compatible avec les tags, ce qui est indispensable pour appeler <code>$item-&gt;tag()</code>. Le pool s'injecte alors sous la forme d'un <code>TagAwareCacheInterface</code>, et l'attribut <code>#[Target]</code> permet de le choisir explicitement :</p>
 <pre><code>use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
@@ -100,6 +78,7 @@ final class ProductCatalog
         });
     }
 }</code></pre>
+<p>La méthode <code>get()</code> implémente le cache-aside à votre place : la fonction de rappel n'est exécutée qu'en cas d'absence de la clé. Elle protège aussi contre le <strong>cache stampede</strong> (des dizaines de requêtes qui recalculent la même valeur au même instant, juste après son expiration) grâce à un verrou et à une expiration anticipée probabiliste, réglable avec le troisième argument <code>$beta</code>.</p>
 <p>Remarquez que le résultat mis en cache est un simple tableau, et non une liste d'entités : il se sérialise sans surprise et reste valide même si l'entité évolue.</p>
 
 <h3>Invalidation du cache</h3>

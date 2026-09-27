@@ -9,8 +9,8 @@
 <p>إليك خط أنابيب كاملاً لمشروع Symfony: تثبيت الاعتماديات، ثم التحليل الساكن والاختبارات بالتوازي، ثم النشر انطلاقاً من الفرع الرئيسي.</p>
 <pre><code>pipeline {
     agent {
-        docker {
-            image 'php:8.3-cli'
+        dockerfile {
+            filename 'Dockerfile.ci'
         }
     }
 
@@ -71,7 +71,7 @@
 
 <h3>قراءة خط الأنابيب كتلةً كتلة</h3>
 <ul>
-<li><strong><code>agent { docker { … } }</code></strong>: يُنفَّذ كل بناء داخل حاوية مؤقتة تُنشأ من الصورة المحددة. تلزم إضافة <em>Docker Pipeline</em>، ويجب أن يتوفر Docker على الوكيل.</li>
+<li><strong><code>agent { dockerfile { … } }</code></strong>: يُنفَّذ كل بناء داخل حاوية مؤقتة تُنشأ من الصورة الموصوفة في ملف <code>Dockerfile.ci</code> الخاص بالمشروع (المفصّل أدناه). تلزم إضافة <em>Docker Pipeline</em>، ويجب أن يتوفر Docker على الوكيل.</li>
 <li><strong><code>environment</code></strong>: يعرّف متغيرات مرئية لكل الخطوات. تجلب <code>credentials('database-url')</code> سراً مخزناً في Jenkins؛ وبالنسبة لبيانات اعتماد من نوع «Secret text»، يحتوي المتغير على القيمة مباشرة ويخفيها Jenkins في السجلات.</li>
 <li><strong><code>parallel</code></strong>: لا يعتمد PHPStan وPHP-CS-Fixer أحدهما على الآخر، لذا يعملان في الوقت نفسه. تفشل المرحلة الأم إذا فشل أيٌّ منهما.</li>
 <li><strong><code>junit</code></strong>: عند وضعه في كتلة <code>post { always { } }</code>، ينشر تقرير الاختبارات حتى عند فشل بعضها. يعرض Jenkins حينها السجل التاريخي والاختبارات غير المستقرة.</li>
@@ -79,8 +79,8 @@
 <li><strong><code>post { failure { } }</code></strong>: لا يُرسل إشعار Slack إلا عند الفشل. الأمر <code>slackSend</code> توفره إضافة <em>Slack Notification</em>.</li>
 </ul>
 
-<h3>صورة بناء تحتوي فعلاً على Composer</h3>
-<p>فخ كلاسيكي: الصورة الرسمية <code>php:8.3-cli</code> لا تحتوي على Composer ولا على <code>git</code> ولا على الامتداد <code>zip</code>. لذلك سيفشل الأمر <code>composer install</code> في خط الأنابيب أعلاه ما لم تُوسَّع الصورة. الحل الأنظف هو ملف <code>Dockerfile.ci</code> مُدار بالإصدارات مع المشروع:</p>
+<h3>صورة بناء تحتوي على Composer</h3>
+<p>لا تحتوي الصورة الرسمية <code>php:8.3-cli</code> على Composer ولا على <code>git</code> ولا على الامتداد <code>zip</code>. لذلك يعتمد خط الأنابيب على ملف <code>Dockerfile.ci</code> مُدار بالإصدارات مع المشروع، يضيف إليها ما يحتاجه البناء:</p>
 <pre><code>FROM php:8.3-cli
 
 RUN apt-get update \
@@ -89,7 +89,7 @@ RUN apt-get update \
     &amp;&amp; rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer</code></pre>
-<p>يكفي بعد ذلك استبدال كتلة <code>docker</code> بـ <code>dockerfile { filename 'Dockerfile.ci' }</code>: يبني Jenkins الصورة، ويخزنها مؤقتاً على الوكيل، ويشغّل البناء داخلها. وهكذا تصبح بيئة CI موصوفة في المستودع لا في إعدادات جهاز بعينه.</p>
+<p>مع <code>dockerfile { filename 'Dockerfile.ci' }</code>، يبني Jenkins الصورة، ويخزنها مؤقتاً على الوكيل، ويشغّل البناء داخلها. وهكذا تصبح بيئة CI موصوفة في المستودع لا في إعدادات جهاز بعينه.</p>
 
 <h3>خط أنابيب أكثر متانة</h3>
 <p>يعمل المثال الأول، لكنه يفتقر إلى عدة ضمانات تُضاف دائماً في بيئة الإنتاج: مدة قصوى، ومنع عمليات البناء المتزامنة على الفرع نفسه، وتدوير السجل، وأرشفة المخرجات (artifacts)، وموافقة بشرية قبل النشر في الإنتاج.</p>

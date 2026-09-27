@@ -90,17 +90,7 @@ try {
 <p>The classic trap is alert fatigue: if every error triggers a notification, the team ends up ignoring them all. I recommend alerting on <strong>new</strong> issues and <strong>regressions</strong> in production, and reserving volume alerts for critical flows such as payment or authentication.</p>
 
 <h3>Performance Monitoring</h3>
-<p>Beyond errors, Sentry measures the duration of requests and their steps. The Symfony bundle automatically traces HTTP requests and, depending on configuration, Doctrine queries, cache and outgoing HTTP calls. For a specific business operation, you can create your own transactions and spans:</p>
-<pre><code>// Measure a specific operation
-$transaction = \Sentry\startTransaction(['name' =&gt; 'process-order']);
-\Sentry\configureScope(fn(Scope $scope) =&gt; $scope-&gt;setSpan($transaction));
-
-$span = $transaction-&gt;startChild(['op' =&gt; 'db.query']);
-// ... database query
-$span-&gt;finish();
-
-$transaction-&gt;finish();</code></pre>
-<p>This code shows the principle. With version 4 of the PHP SDK, <code>startTransaction()</code> and <code>startChild()</code> expect context objects rather than arrays, and the <code>\Sentry\trace()</code> function makes it easy to create a span around a block of code:</p>
+<p>Beyond errors, Sentry measures the duration of requests and their steps. The Symfony bundle automatically traces HTTP requests and, depending on configuration, Doctrine queries, cache and outgoing HTTP calls. For a specific business operation, you can create your own transaction with the context objects of version 4 of the PHP SDK, and wrap each step in a span with the <code>\Sentry\trace()</code> function:</p>
 <pre><code>use Sentry\SentrySdk;
 use Sentry\Tracing\SpanContext;
 use Sentry\Tracing\TransactionContext;

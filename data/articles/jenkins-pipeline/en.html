@@ -9,8 +9,8 @@
 <p>Here is a complete pipeline for a Symfony project: dependency installation, static analysis and tests in parallel, then deployment from the main branch.</p>
 <pre><code>pipeline {
     agent {
-        docker {
-            image 'php:8.3-cli'
+        dockerfile {
+            filename 'Dockerfile.ci'
         }
     }
 
@@ -71,7 +71,7 @@
 
 <h3>Reading the pipeline, block by block</h3>
 <ul>
-<li><strong><code>agent { docker { … } }</code></strong>: each build runs in a throwaway container created from the given image. The <em>Docker Pipeline</em> plugin is required, and the agent must have Docker available.</li>
+<li><strong><code>agent { dockerfile { … } }</code></strong>: each build runs in a throwaway container created from the image described in the project's <code>Dockerfile.ci</code> (detailed below). The <em>Docker Pipeline</em> plugin is required, and the agent must have Docker available.</li>
 <li><strong><code>environment</code></strong>: defines variables visible to every step. <code>credentials('database-url')</code> fetches a secret stored in Jenkins; for a "Secret text" credential, the variable holds the value directly and Jenkins masks it in the logs.</li>
 <li><strong><code>parallel</code></strong>: PHPStan and PHP-CS-Fixer do not depend on each other, so they run at the same time. The parent stage fails if either one fails.</li>
 <li><strong><code>junit</code></strong>: placed in a <code>post { always { } }</code> block, it publishes the test report even when tests fail. Jenkins then shows the history and flaky tests.</li>
@@ -79,8 +79,8 @@
 <li><strong><code>post { failure { } }</code></strong>: the Slack notification is only sent on failure. <code>slackSend</code> is provided by the <em>Slack Notification</em> plugin.</li>
 </ul>
 
-<h3>A build image that actually contains Composer</h3>
-<p>A classic trap: the official <code>php:8.3-cli</code> image contains neither Composer, nor <code>git</code>, nor the <code>zip</code> extension. The <code>composer install</code> command in the pipeline above will therefore fail until the image is extended. The cleanest solution is a <code>Dockerfile.ci</code> versioned with the project:</p>
+<h3>A build image with Composer</h3>
+<p>The official <code>php:8.3-cli</code> image contains neither Composer, nor <code>git</code>, nor the <code>zip</code> extension. That is why the pipeline relies on a <code>Dockerfile.ci</code> versioned with the project, which adds what the build needs:</p>
 <pre><code>FROM php:8.3-cli
 
 RUN apt-get update \
@@ -89,7 +89,7 @@ RUN apt-get update \
     &amp;&amp; rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer</code></pre>
-<p>Then simply replace the <code>docker</code> block with <code>dockerfile { filename 'Dockerfile.ci' }</code>: Jenkins builds the image, caches it on the agent and runs the build inside it. The CI environment is now described in the repository instead of in a machine's configuration.</p>
+<p>With <code>dockerfile { filename 'Dockerfile.ci' }</code>, Jenkins builds the image, caches it on the agent and runs the build inside it. The CI environment is thus described in the repository instead of in a machine's configuration.</p>
 
 <h3>A more robust pipeline</h3>
 <p>The first example works, but it lacks several safeguards that are always added in production: a maximum duration, no concurrent builds on the same branch, history rotation, artifact archiving and a human approval before going to production.</p>

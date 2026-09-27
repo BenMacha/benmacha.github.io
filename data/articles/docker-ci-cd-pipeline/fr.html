@@ -42,7 +42,7 @@ node_modules
 .env.*.local</code></pre>
 
 <h3>Pipeline GitHub Actions avec Docker</h3>
-<p>Voici une première version du pipeline : un job construit l'image de test et exécute PHPUnit dedans, puis, si les tests passent, un second job construit l'image de production et la pousse vers le registre.</p>
+<p>Voici une version minimale du pipeline : un job construit l'image de test et exécute PHPUnit dedans, puis, si les tests passent, un second job construit l'image de production et la pousse vers GitHub Container Registry.</p>
 <pre><code>name: CI/CD Pipeline
 on:
   push:
@@ -56,20 +56,24 @@ jobs:
       - name: Build test image
         run: docker build --target test -t app:test .
       - name: Run tests
-        run: docker run app:test php bin/phpunit
+        run: docker run --rm app:test php bin/phpunit
 
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Build production image
-        run: docker build --target production -t app:latest .
-      - name: Push to registry
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Build and push production image
         run: |
-          echo "$REGISTRY_TOKEN" | docker login -u user --password-stdin
-          docker push app:latest</code></pre>
-<p>Cette version illustre le principe, mais elle a trois limites. Le tag <code>app:latest</code> ne désigne aucun registre : il faut un nom complet comme <code>ghcr.io/organisation/app</code>. Le tag <code>latest</code> seul ne permet pas de savoir quel commit tourne en production, ni de revenir en arrière facilement. Enfin, chaque job reconstruit tout depuis zéro, car les runners ne conservent pas le cache Docker entre deux exécutions.</p>
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker build --target production -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:latest" .
+          docker push --all-tags "$IMAGE"</code></pre>
+<p>Le nom de l'image est dérivé du dépôt (<code>ghcr.io/proprietaire/depot</code>), converti en minuscules car les registres refusent les majuscules. L'authentification utilise le <code>GITHUB_TOKEN</code> du workflow, qui a seulement besoin de la permission <code>packages: write</code>. Chaque image reçoit deux tags : le SHA du commit, qui indique précisément ce qui tourne en production et facilite le retour arrière, et <code>latest</code>. En revanche, chaque job reconstruit tout depuis zéro, car les runners ne conservent pas le cache Docker entre deux exécutions.</p>
 
 <h3>Optimisation du cache</h3>
 <p>Le cache des couches Docker est crucial pour la vitesse du pipeline :</p>
@@ -83,7 +87,7 @@ jobs:
 <p><code>type=gha</code> stocke les couches dans le cache de GitHub Actions. Avec <code>mode=max</code>, les couches des étapes intermédiaires (comme <code>vendor</code>) sont aussi exportées, et pas seulement celles de l'image finale. Quand plusieurs builds partagent le même cache, donnez à chacun son propre <code>scope</code> pour qu'ils ne s'écrasent pas mutuellement.</p>
 
 <h3>Un pipeline complet et traçable</h3>
-<p>La version suivante corrige ces limites : image publiée sur GitHub Container Registry, tags basés sur le commit, cache séparé par cible, et tests exécutés avec leurs services grâce à Docker Compose.</p>
+<p>La version suivante reprend le même principe avec les actions Docker officielles : tags générés par <code>docker/metadata-action</code>, cache séparé par cible, tests exécutés avec leurs services grâce à Docker Compose, et pull requests testées sans rien publier.</p>
 <pre><code>name: CI/CD Pipeline
 on:
   push:

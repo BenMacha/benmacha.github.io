@@ -24,8 +24,7 @@ docker compose config</code></pre>
 <p>The <code>docker compose config</code> command prints the configuration that is actually applied, interpolated variables included. It is the first thing to run when a service does not behave as expected.</p>
 
 <h3>Production configuration</h3>
-<pre><code>version: '3.8'
-services:
+<pre><code>services:
   app:
     build:
       context: .
@@ -44,6 +43,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: always
     ports:
       - "80:80"
       - "443:443"
@@ -66,7 +66,6 @@ services:
 <li><strong><code>depends_on</code> with <code>condition: service_healthy</code></strong>: Nginx only starts once PHP-FPM is reported healthy, which avoids 502 errors at startup.</li>
 <li><strong>Redis</strong> is capped at 256 MB with the <code>allkeys-lru</code> policy: once the limit is reached, the least recently used keys are evicted. That suits a cache, not a session store whose entries must not disappear.</li>
 </ul>
-<p>The <code>version</code> key at the top of the file is now obsolete: Docker Compose v2 ignores it and prints a warning. You can safely remove it. Also note that the <code>nginx</code> service has no restart policy in this example: give it <code>restart: always</code> like the others.</p>
 
 <h3>Environment variables and secrets</h3>
 <p>The <code>.env.production</code> file must never be committed: it lives only on the server, with restricted permissions (<code>chmod 600</code>). Compose can also make a variable mandatory, so that a missing value makes the deployment fail instead of starting a misconfigured application:</p>

@@ -42,7 +42,7 @@ node_modules
 .env.*.local</code></pre>
 
 <h3>خط أنابيب GitHub Actions مع Docker</h3>
-<p>إليك نسخة أولى من خط الأنابيب: مهمة تبني صورة الاختبار وتشغّل PHPUnit داخلها، ثم، إذا نجحت الاختبارات، تبني مهمة ثانية صورة الإنتاج وتدفعها إلى السجل (registry).</p>
+<p>إليك نسخة مبسّطة من خط الأنابيب: مهمة تبني صورة الاختبار وتشغّل PHPUnit داخلها، ثم، إذا نجحت الاختبارات، تبني مهمة ثانية صورة الإنتاج وتدفعها إلى GitHub Container Registry.</p>
 <pre><code>name: CI/CD Pipeline
 on:
   push:
@@ -56,20 +56,24 @@ jobs:
       - name: Build test image
         run: docker build --target test -t app:test .
       - name: Run tests
-        run: docker run app:test php bin/phpunit
+        run: docker run --rm app:test php bin/phpunit
 
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Build production image
-        run: docker build --target production -t app:latest .
-      - name: Push to registry
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Build and push production image
         run: |
-          echo "$REGISTRY_TOKEN" | docker login -u user --password-stdin
-          docker push app:latest</code></pre>
-<p>توضح هذه النسخة المبدأ، لكن لها ثلاثة قيود. الوسم <code>app:latest</code> لا يشير إلى أي سجل: تحتاج إلى اسم كامل مثل <code>ghcr.io/organization/app</code>. والوسم <code>latest</code> وحده لا يتيح معرفة أي commit يعمل في الإنتاج، ولا يسهّل التراجع. وأخيراً، تعيد كل مهمة بناء كل شيء من الصفر، لأن الـ runners لا تحتفظ بذاكرة Docker المؤقتة بين تنفيذين.</p>
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker build --target production -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:latest" .
+          docker push --all-tags "$IMAGE"</code></pre>
+<p>يُشتق اسم الصورة من المستودع (<code>ghcr.io/owner/repository</code>)، ويُحوَّل إلى أحرف صغيرة لأن السجلات (registries) ترفض الأحرف الكبيرة. وتعتمد المصادقة على <code>GITHUB_TOKEN</code> الخاص بسير العمل، الذي لا يحتاج إلا إلى الصلاحية <code>packages: write</code>. تحصل كل صورة على وسمين: الـ SHA الخاص بالـ commit، الذي يبيّن بدقة ما يعمل في الإنتاج ويسهّل التراجع، و<code>latest</code>. لكن كل مهمة ما زالت تعيد بناء كل شيء من الصفر، لأن الـ runners لا تحتفظ بذاكرة Docker المؤقتة بين تنفيذين.</p>
 
 <h3>تحسين التخزين المؤقت</h3>
 <p>التخزين المؤقت لطبقات Docker أمر حاسم لسرعة خط الأنابيب:</p>
@@ -83,7 +87,7 @@ jobs:
 <p>يخزن <code>type=gha</code> الطبقات في ذاكرة GitHub Actions المؤقتة. ومع <code>mode=max</code>، تُصدَّر أيضاً طبقات المراحل الوسيطة (مثل <code>vendor</code>)، لا طبقات الصورة النهائية فقط. وعندما تتشارك عدة عمليات بناء الذاكرة المؤقتة نفسها، امنح كل واحدة منها <code>scope</code> خاصاً بها حتى لا تكتب إحداها فوق الأخرى.</p>
 
 <h3>خط أنابيب كامل وقابل للتتبع</h3>
-<p>تعالج النسخة التالية هذه القيود: صورة منشورة على GitHub Container Registry، ووسوم مبنية على الـ commit، وذاكرة مؤقتة منفصلة لكل هدف، واختبارات تُنفَّذ مع خدماتها بفضل Docker Compose.</p>
+<p>تعتمد النسخة التالية المبدأ نفسه مع إجراءات Docker الرسمية: وسوم يولّدها <code>docker/metadata-action</code>، وذاكرة مؤقتة منفصلة لكل هدف، واختبارات تُنفَّذ مع خدماتها بفضل Docker Compose، وطلبات دمج (pull requests) تُختبر دون نشر أي شيء.</p>
 <pre><code>name: CI/CD Pipeline
 on:
   push:

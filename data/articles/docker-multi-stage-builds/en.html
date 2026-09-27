@@ -11,19 +11,20 @@
 FROM composer:2 AS builder
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 COPY . .
+RUN composer dump-autoload --no-dev --optimize
 
 # Stage 2: Production
 FROM php:8.3-fpm-alpine
+RUN docker-php-ext-install pdo_mysql opcache
 COPY --from=builder /app /var/www/html
-RUN docker-php-ext-install pdo pdo_mysql opcache
 EXPOSE 9000
 CMD ["php-fpm"]</code></pre>
-<p>The first stage, named <code>builder</code>, starts from the official Composer image. It first copies only <code>composer.json</code> and <code>composer.lock</code>, then installs the dependencies: as long as those two files do not change, Docker reuses the cached layer and the installation is not re-run, even if the application code has changed. The code is copied afterwards. The second stage starts from a PHP-FPM Alpine image, picks up the whole <code>/app</code> directory and installs the required extensions.</p>
+<p>The first stage, named <code>builder</code>, starts from the official Composer image. It first copies only <code>composer.json</code> and <code>composer.lock</code>, then installs the dependencies: as long as those two files do not change, Docker reuses the cached layer and the installation is not re-run, even if the application code has changed. Scripts and autoloader generation are deferred (<code>--no-scripts</code>, <code>--no-autoloader</code>) because the code is not there yet: once it has been copied, <code>composer dump-autoload --optimize</code> generates an autoloader that includes the application's classes. The second stage starts from a PHP-FPM Alpine image, installs the required extensions before copying the code, so that this expensive layer stays cached, then picks up the whole <code>/app</code> directory.</p>
 
 <h3>A more complete version</h3>
-<p>The example above works, but it can be improved on four points. The optimized autoloader is generated before the code is copied, so it does not contain the application's classes. The PHP extensions are installed after the code is copied, so any code change also invalidates that expensive layer. The process runs as root. Finally, a Symfony application often has front-end assets to compile. Here is a version that addresses these points:</p>
+<p>In a real project, this Dockerfile is usually taken further: the process should not run as root, Composer's cache can be kept between two builds, the extension build dependencies should not remain in the image, and a Symfony application often has front-end assets to compile. Here is a more complete version:</p>
 <pre><code># syntax=docker/dockerfile:1
 
 # Stage 1: PHP dependencies

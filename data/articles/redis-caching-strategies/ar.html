@@ -15,7 +15,7 @@
         $cacheKey = "product:{$id}";
         $cached = $this-&gt;redis-&gt;get($cacheKey);
 
-        if ($cached !== null) {
+        if ($cached !== false) {
             return unserialize($cached);
         }
 
@@ -25,7 +25,7 @@
         return $product;
     }
 }</code></pre>
-<p>ملاحظتان حول هذه الشيفرة. أولاً، القيمة المُرجعة لمفتاح غير موجود تعتمد على العميل: يُرجع <strong>Predis</strong> القيمة <code>null</code>، بينما يُرجع امتداد <strong>phpredis</strong> القيمة <code>false</code>. ومع phpredis، سيكون الشرط <code>!== null</code> صحيحاً دائماً وسيفشل <code>unserialize(false)</code>: كيّف الشرط حسب العميل الذي تستخدمه. ثانياً، تسلسل (serialize) كيان Doctrine كامل أمر هش (الـ proxies، والمجموعات المحمّلة عند الطلب، وتغيّر بنية الصنف بين عمليتي نشر). أنصح بتخزين مصفوفة أو DTO بسيط بدلاً من الكيان نفسه.</p>
+<p>ملاحظتان حول هذه الشيفرة. أولاً، تستخدم امتداد <strong>phpredis</strong> الذي يُرجع القيمة <code>false</code> لمفتاح غير موجود؛ أما مع <strong>Predis</strong> الذي يُرجع <code>null</code>، فاختبر القيمة <code>null</code> بدلاً من ذلك. ثانياً، تسلسل (serialize) كيان Doctrine كامل أمر هش (الـ proxies، والمجموعات المحمّلة عند الطلب، وتغيّر بنية الصنف بين عمليتي نشر). أنصح بتخزين مصفوفة أو DTO بسيط بدلاً من الكيان نفسه.</p>
 
 <h3>Write-Through</h3>
 <p>هنا، تحدّث كل عملية كتابة قاعدة البيانات <strong>و</strong>الـ cache في العملية نفسها. يبقى الـ cache ممتلئاً، ولا تحتاج القراءة التالية إلى لمس قاعدة البيانات.</p>
@@ -49,31 +49,9 @@ framework:
             app.cache.products:
                 adapter: cache.adapter.redis
                 default_lifetime: 3600
-                provider: 'redis://redis:6379'</code></pre>
-<pre><code>class ProductController
-{
-    public function list(CacheInterface $productsCache): Response
-    {
-        $products = $productsCache-&gt;get('products_list', function (ItemInterface $item) {
-            $item-&gt;expiresAfter(3600);
-            $item-&gt;tag(['products']);
-            return $this-&gt;repository-&gt;findAll();
-        });
-
-        return $this-&gt;json($products);
-    }
-}</code></pre>
-<p>تطبّق الدالة <code>get()</code> نمط cache-aside نيابةً عنك: لا تُنفَّذ دالة الاستدعاء إلا عند غياب المفتاح. كما تحمي من <strong>cache stampede</strong> (عشرات الطلبات التي تعيد حساب القيمة نفسها في اللحظة نفسها، مباشرة بعد انتهاء صلاحيتها) بفضل قفل (lock) وانتهاء صلاحية مبكر احتمالي، يمكن ضبطه عبر الوسيط الثالث <code>$beta</code>.</p>
-<p>لكن انتبه: لاستخدام <code>$item-&gt;tag()</code>، يجب أن يدعم الـ pool الوسوم، وإلا أطلق Symfony استثناءً. يجب إضافة <code>tags: true</code> إلى الـ pool وحقن <code>TagAwareCacheInterface</code>. وتتيح السمة <code>#[Target]</code> اختيار الـ pool صراحةً:</p>
-<pre><code># config/packages/cache.yaml
-framework:
-    cache:
-        pools:
-            app.cache.products:
-                adapter: cache.adapter.redis
-                default_lifetime: 3600
                 provider: 'redis://redis:6379'
                 tags: true</code></pre>
+<p>يجعل الخيار <code>tags: true</code> الـ pool داعماً للوسوم، وهو شرط لاستدعاء <code>$item-&gt;tag()</code>. يُحقن الـ pool عندئذٍ على شكل <code>TagAwareCacheInterface</code>، وتتيح السمة <code>#[Target]</code> اختياره صراحةً:</p>
 <pre><code>use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
@@ -100,6 +78,7 @@ final class ProductCatalog
         });
     }
 }</code></pre>
+<p>تطبّق الدالة <code>get()</code> نمط cache-aside نيابةً عنك: لا تُنفَّذ دالة الاستدعاء إلا عند غياب المفتاح. كما تحمي من <strong>cache stampede</strong> (عشرات الطلبات التي تعيد حساب القيمة نفسها في اللحظة نفسها، مباشرة بعد انتهاء صلاحيتها) بفضل قفل (lock) وانتهاء صلاحية مبكر احتمالي، يمكن ضبطه عبر الوسيط الثالث <code>$beta</code>.</p>
 <p>لاحظ أن النتيجة المخزنة مؤقتاً مصفوفة بسيطة، لا قائمة كيانات: فهي تُسلسَل دون مفاجآت وتبقى صالحة حتى لو تطوّر الكيان.</p>
 
 <h3>إبطال الـ cache</h3>

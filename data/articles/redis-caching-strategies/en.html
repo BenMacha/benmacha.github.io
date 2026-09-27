@@ -15,7 +15,7 @@
         $cacheKey = "product:{$id}";
         $cached = $this-&gt;redis-&gt;get($cacheKey);
 
-        if ($cached !== null) {
+        if ($cached !== false) {
             return unserialize($cached);
         }
 
@@ -25,7 +25,7 @@
         return $product;
     }
 }</code></pre>
-<p>Two remarks about this code. First, the value returned for a missing key depends on the client: <strong>Predis</strong> returns <code>null</code>, while the <strong>phpredis</strong> extension returns <code>false</code>. With phpredis, the <code>!== null</code> check would always be true and <code>unserialize(false)</code> would fail: adapt the condition to your client. Second, serializing a full Doctrine entity is fragile (proxies, lazily loaded collections, class structure changing between two deployments). I recommend caching an array or a simple DTO rather than the entity itself.</p>
+<p>Two remarks about this code. First, it uses the <strong>phpredis</strong> extension, which returns <code>false</code> for a missing key; with <strong>Predis</strong>, which returns <code>null</code>, test against <code>null</code> instead. Second, serializing a full Doctrine entity is fragile (proxies, lazily loaded collections, class structure changing between two deployments). I recommend caching an array or a simple DTO rather than the entity itself.</p>
 
 <h3>Write-Through</h3>
 <p>Here, every write updates the database <strong>and</strong> the cache in the same operation. The cache stays warm, and the next read does not need to touch the database.</p>
@@ -49,31 +49,9 @@ framework:
             app.cache.products:
                 adapter: cache.adapter.redis
                 default_lifetime: 3600
-                provider: 'redis://redis:6379'</code></pre>
-<pre><code>class ProductController
-{
-    public function list(CacheInterface $productsCache): Response
-    {
-        $products = $productsCache-&gt;get('products_list', function (ItemInterface $item) {
-            $item-&gt;expiresAfter(3600);
-            $item-&gt;tag(['products']);
-            return $this-&gt;repository-&gt;findAll();
-        });
-
-        return $this-&gt;json($products);
-    }
-}</code></pre>
-<p>The <code>get()</code> method implements cache-aside for you: the callback only runs when the key is missing. It also protects against <strong>cache stampede</strong> (dozens of requests recomputing the same value at the same moment, right after it expires) thanks to a lock and probabilistic early expiration, tunable with the third argument <code>$beta</code>.</p>
-<p>Be careful, though: to use <code>$item-&gt;tag()</code>, the pool must support tags, otherwise Symfony throws an exception. You need to add <code>tags: true</code> to the pool and inject a <code>TagAwareCacheInterface</code>. The <code>#[Target]</code> attribute lets you pick the pool explicitly:</p>
-<pre><code># config/packages/cache.yaml
-framework:
-    cache:
-        pools:
-            app.cache.products:
-                adapter: cache.adapter.redis
-                default_lifetime: 3600
                 provider: 'redis://redis:6379'
                 tags: true</code></pre>
+<p>The <code>tags: true</code> option makes the pool tag-aware, which is required to call <code>$item-&gt;tag()</code>. The pool is then injected as a <code>TagAwareCacheInterface</code>, and the <code>#[Target]</code> attribute selects it explicitly:</p>
 <pre><code>use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
@@ -100,6 +78,7 @@ final class ProductCatalog
         });
     }
 }</code></pre>
+<p>The <code>get()</code> method implements cache-aside for you: the callback only runs when the key is missing. It also protects against <strong>cache stampede</strong> (dozens of requests recomputing the same value at the same moment, right after it expires) thanks to a lock and probabilistic early expiration, tunable with the third argument <code>$beta</code>.</p>
 <p>Notice that the cached result is a plain array, not a list of entities: it serializes without surprises and remains valid even if the entity evolves.</p>
 
 <h3>Cache invalidation</h3>

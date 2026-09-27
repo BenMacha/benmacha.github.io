@@ -24,8 +24,7 @@ docker compose config</code></pre>
 <p>يعرض الأمر <code>docker compose config</code> الإعدادات المطبّقة فعلياً، بما فيها المتغيرات بعد استبدال قيمها. إنه أول ما يجب تنفيذه عندما لا تتصرف خدمة ما كما هو متوقع.</p>
 
 <h3>إعدادات الإنتاج</h3>
-<pre><code>version: '3.8'
-services:
+<pre><code>services:
   app:
     build:
       context: .
@@ -44,6 +43,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: always
     ports:
       - "80:80"
       - "443:443"
@@ -66,7 +66,6 @@ services:
 <li><strong><code>depends_on</code> مع <code>condition: service_healthy</code></strong>: لا يبدأ Nginx إلا بعد أن يُعلَن PHP-FPM سليماً، مما يتجنّب أخطاء 502 عند الإقلاع.</li>
 <li><strong>Redis</strong> محدود بـ 256 ميغابايت مع سياسة <code>allkeys-lru</code>: عند بلوغ الحد، تُحذف المفاتيح الأقل استخداماً مؤخراً. هذا مناسب لذاكرة cache، لا لتخزين جلسات يجب ألا تختفي.</li>
 </ul>
-<p>أصبح المفتاح <code>version</code> في رأس الملف متقادماً اليوم: يتجاهله Docker Compose v2 ويعرض تحذيراً. يمكنك حذفه دون أي خطر. لاحظ أيضاً أن خدمة <code>nginx</code> ليست لها سياسة إعادة تشغيل في هذا المثال: أضف إليها <code>restart: always</code> كبقية الخدمات.</p>
 
 <h3>متغيرات البيئة والأسرار</h3>
 <p>يجب ألا يُرفع الملف <code>.env.production</code> إلى المستودع أبداً: فهو يعيش على الخادم فقط، بصلاحيات مقيّدة (<code>chmod 600</code>). ويتيح Compose أيضاً جعل متغير ما إلزامياً، بحيث يؤدي نسيانه إلى فشل النشر بدلاً من تشغيل تطبيق بإعدادات خاطئة:</p>

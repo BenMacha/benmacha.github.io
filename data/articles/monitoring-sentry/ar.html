@@ -90,17 +90,7 @@ try {
 <p>الفخ الكلاسيكي هو إرهاق التنبيهات: إذا أطلق كل خطأ إشعاراً، ينتهي الفريق بتجاهلها جميعاً. أنصح بالتنبيه على الـ issues <strong>الجديدة</strong> وحالات <strong>التراجع</strong> (regressions) في الإنتاج، وتخصيص تنبيهات الحجم للمسارات الحرجة مثل الدفع أو المصادقة.</p>
 
 <h3>Performance Monitoring</h3>
-<p>إلى جانب الأخطاء، يقيس Sentry مدة الطلبات ومراحلها. يتتبّع الـ bundle الخاص بـ Symfony تلقائياً طلبات HTTP، وبحسب الإعدادات، استعلامات Doctrine والـ cache واستدعاءات HTTP الصادرة. ولعملية وظيفية محددة، يمكنك إنشاء transactions وspans خاصة بك:</p>
-<pre><code>// Measure a specific operation
-$transaction = \Sentry\startTransaction(['name' =&gt; 'process-order']);
-\Sentry\configureScope(fn(Scope $scope) =&gt; $scope-&gt;setSpan($transaction));
-
-$span = $transaction-&gt;startChild(['op' =&gt; 'db.query']);
-// ... database query
-$span-&gt;finish();
-
-$transaction-&gt;finish();</code></pre>
-<p>توضح هذه الشيفرة المبدأ. مع الإصدار 4 من SDK الخاص بـ PHP، تتوقع <code>startTransaction()</code> و<code>startChild()</code> كائنات سياق بدلاً من مصفوفات، وتسهّل الدالة <code>\Sentry\trace()</code> إنشاء span حول كتلة من الشيفرة:</p>
+<p>إلى جانب الأخطاء، يقيس Sentry مدة الطلبات ومراحلها. يتتبّع الـ bundle الخاص بـ Symfony تلقائياً طلبات HTTP، وبحسب الإعدادات، استعلامات Doctrine والـ cache واستدعاءات HTTP الصادرة. ولعملية وظيفية محددة، يمكنك إنشاء transaction خاصة بك باستخدام كائنات السياق في الإصدار 4 من SDK الخاص بـ PHP، وإحاطة كل مرحلة بـ span عبر الدالة <code>\Sentry\trace()</code>:</p>
 <pre><code>use Sentry\SentrySdk;
 use Sentry\Tracing\SpanContext;
 use Sentry\Tracing\TransactionContext;

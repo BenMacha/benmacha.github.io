@@ -13,8 +13,7 @@
 
 <h3>Docker Compose لـ Symfony</h3>
 <p>يُعرّف الملف <code>compose.yaml</code> (أو <code>docker-compose.yml</code>) مجموع الخدمات:</p>
-<pre><code>version: '3.8'
-services:
+<pre><code>services:
   php:
     build: .docker/php
     volumes:
@@ -55,7 +54,6 @@ volumes:
 <li><strong>الوحدة المسمّاة (named volume)</strong> <code>mysql-data</code> تحفظ بيانات قاعدة البيانات بين تنفيذين للأمر <code>docker compose down</code>. وحده الأمر <code>docker compose down -v</code> يحذفها.</li>
 <li><strong>الشبكة</strong> تُنشأ تلقائياً: يمكن الوصول إلى كل خدمة باسمها (<code>mysql</code>، <code>redis</code>، <code>rabbitmq</code>). لذلك لا نستخدم أبداً <code>localhost</code> من داخل Symfony للوصول إلى قاعدة البيانات.</li>
 <li><strong>المنفذ 15672</strong> يعرض واجهة إدارة RabbitMQ على <code>http://localhost:15672</code> (بيانات الدخول الافتراضية <code>guest</code> / <code>guest</code>).</li>
-<li><strong>المفتاح <code>version</code></strong> أصبح مُتجاهَلاً في Docker Compose v2: لا يفعل سوى إظهار تحذير، ويمكن حذفه دون أي خطر.</li>
 </ul>
 
 <h3>انتظار جاهزية قاعدة البيانات فعلياً</h3>

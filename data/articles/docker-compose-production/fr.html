@@ -24,8 +24,7 @@ docker compose config</code></pre>
 <p>La commande <code>docker compose config</code> affiche la configuration réellement appliquée, variables interpolées comprises. C'est le premier réflexe à avoir lorsqu'un service ne se comporte pas comme prévu.</p>
 
 <h3>Configuration de production</h3>
-<pre><code>version: '3.8'
-services:
+<pre><code>services:
   app:
     build:
       context: .
@@ -44,6 +43,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: always
     ports:
       - "80:80"
       - "443:443"
@@ -66,7 +66,6 @@ services:
 <li><strong><code>depends_on</code> avec <code>condition: service_healthy</code></strong> : Nginx ne démarre qu'une fois PHP-FPM déclaré sain, ce qui évite les erreurs 502 au démarrage.</li>
 <li><strong>Redis</strong> est borné à 256 Mo avec la politique <code>allkeys-lru</code> : une fois la limite atteinte, les clés les moins récemment utilisées sont évincées. C'est adapté à un cache, pas à un stockage de sessions qui ne doivent pas disparaître.</li>
 </ul>
-<p>La clé <code>version</code> en tête de fichier est aujourd'hui obsolète : Docker Compose v2 l'ignore et affiche un avertissement. Vous pouvez la supprimer sans risque. Notez aussi que le service <code>nginx</code> n'a pas de politique de redémarrage dans cet exemple : ajoutez-lui <code>restart: always</code> comme aux autres.</p>
 
 <h3>Variables d'environnement et secrets</h3>
 <p>Le fichier <code>.env.production</code> ne doit jamais être commité : il vit uniquement sur le serveur, avec des droits restreints (<code>chmod 600</code>). Compose permet aussi de rendre une variable obligatoire, afin qu'un oubli fasse échouer le déploiement au lieu de démarrer une application mal configurée :</p>

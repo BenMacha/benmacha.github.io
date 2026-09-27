@@ -4,8 +4,7 @@
 <p>Cet article construit une stack de développement PHP complète : PHP avec Xdebug, MySQL et un serveur mail de test, puis aborde le débogage, les performances des volumes sur macOS et Windows et les pièges classiques.</p>
 
 <h3>Stack de développement complète</h3>
-<pre><code>version: '3.8'
-services:
+<pre><code>services:
   php:
     build:
       context: .
@@ -42,7 +41,7 @@ volumes:
 <li><strong>MySQL</strong> publie le port 3306 pour permettre à un client graphique de s'y connecter depuis le poste. Les données survivent aux redémarrages grâce au volume <code>mysql-data</code>. Utilisez la même version majeure qu'en production.</li>
 <li><strong>MailHog</strong> intercepte tous les e-mails envoyés par l'application et les affiche sur <code>http://localhost:8025</code> : aucun risque d'écrire à de vrais clients depuis un poste de développement. Dans un projet Symfony, pointez <code>MAILER_DSN</code> vers <code>smtp://mailhog:1025</code>. MailHog n'étant plus maintenu, <strong>Mailpit</strong> (image <code>axllent/mailpit</code>, mêmes ports) est aujourd'hui une alternative active et compatible.</li>
 </ul>
-<p>Les mots de passe en clair sont acceptables ici parce que cet environnement ne quitte jamais le poste du développeur. Comme dans les autres exemples, la clé <code>version</code> est obsolète avec Docker Compose v2 et peut être retirée.</p>
+<p>Les mots de passe en clair sont acceptables ici parce que cet environnement ne quitte jamais le poste du développeur.</p>
 
 <h3>Le Dockerfile de développement</h3>
 <p>Le fichier <code>Dockerfile.dev</code> part de l'image officielle PHP et ajoute les extensions courantes, Composer et Xdebug. Il reste volontairement distinct du Dockerfile de production, qui ne doit jamais contenir Xdebug :</p>

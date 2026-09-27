@@ -40,7 +40,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Comment configurer Docker Compose pour un environnement de production robuste et performant.',
     category: 'Docker',
     date: '28 Feb 2024',
-    readTime: '9 min',
+    readTime: '8 min',
     tags: ['Docker', 'Production', 'DevOps'],
     translations: {
       en: { title: 'Docker Compose in production', description: 'How to configure Docker Compose for a robust, high-performance production environment.' },
@@ -313,7 +313,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Implémentez des stratégies de cache efficaces avec Redis pour améliorer les performances.',
     category: 'DevOps',
     date: '30 Aug 2024',
-    readTime: '8 min',
+    readTime: '7 min',
     tags: ['Redis', 'Cache', 'Performance'],
     translations: {
       en: { title: 'Caching strategies with Redis', description: 'Implement effective caching strategies with Redis to improve performance.' },

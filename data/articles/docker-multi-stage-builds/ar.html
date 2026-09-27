@@ -11,19 +11,20 @@
 FROM composer:2 AS builder
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 COPY . .
+RUN composer dump-autoload --no-dev --optimize
 
 # Stage 2: Production
 FROM php:8.3-fpm-alpine
+RUN docker-php-ext-install pdo_mysql opcache
 COPY --from=builder /app /var/www/html
-RUN docker-php-ext-install pdo pdo_mysql opcache
 EXPOSE 9000
 CMD ["php-fpm"]</code></pre>
-<p>تنطلق المرحلة الأولى، المسمّاة <code>builder</code>، من صورة Composer الرسمية. تنسخ أولاً الملفين <code>composer.json</code> و<code>composer.lock</code> فقط، ثم تثبّت الاعتماديات: ما دام هذان الملفان لم يتغيرا، يعيد Docker استخدام الطبقة المخزّنة في الـ cache ولا يُعاد التثبيت، حتى لو تغيّرت شيفرة التطبيق. بعد ذلك تُنسخ الشيفرة. أما المرحلة الثانية فتنطلق من صورة PHP-FPM مبنية على Alpine، وتأخذ المجلد <code>/app</code> كاملاً وتثبّت الإضافات اللازمة.</p>
+<p>تنطلق المرحلة الأولى، المسمّاة <code>builder</code>، من صورة Composer الرسمية. تنسخ أولاً الملفين <code>composer.json</code> و<code>composer.lock</code> فقط، ثم تثبّت الاعتماديات: ما دام هذان الملفان لم يتغيرا، يعيد Docker استخدام الطبقة المخزّنة في الـ cache ولا يُعاد التثبيت، حتى لو تغيّرت شيفرة التطبيق. ويُؤجَّل تنفيذ السكربتات وتوليد الـ autoloader (<code>--no-scripts</code>، <code>--no-autoloader</code>) لأن الشيفرة لم تُنسخ بعد: وبعد نسخها، يولّد الأمر <code>composer dump-autoload --optimize</code> ملف autoloader يتضمن أصناف التطبيق. أما المرحلة الثانية فتنطلق من صورة PHP-FPM مبنية على Alpine، وتثبّت الإضافات اللازمة قبل نسخ الشيفرة كي تبقى هذه الطبقة المكلفة في الـ cache، ثم تأخذ المجلد <code>/app</code> كاملاً.</p>
 
 <h3>نسخة أكثر اكتمالاً</h3>
-<p>يعمل المثال أعلاه، لكن يمكن تحسينه في أربع نقاط. يُولَّد الـ autoloader المُحسَّن قبل نسخ الشيفرة، لذا لا يتضمن أصناف التطبيق. وتُثبَّت إضافات PHP بعد نسخ الشيفرة، فيؤدي أي تعديل في الشيفرة إلى إبطال هذه الطبقة المكلفة أيضاً. وتعمل العملية بصلاحيات root. وأخيراً، كثيراً ما يحتوي تطبيق Symfony على ملفات واجهة أمامية يجب تجميعها. إليك نسخة تعالج هذه النقاط:</p>
+<p>في مشروع حقيقي، نذهب عادةً أبعد من ذلك: يجب ألا تعمل العملية بصلاحيات root، ويمكن الاحتفاظ بذاكرة Composer المؤقتة بين عمليتي بناء، ويجب ألا تبقى اعتماديات تجميع الإضافات في الصورة، وكثيراً ما يحتوي تطبيق Symfony على ملفات واجهة أمامية يجب تجميعها. إليك نسخة أكثر اكتمالاً:</p>
 <pre><code># syntax=docker/dockerfile:1
 
 # Stage 1: PHP dependencies

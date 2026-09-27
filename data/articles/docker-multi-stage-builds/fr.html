@@ -11,19 +11,20 @@
 FROM composer:2 AS builder
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 COPY . .
+RUN composer dump-autoload --no-dev --optimize
 
 # Stage 2 : Production
 FROM php:8.3-fpm-alpine
+RUN docker-php-ext-install pdo_mysql opcache
 COPY --from=builder /app /var/www/html
-RUN docker-php-ext-install pdo pdo_mysql opcache
 EXPOSE 9000
 CMD ["php-fpm"]</code></pre>
-<p>La première étape, nommée <code>builder</code>, part de l'image officielle Composer. Elle copie d'abord uniquement <code>composer.json</code> et <code>composer.lock</code>, puis installe les dépendances : tant que ces deux fichiers ne changent pas, Docker réutilise la couche en cache et l'installation n'est pas relancée, même si le code applicatif a changé. Le code est copié ensuite. La seconde étape part d'une image PHP-FPM Alpine, récupère le répertoire <code>/app</code> complet et installe les extensions nécessaires.</p>
+<p>La première étape, nommée <code>builder</code>, part de l'image officielle Composer. Elle copie d'abord uniquement <code>composer.json</code> et <code>composer.lock</code>, puis installe les dépendances : tant que ces deux fichiers ne changent pas, Docker réutilise la couche en cache et l'installation n'est pas relancée, même si le code applicatif a changé. Les scripts et la génération de l'autoloader sont différés (<code>--no-scripts</code>, <code>--no-autoloader</code>), car le code n'est pas encore là : une fois celui-ci copié, <code>composer dump-autoload --optimize</code> génère un autoloader qui inclut les classes de l'application. La seconde étape part d'une image PHP-FPM Alpine, installe les extensions nécessaires avant de copier le code, pour que cette couche coûteuse reste en cache, puis récupère le répertoire <code>/app</code> complet.</p>
 
 <h3>Une version plus aboutie</h3>
-<p>L'exemple ci-dessus fonctionne, mais peut être amélioré sur quatre points. L'autoloader optimisé est généré avant la copie du code, il ne contient donc pas les classes de l'application. Les extensions PHP sont installées après la copie du code, si bien que toute modification du code invalide aussi cette couche coûteuse. Le processus tourne en root. Enfin, une application Symfony a souvent des assets front à compiler. Voici une version qui corrige ces points :</p>
+<p>Dans un vrai projet, on va généralement plus loin : le processus ne doit pas tourner en root, le cache de Composer peut être conservé entre deux builds, les dépendances de compilation des extensions ne doivent pas rester dans l'image, et une application Symfony a souvent des assets front à compiler. Voici une version plus aboutie :</p>
 <pre><code># syntax=docker/dockerfile:1
 
 # Stage 1 : dépendances PHP

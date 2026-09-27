@@ -90,17 +90,7 @@ try {
 <p>Le piège classique est la fatigue d'alerte : si chaque erreur déclenche une notification, l'équipe finit par les ignorer toutes. Je recommande d'alerter sur les <strong>nouvelles</strong> issues et les <strong>régressions</strong> en production, et de réserver les alertes de volume aux flux critiques comme le paiement ou l'authentification.</p>
 
 <h3>Performance Monitoring</h3>
-<p>Au-delà des erreurs, Sentry mesure la durée des requêtes et de leurs étapes. Le bundle Symfony trace automatiquement les requêtes HTTP ainsi que, selon la configuration, les requêtes Doctrine, le cache et les appels HTTP sortants. Pour une opération métier précise, on peut créer ses propres transactions et spans :</p>
-<pre><code>// Mesurer une opération spécifique
-$transaction = \Sentry\startTransaction(['name' =&gt; 'process-order']);
-\Sentry\configureScope(fn(Scope $scope) =&gt; $scope-&gt;setSpan($transaction));
-
-$span = $transaction-&gt;startChild(['op' =&gt; 'db.query']);
-// ... requête base de données
-$span-&gt;finish();
-
-$transaction-&gt;finish();</code></pre>
-<p>Ce code montre le principe. Avec la version 4 du SDK PHP, <code>startTransaction()</code> et <code>startChild()</code> attendent des objets de contexte plutôt que des tableaux, et la fonction <code>\Sentry\trace()</code> simplifie la création d'un span autour d'un bloc de code :</p>
+<p>Au-delà des erreurs, Sentry mesure la durée des requêtes et de leurs étapes. Le bundle Symfony trace automatiquement les requêtes HTTP ainsi que, selon la configuration, les requêtes Doctrine, le cache et les appels HTTP sortants. Pour une opération métier précise, on peut créer sa propre transaction avec les objets de contexte de la version 4 du SDK PHP, et entourer chaque étape d'un span grâce à la fonction <code>\Sentry\trace()</code> :</p>
 <pre><code>use Sentry\SentrySdk;
 use Sentry\Tracing\SpanContext;
 use Sentry\Tracing\TransactionContext;

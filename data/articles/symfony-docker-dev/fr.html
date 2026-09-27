@@ -13,8 +13,7 @@
 
 <h3>Docker Compose pour Symfony</h3>
 <p>Le fichier <code>compose.yaml</code> (ou <code>docker-compose.yml</code>) déclare l'ensemble des services :</p>
-<pre><code>version: '3.8'
-services:
+<pre><code>services:
   php:
     build: .docker/php
     volumes:
@@ -55,7 +54,6 @@ volumes:
 <li><strong>Le volume nommé</strong> <code>mysql-data</code> conserve les données de la base entre deux <code>docker compose down</code>. Seul <code>docker compose down -v</code> le supprime.</li>
 <li><strong>Le réseau</strong> est créé automatiquement : chaque service est joignable par son nom (<code>mysql</code>, <code>redis</code>, <code>rabbitmq</code>). Depuis Symfony, on n'utilise donc jamais <code>localhost</code> pour atteindre la base.</li>
 <li><strong>Le port 15672</strong> expose l'interface d'administration de RabbitMQ sur <code>http://localhost:15672</code> (identifiants par défaut <code>guest</code> / <code>guest</code>).</li>
-<li><strong>La clé <code>version</code></strong> est aujourd'hui ignorée par Docker Compose v2 : elle ne fait qu'afficher un avertissement et peut être retirée sans risque.</li>
 </ul>
 
 <h3>Attendre que la base soit réellement prête</h3>
