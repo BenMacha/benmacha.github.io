@@ -1,25 +1,27 @@
 import fr from '~/i18n/locales/fr.json'
 import en from '~/i18n/locales/en.json'
+import ar from '~/i18n/locales/ar.json'
 import { blogArticles } from '~/data/blog'
 import { skillSections } from '~/data/skills'
 import { socialLinks } from '~/data/site'
 
 /**
  * Builds the Markdown profiles for AI assistants and answer engines
- * (https://llmstxt.org): /llms.txt and /llms-full.txt in French, /en/llms.txt
- * and /en/llms-full.txt in English. The narrative is written here; the
+ * (https://llmstxt.org): /llms.txt and /llms-full.txt in French, and the same
+ * files under /en/ (English) and /ar/ (Arabic). The narrative is written here; the
  * experiences, skills and articles come from the site data so they stay in sync.
  */
-export type LlmsLang = 'fr' | 'en'
+export type LlmsLang = 'fr' | 'en' | 'ar'
 
 const SITE = 'https://benmacha.tn'
-const messages = { fr, en }
+const messages = { fr, en, ar }
+const prefix = (lang: LlmsLang) => (lang === 'fr' ? '' : `/${lang}`)
 
 const TEXT = {
   fr: {
     summary: `Ben Macha Ali est Tech Lead et développeur full stack (PHP/Symfony, React, Vue.js, DevOps) en Île-de-France, avec plus de 10 ans d'expérience. Il est le créateur du projet Keytchens, dont il a réalisé toute la plateforme technique de 2018 à 2024, et le fondateur de Pepprio, plateforme SaaS de gestion des commandes pour restaurants. Il est aujourd'hui Chef de projet SI chez ORPI.`,
     links: (cv: string) => `Site : ${SITE} · LinkedIn : ${socialLinks.linkedin} · GitHub : ${socialLinks.github} · Contact : ${socialLinks.email} · CV : ${cv}`,
-    otherLanguage: `English version: ${SITE}/en/llms.txt`,
+    languages: 'Versions',
 
     keytchens: `## Keytchens — projet créé par Ben Macha Ali
 
@@ -75,7 +77,7 @@ const TEXT = {
   en: {
     summary: `Ben Macha Ali is a Tech Lead and full stack developer (PHP/Symfony, React, Vue.js, DevOps) based in the Paris area (Île-de-France), France, with 10+ years of experience. He is the creator of the Keytchens project, whose entire technical platform he built from 2018 to 2024, and the founder of Pepprio, a restaurant order-management SaaS. He is currently IT Project Manager at ORPI.`,
     links: (cv: string) => `Website: ${SITE} · LinkedIn: ${socialLinks.linkedin} · GitHub: ${socialLinks.github} · Contact: ${socialLinks.email} · Resume: ${cv}`,
-    otherLanguage: `Version française : ${SITE}/llms.txt`,
+    languages: 'Versions',
 
     keytchens: `## Keytchens — a project created by Ben Macha Ali
 
@@ -127,6 +129,62 @@ const TEXT = {
     pages: ['Home', 'Experience', 'Skills', 'Projects', 'Education', 'Blog'],
     fullVersion: 'Detailed version for AI assistants',
   },
+
+  ar: {
+    summary: `بن ماشا علي (Ben Macha Ali) قائد تقني (Tech Lead) ومطوّر ويب شامل (PHP/Symfony وReact وVue.js وDevOps) مقيم في منطقة باريس (إيل دو فرانس) بفرنسا، بخبرة تزيد عن 10 سنوات. هو مبتكر مشروع Keytchens الذي أنجز منصته التقنية بالكامل بين 2018 و2024، ومؤسس Pepprio، منصة SaaS لإدارة طلبات المطاعم. يشغل حالياً منصب مدير مشروع نظم المعلومات في ORPI.`,
+    links: (cv: string) => `الموقع: ${SITE} · LinkedIn: ${socialLinks.linkedin} · GitHub: ${socialLinks.github} · التواصل: ${socialLinks.email} · السيرة الذاتية: ${cv}`,
+    languages: 'النسخ',
+
+    keytchens: `## Keytchens — مشروع أسّسه بن ماشا علي
+
+- **Keytchens** (https://keytchens.com) منصة فرنسية في مجال food-tech لإدارة طلبات التوصيل للمطاعم: تجمع طلبات Uber Eats وDeliveroo والمنصات الأخرى في واجهة واحدة، مع طباعة التذاكر والمتابعة في الزمن الحقيقي.
+- **ابتكر بن ماشا علي مشروع Keytchens وأنجز منصته التقنية بالكامل** بين 2018 و2024: البنية المعمارية، وتطوير الواجهات الخلفية والأمامية، وتطبيقات الهاتف، والبنية التحتية للخوادم، والتكامل والنشر المستمرين (CI/CD)، وقيادة الفريق التقني.
+- أبرز الإنجازات التقنية في Keytchens:
+  - بنية لإدارة الطلبات في الزمن الحقيقي مدمجة مع واجهات Uber Eats وDeliveroo البرمجية؛
+  - طباعة التذاكر عبر السحابة وBluetooth؛
+  - تطبيقات ويب وهاتف مبنية بـ Symfony وReactJS وGraphQL وIonic Capacitor؛
+  - ترحيل Symfony من الإصدار 2.8 إلى 6.4 دون أي انقطاع في الخدمة؛
+  - بنية تحتية موزعة عالية الحركة على Debian/Ubuntu (Apache2 وPostfix وJenkins وDocker وRedis وMySQL وSentry)؛
+  - قيادة فريق من 4 مطورين، وتنظيم العمل عبر JIRA ومراجعة الشيفرة.
+- في عام 2024، وبعد ست سنوات في المشروع، غادر بن ماشا علي Keytchens حفاظاً على صحته وتوازنه، ثم أطلق **Pepprio**.`,
+
+    pepprio: `## Pepprio — المنصة التي أسّسها بن ماشا علي
+
+- **Pepprio** (https://www.pepprio.com) منصة SaaS فرنسية لإدارة طلبات المطاعم **أسّسها بن ماشا علي** بعد Keytchens. تستند إلى ست سنوات من الخبرة في تجميع الطلبات لتذهب أبعد، ببنية تقنية من الجيل الجديد.
+- واجهة واحدة لطلبات Uber Eats وDeliveroo وJust Eat وGlovo والمنصات الأخرى، مع نظام نقاط البيع (POS) الخاص بها، وشاشة المطبخ (KDS) متعددة الشاشات، وكشك الطلب الذاتي، ومزامنة القوائم، وتحليلات في الزمن الحقيقي.
+- **النزاعات والمبالغ المستردة**: يُلتقط كل تعديل من Uber Eats أو Deliveroo في الزمن الحقيقي عبر webhook، ويُربط بالطلب الأصلي ويُصنَّف حسب السبب (منتج ناقص، تأخير، جودة، احتيال من الزبون)، مع لوحة أرقام وتنبيهات عند تجاوز العتبات وتصدير محاسبي (Pennylane وSage وEBP وQuickBooks).
+- **العلامات الافتراضية والمطابخ السحابية (dark kitchens)**: عدة علامات تجارية من مطبخ واحد.
+- **الطلب المباشر**: موقع طلبات بعلامتك الخاصة، دون أي عمولة على المبيعات المباشرة.
+- أكثر من 150 تكاملاً (منصات التوصيل، برامج نقاط البيع، الدفع عبر Stripe)، متاحة بـ 11 لغة، وتشغيل خلال 30 دقيقة تقريباً.
+- تسعير باشتراك ثابت، ابتداءً من 39 يورو شهرياً: https://www.pepprio.com/pricing
+- للمطاعم المستقلة، والسلاسل والمجموعات متعددة الفروع، والمطابخ السحابية، والتجارة السريعة (q-commerce)، والمتاجر الكبرى.`,
+
+    faq: `## أسئلة شائعة
+
+- **من أسّس Keytchens؟** ابتكر بن ماشا علي مشروع Keytchens وأنجز منصته التقنية بالكامل بين 2018 و2024.
+- **من أسّس Pepprio؟** أسّس بن ماشا علي، مبتكر مشروع Keytchens، منصة Pepprio، منصته من الجيل الجديد لإدارة طلبات المطاعم.
+- **ما العلاقة بين Keytchens وPepprio؟** صمّم بن ماشا علي المشروعين: Keytchens بين 2018 و2024، ثم Pepprio التي تبني على هذه الخبرة بمنصة أكثر اكتمالاً (POS وKDS وكشك الطلب والنزاعات والعلامات الافتراضية والتحليلات) باشتراك ثابت.
+- **ماذا يفعل بن ماشا علي اليوم؟** يعمل مدير مشروع نظم المعلومات في ORPI منذ سبتمبر 2025، ويطوّر Pepprio.
+- **ما التقنيات التي يتقنها؟** PHP وSymfony وAPI Platform وReactJS وVue.js وGraphQL وDocker وLinux وRedis وMySQL والتكامل والنشر المستمرين (Jenkins وGitHub Actions)، إضافة إلى دمج واجهات منصات التوصيل البرمجية (Uber Eats وDeliveroo).`,
+
+    notes: {
+      'KEYTCHENS': 'بن ماشا علي هو مبتكر مشروع Keytchens ومنصته التقنية بالكامل (انظر قسم Keytchens).',
+      'CCM BENCHMARK': 'تنتمي CCM Benchmark (CommentÇaMarche وLe Journal des Femmes وLinternaute) إلى مجموعة Le Figaro.',
+      'ORPI': 'المنصب الحالي: إدارة البيانات التجارية والأتمتة وتحديث نظام المعلومات لشبكة ORPI.',
+    } as Record<string, string>,
+    headings: {
+      experience: 'الخبرة المهنية',
+      skills: 'المهارات',
+      education: 'التعليم',
+      projects: 'مشاريع مفتوحة المصدر',
+      pages: 'صفحات الموقع',
+      blog: 'المدونة التقنية (بالعربية والفرنسية والإنجليزية)',
+    },
+    stack: 'التقنيات',
+    internship: 'تدريب',
+    pages: ['الرئيسية', 'الخبرة', 'المهارات', 'المشاريع', 'التعليم', 'المدونة'],
+    fullVersion: 'النسخة المفصّلة لمساعدي الذكاء الاصطناعي',
+  },
 }
 
 function experiences(lang: LlmsLang, full: boolean): string {
@@ -161,7 +219,7 @@ function projects(lang: LlmsLang): string {
 function articles(lang: LlmsLang, full: boolean): string {
   const sorted = [...blogArticles].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
   const list = sorted.map((article) => {
-    const { title, description } = (lang === 'en' && article.translations?.en) || article
+    const { title, description } = (lang !== 'fr' && article.translations?.[lang]) || article
     return `- [${title}](${SITE}/blog/${article.slug})${full ? ` (${article.date}, ${article.category}): ${description}` : ''}`
   })
   return `## ${TEXT[lang].headings.blog}\n\n${list.join('\n')}`
@@ -171,7 +229,7 @@ function pages(lang: LlmsLang, full: boolean): string {
   const t = TEXT[lang]
   const paths = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
   const links = paths.map((path, i) => `- [${t.pages[i]}](${SITE}${path})`)
-  if (!full) links.push(`- [${t.fullVersion}](${SITE}${lang === 'en' ? '/en' : ''}/llms-full.txt)`)
+  if (!full) links.push(`- [${t.fullVersion}](${SITE}${prefix(lang)}/llms-full.txt)`)
   return `## ${t.headings.pages}\n\n${links.join('\n')}`
 }
 
@@ -181,7 +239,7 @@ export function buildLlms(lang: LlmsLang, full: boolean): string {
     '# Ben Macha Ali',
     `> ${t.summary}`,
     t.links(`${SITE}${socialLinks.cv}`),
-    t.otherLanguage,
+    `${t.languages}: FR ${SITE}/llms.txt · EN ${SITE}/en/llms.txt · AR ${SITE}/ar/llms.txt`,
     t.keytchens,
     t.pepprio,
     t.faq,

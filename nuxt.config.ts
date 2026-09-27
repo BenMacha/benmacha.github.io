@@ -46,10 +46,13 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'canonical', href: SITE_URL },
-        { rel: 'icon', type: 'image/jpeg', href: '/logo.jpeg' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
         // Markdown profile for AI assistants (https://llmstxt.org)
         { rel: 'alternate', type: 'text/plain', href: '/llms.txt', hreflang: 'fr', title: 'Ben Macha Ali — profil pour les IA' },
         { rel: 'alternate', type: 'text/plain', href: '/en/llms.txt', hreflang: 'en', title: 'Ben Macha Ali — profile for AI assistants' },
+        { rel: 'alternate', type: 'text/plain', href: '/ar/llms.txt', hreflang: 'ar', title: 'بن ماشا علي — ملف تعريفي لمساعدي الذكاء الاصطناعي' },
       ],
     },
     pageTransition: { name: 'page', mode: 'out-in' },
@@ -100,7 +103,7 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
-      routes: [...staticPages, ...blogPages, '/llms.txt', '/llms-full.txt', '/en/llms.txt', '/en/llms-full.txt'],
+      routes: [...staticPages, ...blogPages, '/llms.txt', '/llms-full.txt', '/en/llms.txt', '/en/llms-full.txt', '/ar/llms.txt', '/ar/llms-full.txt'],
       crawlLinks: true,
     },
   },
