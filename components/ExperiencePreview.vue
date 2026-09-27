@@ -2,17 +2,18 @@
   <section class="home-section">
     <SectionTitle
       :eyebrow="$t('sections.experience')"
-      :title="$t('experience.title')"
+      :title="$t('sections.bestExperience')"
       to="/experience"
       :link-label="$t('sections.seeAll')"
     />
     <div class="grid">
-      <article v-for="(job, i) in latest" :key="job.company" v-reveal="i" v-lift class="job card">
+      <article v-for="(job, i) in featured" :key="job.company" v-reveal="i" v-lift class="job card">
         <div class="job__head">
-          <span class="level">LVL 1-{{ experiences.length - i }}</span>
+          <span class="level">LVL 1-{{ job.level }}</span>
           <span class="job__period">{{ job.period }}</span>
         </div>
         <h3 class="job__company pixel">{{ job.company }}</h3>
+        <StarRating v-if="job.rating" :value="job.rating" />
         <p class="job__role">{{ job.role }}</p>
         <p class="job__task">▸ {{ job.tasks[0] }}</p>
       </article>
@@ -21,8 +22,17 @@
 </template>
 
 <script setup lang="ts">
+import { featuredCompanies } from '~/data/experience'
+
 const { experiences } = useResume()
-const latest = computed(() => experiences.value.slice(0, 3))
+
+// Best experiences, in the chosen order; the level keeps the career numbering
+const featured = computed(() =>
+  featuredCompanies.flatMap((company) => {
+    const index = experiences.value.findIndex(job => job.company === company)
+    return index === -1 ? [] : [{ ...experiences.value[index], level: experiences.value.length - index }]
+  }),
+)
 </script>
 
 <style scoped>

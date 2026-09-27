@@ -302,13 +302,15 @@
     "arcade": "WORLD 6 · ARCADE",
     "seeAll": "See all",
     "openInventory": "Open inventory",
-    "education": "WORLD 5 · ACHIEVEMENTS"
+    "education": "WORLD 5 · ACHIEVEMENTS",
+    "bestExperience": "My best experiences"
   },
   "experienceUi": {
     "eyebrow": "WORLD 1 · LEVEL MAP",
     "more": "+{n} quests",
     "less": "Collapse",
-    "start": "START · 2016"
+    "start": "START · 2016",
+    "rating": "Rating: {n}/5"
   },
   "skillsUi": {
     "eyebrow": "WORLD 2 · INVENTORY",

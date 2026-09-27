@@ -18,7 +18,10 @@
 
           <div class="job__body">
             <div>
-              <h2 class="job__company pixel">{{ job.company }}</h2>
+              <div class="job__title">
+                <h2 class="job__company pixel">{{ job.company }}</h2>
+                <StarRating v-if="job.rating" :value="job.rating" />
+              </div>
               <p class="job__role">{{ job.role }}</p>
               <p v-if="job.location" class="job__location">⌖ {{ job.location }}</p>
             </div>
@@ -138,8 +141,17 @@ useHead({
   padding: 20px;
 }
 
+.job__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
 .job__company {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 15px;
   line-height: 1.5;
   color: var(--accent);

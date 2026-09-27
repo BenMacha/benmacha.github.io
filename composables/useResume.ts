@@ -1,3 +1,5 @@
+import { companyRatings } from '~/data/experience'
+
 /**
  * Typed, locale-reactive access to the resume content stored in the i18n files.
  */
@@ -9,6 +11,8 @@ export interface Experience {
   tasks: string[]
   stack: string[]
   website?: string
+  /** Personal rating out of 5, when given. */
+  rating?: number
 }
 
 export interface Project {
@@ -56,6 +60,7 @@ export function useResume() {
       tasks: list(item.tasks),
       stack: str(item.stack)?.split(', ') ?? [],
       website: str(item.website),
+      rating: companyRatings[rt(item.company)],
     })),
   )
 

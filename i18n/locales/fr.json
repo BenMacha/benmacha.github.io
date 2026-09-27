@@ -302,13 +302,15 @@
     "arcade": "MONDE 6 · ARCADE",
     "seeAll": "Tout voir",
     "openInventory": "Ouvrir l'inventaire",
-    "education": "MONDE 5 · SUCCÈS"
+    "education": "MONDE 5 · SUCCÈS",
+    "bestExperience": "Mes meilleures expériences"
   },
   "experienceUi": {
     "eyebrow": "MONDE 1 · CARTE DES NIVEAUX",
     "more": "+{n} quêtes",
     "less": "Réduire",
-    "start": "START · 2016"
+    "start": "START · 2016",
+    "rating": "Note : {n}/5"
   },
   "skillsUi": {
     "eyebrow": "MONDE 2 · INVENTAIRE",

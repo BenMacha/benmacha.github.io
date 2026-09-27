@@ -302,13 +302,15 @@
     "arcade": "العالم 6 · الأركيد",
     "seeAll": "عرض الكل",
     "openInventory": "فتح المخزون",
-    "education": "العالم 5 · الإنجازات"
+    "education": "العالم 5 · الإنجازات",
+    "bestExperience": "أفضل تجاربي المهنية"
   },
   "experienceUi": {
     "eyebrow": "العالم 1 · خريطة المستويات",
     "more": "+{n} مهام",
     "less": "طي",
-    "start": "START · 2016"
+    "start": "START · 2016",
+    "rating": "التقييم: {n}/5"
   },
   "skillsUi": {
     "eyebrow": "العالم 2 · المخزون",
