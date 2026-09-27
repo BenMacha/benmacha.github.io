@@ -399,5 +399,83 @@
   },
   "language": {
     "label": "Language"
+  },
+  "pageProse": {
+    "projects": [
+      {
+        "title": "Why these open source projects",
+        "paragraphs": [
+          "Each of these projects was born from a need I met in production: an integration to write, a repetitive task to automate or information that was hard to get. Instead of keeping the code inside a single project, I extracted it, documented it and published it on GitHub and Packagist so that other PHP and Symfony developers can use it.",
+          "These repositories span several generations of Symfony, from the first bundles written in 2017 to recent versions maintained for Symfony 7. They also show how I work: typed code, static analysis tools, continuous integration and documentation that is readable right from the repository's front page."
+        ]
+      },
+      {
+        "title": "UberEats PHP SDK: a clean Uber Eats API integration",
+        "paragraphs": [
+          "The UberEats SDK is a modern PHP client for the Uber Eats API, compatible with PHP 7.4 and above. It handles authentication, orders, stores and deliveries, as well as webhooks. Requests and responses are represented by typed objects, which avoids handling fragile associative arrays.",
+          "The project relies on Guzzle for HTTP and accepts an optional PSR-3 logger. Quality is checked automatically: PSR-12 coding style with PHP CS Fixer, PHPStan at the maximum level and tests running in continuous integration on GitHub Actions. It installs with Composer through the ubereats/php-sdk package."
+        ]
+      },
+      {
+        "title": "The Symfony bundles",
+        "paragraphs": [
+          "Template Bundle (benmacha/templatebundle) provides a ready-to-use admin interface and a command, benmacha:generate:crud, that generates a complete CRUD with its menu entry. It saves real time on internal back offices where many similar management screens are needed.",
+          "MouseTrackerBundle (benmacha/mousetracker) is a self-hosted mouse tracker for Symfony 5.4, 6.4 and 7.x, on PHP 8.1 and above. It records movements, clicks, scrolling and DOM snapshots in your own database to produce heatmaps and session replays without sending your users' data to a third-party service. Version 2 no longer depends on jQuery.",
+          "DiagramBundle (benmacha/diagram-bundle), released under the MIT license, draws the entities of a database and the relationships between them. It helps you quickly understand the data model of an existing Symfony project, for example when taking over a codebase or onboarding a new developer."
+        ]
+      },
+      {
+        "title": "Use or contribute",
+        "paragraphs": [
+          "All these packages install with Composer, and their documentation lives directly in the GitHub repository. Issues and pull requests are welcome: a precise bug report or a documentation improvement is already a useful contribution. For a more specific need around Symfony or an API integration, you can also contact me directly."
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "title": "Skills used in production",
+        "paragraphs": [
+          "This page lists the technologies I actually use in my work, not a list of keywords. My core expertise is PHP back-end development with Symfony: I worked with versions ranging from Symfony 2.8 to 6.4 at Keytchens, then with API Platform and Docker as PHP Lead Developer at CCM Benchmark. Laravel, Node.js and Python complete this foundation depending on project needs.",
+          "On the data side, MySQL and Redis are my everyday tools, and GraphQL is part of the APIs I designed at Keytchens and at Manymore. Today, as IT Project Manager at ORPI, I mostly work on integrating many business tools through REST APIs and connectors such as Zapier."
+        ]
+      },
+      {
+        "title": "From front-end to mobile",
+        "paragraphs": [
+          "On the front-end, I mainly work with ReactJS and VueJS, in TypeScript, with Tailwind CSS for interfaces. This website is an example: it is built with Nuxt, prerendered and translated into three languages.",
+          "Mobile development is part of my software engineering education. I have used native approaches (Android in Java or Kotlin) and hybrid ones (Cordova, Ionic and Capacitor, React Native, Flutter), as well as push notifications with FCM and APNS."
+        ]
+      },
+      {
+        "title": "DevOps, quality and testing",
+        "paragraphs": [
+          "I also take care of what happens after the code: Debian and Ubuntu Linux servers, Nginx and Apache, Docker containers, Jenkins and GitHub Actions pipelines, AWS services. At Keytchens, this included server administration, email with Postfix and error monitoring with Sentry.",
+          "For quality, I write unit tests with PHPUnit, functional and acceptance tests with Codeception, and interface tests with Jest, Cypress or Selenium. Apache Kafka and WebSockets are used for asynchronous and real-time exchanges. The blog articles cover several of these topics with concrete configuration examples."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "title": "A software engineering background",
+        "paragraphs": [
+          "My path starts with a baccalaureate in computer science, obtained in 2012 with highest honors and already focused on programming. From 2012 to 2016, I then studied software engineering at university, at ISI. The program covered object-oriented programming, software architecture, advanced databases, computer security and mobile development.",
+          "These fundamentals are still the ones I use every day: designing a solid data model, splitting an application into clear layers and thinking about security from the start rather than at the end of a project."
+        ]
+      },
+      {
+        "title": "Hands-on internships",
+        "paragraphs": [
+          "Two internships completed this education. In 2014, at Glinse, I trained in PHP and Laravel 4.2 by developing RESTful APIs and integrating third-party services. In 2015, at Tuninfo, I worked on web security, Linux system administration, PHP development with Symfony and penetration testing.",
+          "This dual perspective, developer and security, gave me good habits that I still keep: validate input, limit permissions, monitor servers and test your own applications the way an attacker would. In September 2016, I started my career as a web developer at Pixel Trade."
+        ]
+      },
+      {
+        "title": "Keep learning and giving back",
+        "paragraphs": [
+          "Learning did not stop with the degree. Each position brought new technologies, from GraphQL to API Platform, Docker and continuous integration, and I write on this blog to share what I learn in production.",
+          "Outside of code, I take part in community work, with Amnesty International, a local development club and an environmental protection association. I also enjoy swimming, running, fishing and camping, which are good ways to step back from projects."
+        ]
+      }
+    ]
   }
 }

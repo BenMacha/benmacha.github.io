@@ -13,6 +13,8 @@
         </div>
       </section>
     </div>
+
+    <PageProse page="skills" />
   </div>
 </template>
 

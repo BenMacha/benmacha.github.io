@@ -27,6 +27,8 @@
         </article>
       </div>
     </div>
+
+    <PageProse page="projects" />
   </div>
 </template>
 

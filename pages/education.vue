@@ -35,6 +35,8 @@
         </article>
       </div>
     </section>
+
+    <PageProse page="education" class="education__prose" />
   </div>
 </template>
 
@@ -58,6 +60,10 @@ usePageSeo({
 
 .education :deep(.section-title--page) {
   margin-bottom: 0;
+}
+
+.education > .education__prose {
+  margin-top: 0;
 }
 
 .stack {

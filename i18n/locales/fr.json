@@ -399,5 +399,83 @@
   },
   "language": {
     "label": "Langue"
+  },
+  "pageProse": {
+    "projects": [
+      {
+        "title": "Pourquoi ces projets open source",
+        "paragraphs": [
+          "Chacun de ces projets est né d'un besoin rencontré en production : une intégration à écrire, une tâche répétitive à automatiser ou une information difficile à obtenir. Plutôt que de garder le code dans un seul projet, je l'ai extrait, documenté et publié sur GitHub et Packagist pour qu'il serve à d'autres développeurs PHP et Symfony.",
+          "Ces dépôts couvrent plusieurs générations de Symfony, des premiers bundles écrits en 2017 aux versions récentes maintenues pour Symfony 7. Ils montrent aussi ma façon de travailler : un code typé, des outils d'analyse statique, une intégration continue et une documentation lisible dès la page d'accueil du dépôt."
+        ]
+      },
+      {
+        "title": "UberEats PHP SDK : intégrer l'API Uber Eats proprement",
+        "paragraphs": [
+          "Le SDK UberEats est un client PHP moderne pour l'API Uber Eats, compatible PHP 7.4 et plus. Il gère l'authentification, les commandes, les magasins et les livraisons, ainsi que les webhooks. Les requêtes et les réponses sont représentées par des objets typés, ce qui évite de manipuler des tableaux associatifs fragiles.",
+          "Le projet s'appuie sur Guzzle pour le HTTP et accepte un logger PSR-3 optionnel. La qualité est vérifiée automatiquement : style de code PSR-12 avec PHP CS Fixer, PHPStan au niveau maximal et tests exécutés en intégration continue sur GitHub Actions. Il s'installe avec Composer via le paquet ubereats/php-sdk."
+        ]
+      },
+      {
+        "title": "Les bundles Symfony",
+        "paragraphs": [
+          "Template Bundle (benmacha/templatebundle) fournit une interface d'administration prête à l'emploi et une commande, benmacha:generate:crud, qui génère un CRUD complet avec son entrée de menu. C'est un gain de temps réel pour les back-offices internes où l'on crée beaucoup d'écrans de gestion similaires.",
+          "MouseTrackerBundle (benmacha/mousetracker) est un traqueur de souris auto-hébergé pour Symfony 5.4, 6.4 et 7.x, sur PHP 8.1 et plus. Il enregistre les mouvements, les clics, le défilement et des instantanés du DOM dans votre propre base de données, pour produire des cartes de chaleur et des replays de session sans envoyer les données de vos utilisateurs à un service tiers. La version 2 ne dépend plus de jQuery.",
+          "DiagramBundle (benmacha/diagram-bundle), publié sous licence MIT, dessine les entités d'une base de données et les relations qui les relient. Il aide à comprendre rapidement le modèle de données d'un projet Symfony existant, par exemple lors d'une reprise de code ou de l'arrivée d'un nouveau développeur."
+        ]
+      },
+      {
+        "title": "Utiliser ou contribuer",
+        "paragraphs": [
+          "Tous ces paquets s'installent avec Composer et leur documentation se trouve directement dans le dépôt GitHub. Les issues et les pull requests sont les bienvenues : un rapport de bug précis ou une amélioration de la documentation est déjà une contribution utile. Pour un besoin plus spécifique autour de Symfony ou d'une intégration d'API, vous pouvez aussi me contacter directement."
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "title": "Des compétences utilisées en production",
+        "paragraphs": [
+          "Cette page regroupe les technologies que j'utilise réellement dans mes missions, pas une liste de mots-clés. Mon cœur de métier est le back-end PHP avec Symfony : je l'ai pratiqué sur des versions allant de Symfony 2.8 à 6.4 chez Keytchens, puis avec API Platform et Docker comme Lead Dev PHP chez CCM Benchmark. Laravel, Node.js et Python complètent cette base selon les besoins des projets.",
+          "Côté données, MySQL et Redis sont mes outils de tous les jours, et GraphQL fait partie des API que j'ai conçues chez Keytchens et chez Manymore. Aujourd'hui, comme chef de projet SI chez ORPI, je travaille surtout sur l'intégration de nombreux outils métier par API REST et par des connecteurs comme Zapier."
+        ]
+      },
+      {
+        "title": "Du front-end au mobile",
+        "paragraphs": [
+          "En front-end, je travaille principalement avec ReactJS et VueJS, en TypeScript, avec Tailwind CSS pour les interfaces. Ce site en est un exemple : il est construit avec Nuxt, rendu à l'avance et traduit en trois langues.",
+          "Le développement mobile fait partie de ma formation en génie logiciel. J'ai utilisé des approches natives (Android en Java ou Kotlin) et hybrides (Cordova, Ionic et Capacitor, React Native, Flutter), ainsi que les notifications push avec FCM et APNS."
+        ]
+      },
+      {
+        "title": "DevOps, qualité et tests",
+        "paragraphs": [
+          "Je m'occupe aussi de ce qui se passe après le code : serveurs Linux Debian et Ubuntu, Nginx et Apache, conteneurs Docker, pipelines Jenkins et GitHub Actions, services AWS. Chez Keytchens, cela comprenait l'administration des serveurs, la messagerie avec Postfix et la supervision des erreurs avec Sentry.",
+          "Pour la qualité, j'écris des tests unitaires avec PHPUnit, des tests fonctionnels et d'acceptation avec Codeception, et des tests d'interface avec Jest, Cypress ou Selenium. Apache Kafka et les WebSockets servent aux échanges asynchrones et au temps réel. Les articles du blog détaillent plusieurs de ces sujets avec des exemples de configuration concrets."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "title": "Un parcours en génie logiciel",
+        "paragraphs": [
+          "Mon parcours commence par un baccalauréat en informatique obtenu en 2012 avec la mention très bien, déjà orienté vers la programmation. J'ai ensuite suivi de 2012 à 2016 une formation universitaire en génie logiciel à l'ISI. Elle couvrait la programmation orientée objet, l'architecture logicielle, les bases de données avancées, la sécurité informatique et le développement mobile.",
+          "Ces fondamentaux restent ceux que j'utilise au quotidien : concevoir un modèle de données solide, découper une application en couches claires et penser à la sécurité dès le départ plutôt qu'à la fin d'un projet."
+        ]
+      },
+      {
+        "title": "Des stages tournés vers la pratique",
+        "paragraphs": [
+          "Deux stages ont complété cette formation. En 2014, chez Glinse, je me suis formé à PHP et Laravel 4.2 en développant des API RESTful et en intégrant des services tiers. En 2015, chez Tuninfo, j'ai travaillé sur la sécurité web, l'administration système Linux, le développement PHP avec Symfony et les tests de pénétration.",
+          "Ce double regard, développeur et sécurité, m'a donné de bons réflexes que je garde encore : valider les entrées, limiter les droits, surveiller les serveurs et tester ses propres applications comme le ferait un attaquant. En septembre 2016, j'ai commencé ma carrière comme développeur web chez Pixel Trade."
+        ]
+      },
+      {
+        "title": "Continuer à apprendre et s'engager",
+        "paragraphs": [
+          "La formation ne s'est pas arrêtée au diplôme. Chaque poste m'a amené de nouvelles technologies, de GraphQL à API Platform en passant par Docker et l'intégration continue, et j'écris sur ce blog pour partager ce que j'apprends en production.",
+          "En dehors du code, je m'engage dans la vie associative, avec Amnesty International, un club de développement local et une association de protection de l'environnement. Je pratique aussi la natation, la course, la pêche et le camping, qui sont de bonnes façons de prendre du recul sur les projets."
+        ]
+      }
+    ]
   }
 }
