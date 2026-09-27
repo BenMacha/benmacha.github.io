@@ -163,6 +163,13 @@ useHead(() => ({
   color: var(--accent);
 }
 
+.content :deep(a) {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
 .content :deep(code) {
   font-family: var(--font-mono);
   font-size: .9em;
