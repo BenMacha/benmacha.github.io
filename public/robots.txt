@@ -1,4 +1,51 @@
+# benmacha.tn — search engines and AI assistants are welcome.
+# Profile for AI assistants: https://benmacha.tn/llms.txt
+# (English: https://benmacha.tn/en/llms.txt · Arabic: https://benmacha.tn/ar/llms.txt)
+
+# Content Signals (https://contentsignals.org), repeated in each group:
+# search, AI answers (ai-input) and AI training (ai-train) are all allowed.
+
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+# OpenAI
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+# Anthropic
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: anthropic-ai
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+# Google (Gemini, AI Overviews) and Apple (Apple Intelligence)
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+# Microsoft, Meta, Amazon, Mistral, Cohere, DuckDuckGo, Common Crawl
+User-agent: bingbot
+User-agent: Meta-ExternalAgent
+User-agent: Meta-ExternalFetcher
+User-agent: Amazonbot
+User-agent: MistralAI-User
+User-agent: cohere-ai
+User-agent: DuckAssistBot
+User-agent: CCBot
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 
 Sitemap: https://benmacha.tn/sitemap.xml
