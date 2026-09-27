@@ -69,11 +69,10 @@ function visibleTasks(tasks: string[], index: number) {
   return expanded[index] ? tasks : tasks.slice(0, TASK_LIMIT)
 }
 
-useHead({
-  title: `${t('experience.title')} - Ben Macha Ali | ORPI, CCM Benchmark, Keytchens, Matalto`,
-  meta: [
-    { name: 'description', content: 'Parcours de Ben Macha Ali : Chef de projet SI chez ORPI, Lead Dev PHP chez CCM Benchmark (groupe Le Figaro), créateur et Tech Lead du projet Keytchens, consultant Symfony chez Manymore / Matalto, développeur chez UKN, Argolife et Pixel Trade. Fondateur de Pepprio.' },
-  ],
+usePageSeo({
+  title: () => t('seo.experience.title'),
+  description: () => t('seo.experience.description'),
+  breadcrumb: () => [{ name: t('nav.experience'), path: '/experience' }],
 })
 </script>
 

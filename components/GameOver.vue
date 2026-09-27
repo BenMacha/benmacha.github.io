@@ -5,11 +5,13 @@
     <div class="over__label pixel">{{ $t('404.gameOver') }}</div>
     <h1 class="over__title">{{ $t('404.title') }}</h1>
     <p class="over__text">{{ $t('404.description') }}</p>
-    <NuxtLink to="/" class="btn btn--coin" @click="$emit('home')">▶ {{ $t('404.back') }}</NuxtLink>
+    <NuxtLink :to="localePath('/')" class="btn btn--coin" @click="$emit('home')">▶ {{ $t('404.back') }}</NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+const localePath = useLocalePath()
+
 defineEmits<{ home: [] }>()
 </script>
 

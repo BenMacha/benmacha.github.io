@@ -16,6 +16,8 @@ export type LlmsLang = 'fr' | 'en' | 'ar'
 const SITE = 'https://benmacha.tn'
 const messages = { fr, en, ar }
 const prefix = (lang: LlmsLang) => (lang === 'fr' ? '' : `/${lang}`)
+/** Absolute URL of a page in a language: '/blog' → https://benmacha.tn/en/blog */
+const pageUrl = (lang: LlmsLang, path: string) => `${SITE}${prefix(lang)}${path === '/' && lang !== 'fr' ? '' : path}`
 
 const TEXT = {
   fr: {
@@ -220,7 +222,7 @@ function articles(lang: LlmsLang, full: boolean): string {
   const sorted = [...blogArticles].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
   const list = sorted.map((article) => {
     const { title, description } = (lang !== 'fr' && article.translations?.[lang]) || article
-    return `- [${title}](${SITE}/blog/${article.slug})${full ? ` (${article.date}, ${article.category}): ${description}` : ''}`
+    return `- [${title}](${pageUrl(lang, `/blog/${article.slug}`)})${full ? ` (${article.date}, ${article.category}): ${description}` : ''}`
   })
   return `## ${TEXT[lang].headings.blog}\n\n${list.join('\n')}`
 }
@@ -228,7 +230,7 @@ function articles(lang: LlmsLang, full: boolean): string {
 function pages(lang: LlmsLang, full: boolean): string {
   const t = TEXT[lang]
   const paths = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
-  const links = paths.map((path, i) => `- [${t.pages[i]}](${SITE}${path})`)
+  const links = paths.map((path, i) => `- [${t.pages[i]}](${pageUrl(lang, path)})`)
   if (!full) links.push(`- [${t.fullVersion}](${SITE}${prefix(lang)}/llms-full.txt)`)
   return `## ${t.headings.pages}\n\n${links.join('\n')}`
 }

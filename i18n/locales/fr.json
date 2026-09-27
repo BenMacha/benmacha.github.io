@@ -362,5 +362,42 @@
   },
   "menu": {
     "toggle": "Ouvrir ou fermer le menu"
+  },
+  "seo": {
+    "home": {
+      "title": "Ben Macha Ali – Tech Lead & Développeur Full Stack",
+      "description": "Tech Lead PHP/Symfony, créateur du projet Keytchens et fondateur de Pepprio. Chef de projet SI chez ORPI, ex-Lead Dev PHP chez CCM Benchmark."
+    },
+    "experience": {
+      "title": "Ben Macha Ali – Expériences : ORPI, Keytchens",
+      "description": "Parcours de Ben Macha Ali : Chef de projet SI chez ORPI, Lead Dev PHP chez CCM Benchmark, créateur du projet Keytchens, consultant chez Manymore."
+    },
+    "skills": {
+      "title": "Compétences : PHP, Symfony, React, Docker",
+      "description": "Compétences techniques de Ben Macha Ali : PHP, Symfony, Laravel, React, Vue.js, Docker, Jenkins, AWS, GraphQL, Kafka et tests automatisés."
+    },
+    "projects": {
+      "title": "Projets open source Symfony et PHP",
+      "description": "Projets open source de Ben Macha Ali sur GitHub : SDK PHP UberEat, bundles Symfony pour le CRUD, le suivi de la souris et les diagrammes."
+    },
+    "education": {
+      "title": "Formation, stages et centres d'intérêt",
+      "description": "Formation de Ben Macha Ali : génie logiciel à l'ISI, stages en sécurité web et développement PHP chez Tuninfo et Glinse, engagement associatif."
+    },
+    "blog": {
+      "title": "Blog technique : PHP, Symfony, DevOps",
+      "description": "Articles techniques de Ben Macha Ali sur PHP, Symfony, Docker, Linux, DevOps et l'IA : retours d'expérience et bonnes pratiques, en 3 langues."
+    }
+  },
+  "breadcrumb": {
+    "home": "Accueil"
+  },
+  "intro": {
+    "skills": "Plus de 10 ans de développement web et mobile, du back-end PHP/Symfony à l'infrastructure DevOps : voici les outils que j'utilise au quotidien en production.",
+    "projects": "Des outils open source nés de besoins réels en production : intégration de l'API Uber Eats, génération d'interfaces CRUD et outillage pour Symfony.",
+    "education": "Une formation en génie logiciel, complétée par des stages en sécurité web et en développement PHP, et un engagement associatif."
+  },
+  "language": {
+    "label": "Langue"
   }
 }

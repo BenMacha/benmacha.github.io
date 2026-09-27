@@ -1,23 +1,20 @@
 import type { Composer } from 'vue-i18n'
 import { LOCALE_COOKIE } from '~/data/site'
 
-type Locale = Composer['locale']['value']
-
 /**
- * Pages are prerendered in French. Switching to the visitor's language before
- * hydration makes the client render differ from the HTML (hydration mismatch),
- * so the saved or browser language is applied once the app is hydrated.
+ * The URL decides the language (/, /en/..., /ar/...). A visitor who picked
+ * another language before (cookie set by the language switcher) is sent to
+ * that version once the page is hydrated. Crawlers have no cookie: they are
+ * never redirected.
  */
 export default defineNuxtPlugin((nuxtApp) => {
-  // onNuxtReady runs once hydration (including async pages) is complete
   onNuxtReady(async () => {
     const i18n = nuxtApp.$i18n as Composer
-    const isLocale = (code?: string): code is Locale => !!code && (i18n.availableLocales as string[]).includes(code)
-
     const saved = document.cookie.match(new RegExp(`(?:^|; )${LOCALE_COOKIE}=([^;]*)`))?.[1]
-    const browser = navigator.language?.slice(0, 2)
-    const target = [saved, browser].find(isLocale)
+    if (!saved || saved === i18n.locale.value || !(i18n.availableLocales as string[]).includes(saved)) return
 
-    if (target && target !== i18n.locale.value) await i18n.setLocale(target)
+    const switchLocalePath = await nuxtApp.runWithContext(() => useSwitchLocalePath())
+    const target = switchLocalePath(saved as Composer['locale']['value'])
+    if (target) await navigateTo(target, { replace: true })
   })
 })

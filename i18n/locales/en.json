@@ -362,5 +362,42 @@
   },
   "menu": {
     "toggle": "Open or close the menu"
+  },
+  "seo": {
+    "home": {
+      "title": "Ben Macha Ali – Tech Lead & Full Stack Developer",
+      "description": "PHP/Symfony Tech Lead, creator of the Keytchens project and founder of Pepprio. IT Project Manager at ORPI, former Lead PHP Developer at CCM Benchmark."
+    },
+    "experience": {
+      "title": "Ben Macha Ali – Experience: ORPI, Keytchens",
+      "description": "Ben Macha Ali's career: IT Project Manager at ORPI, Lead PHP Developer at CCM Benchmark, creator of the Keytchens project, Symfony consultant."
+    },
+    "skills": {
+      "title": "Skills: PHP, Symfony, React, Docker",
+      "description": "Ben Macha Ali's technical skills: PHP, Symfony, Laravel, React, Vue.js, Docker, Jenkins, AWS, GraphQL, Kafka and automated testing."
+    },
+    "projects": {
+      "title": "Open source Symfony and PHP projects",
+      "description": "Ben Macha Ali's open source projects on GitHub: UberEat PHP SDK and Symfony bundles for CRUD interfaces, mouse tracking and diagrams."
+    },
+    "education": {
+      "title": "Education, internships and interests",
+      "description": "Ben Macha Ali's education: software engineering at ISI, web security and PHP development internships at Tuninfo and Glinse, volunteering."
+    },
+    "blog": {
+      "title": "Tech blog: PHP, Symfony, DevOps",
+      "description": "Technical articles by Ben Macha Ali on PHP, Symfony, Docker, Linux, DevOps and AI: lessons learned and best practices, in 3 languages."
+    }
+  },
+  "breadcrumb": {
+    "home": "Home"
+  },
+  "intro": {
+    "skills": "10+ years of web and mobile development, from PHP/Symfony back ends to DevOps infrastructure: these are the tools I use every day in production.",
+    "projects": "Open source tools born from real production needs: Uber Eats API integration, CRUD interface generation and tooling for Symfony.",
+    "education": "A software engineering degree, complemented by internships in web security and PHP development, and volunteering."
+  },
+  "language": {
+    "label": "Language"
   }
 }

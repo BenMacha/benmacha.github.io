@@ -12,13 +12,16 @@
 <script setup lang="ts">
 import { animate, scroll } from 'motion'
 
-const i18nHead = useLocaleHead()
+// lang/dir, canonical, hreflang alternates (+ x-default) and og:locale for the current locale
+const i18nHead = useLocaleHead({ seo: true })
 
 useHead(() => ({
   htmlAttrs: {
     lang: i18nHead.value.htmlAttrs?.lang,
     dir: i18nHead.value.htmlAttrs?.dir as 'ltr' | 'rtl' | undefined,
   },
+  link: i18nHead.value.link ?? [],
+  meta: (i18nHead.value.meta ?? []).filter(m => m.property !== 'og:locale'),
 }))
 
 // Rainbow reading-progress bar, driven by Motion's scroll timeline

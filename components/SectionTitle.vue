@@ -8,11 +8,13 @@
       </div>
       <p v-if="subtitle" class="section-title__subtitle">{{ subtitle }}</p>
     </div>
-    <NuxtLink v-if="to && linkLabel" :to="to" class="btn btn--ghost">{{ linkLabel }} ▶</NuxtLink>
+    <NuxtLink v-if="to && linkLabel" :to="localePath(to)" class="btn btn--ghost">{{ linkLabel }} ▶</NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+const localePath = useLocalePath()
+
 defineProps<{
   eyebrow: string
   title: string

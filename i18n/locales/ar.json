@@ -362,5 +362,42 @@
   },
   "menu": {
     "toggle": "فتح القائمة أو إغلاقها"
+  },
+  "seo": {
+    "home": {
+      "title": "بن ماشا علي – قائد تقني ومطوّر ويب شامل",
+      "description": "قائد تقني PHP/Symfony، مبتكر مشروع Keytchens ومؤسس Pepprio. مدير مشروع نظم المعلومات في ORPI، وقائد مطوري PHP سابقاً في CCM Benchmark."
+    },
+    "experience": {
+      "title": "بن ماشا علي – الخبرة المهنية: ORPI وKeytchens",
+      "description": "مسيرة بن ماشا علي: مدير مشروع نظم المعلومات في ORPI، قائد مطوري PHP في CCM Benchmark، مبتكر مشروع Keytchens، ومستشار Symfony."
+    },
+    "skills": {
+      "title": "المهارات: PHP وSymfony وReact وDocker",
+      "description": "المهارات التقنية لبن ماشا علي: PHP وSymfony وLaravel وReact وVue.js وDocker وJenkins وAWS وGraphQL وKafka والاختبارات الآلية."
+    },
+    "projects": {
+      "title": "مشاريع مفتوحة المصدر في Symfony وPHP",
+      "description": "مشاريع بن ماشا علي مفتوحة المصدر على GitHub: حزمة PHP لواجهة UberEat، وحزم Symfony لواجهات CRUD وتتبع الفأرة والمخططات."
+    },
+    "education": {
+      "title": "التعليم والتدريب والاهتمامات",
+      "description": "تعليم بن ماشا علي: هندسة البرمجيات في ISI، وتدريب في أمن الويب وتطوير PHP لدى Tuninfo وGlinse، إضافة إلى العمل التطوعي."
+    },
+    "blog": {
+      "title": "المدونة التقنية: PHP وSymfony وDevOps",
+      "description": "مقالات تقنية لبن ماشا علي حول PHP وSymfony وDocker وLinux وDevOps والذكاء الاصطناعي: تجارب عملية وأفضل الممارسات، بثلاث لغات."
+    }
+  },
+  "breadcrumb": {
+    "home": "الرئيسية"
+  },
+  "intro": {
+    "skills": "أكثر من 10 سنوات في تطوير الويب والهاتف، من الواجهات الخلفية بـ PHP/Symfony إلى البنية التحتية DevOps: هذه هي الأدوات التي أستخدمها يومياً في بيئة الإنتاج.",
+    "projects": "أدوات مفتوحة المصدر وُلدت من احتياجات حقيقية في بيئة الإنتاج: دمج واجهة Uber Eats، وتوليد واجهات CRUD، وأدوات لـ Symfony.",
+    "education": "شهادة في هندسة البرمجيات، استكملتها بتدريب في أمن الويب وتطوير PHP، إضافة إلى العمل التطوعي."
+  },
+  "language": {
+    "label": "اللغة"
   }
 }

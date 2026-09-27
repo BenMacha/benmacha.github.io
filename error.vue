@@ -5,5 +5,11 @@
 </template>
 
 <script setup lang="ts">
-useHead({ title: '404 - Ben Macha Ali', meta: [{ name: 'robots', content: 'noindex' }] })
+const { t } = useI18n()
+
+usePageSeo({
+  title: () => `404 – ${t('404.title')}`,
+  description: () => t('404.description'),
+  noindex: true,
+})
 </script>

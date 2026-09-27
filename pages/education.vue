@@ -1,6 +1,6 @@
 <template>
   <div class="container container--narrow page education">
-    <SectionTitle page :eyebrow="$t('educationUi.eyebrow')" :title="$t('education.title')" />
+    <SectionTitle page :eyebrow="$t('educationUi.eyebrow')" :title="$t('education.title')" :subtitle="$t('intro.education')" />
 
     <div class="stack">
       <AchievementCard v-for="(degree, i) in education" :key="degree.school" v-reveal="i" :degree="degree" />
@@ -42,11 +42,10 @@
 const { t } = useI18n()
 const { education, internships, interests } = useResume()
 
-useHead({
-  title: `${t('education.title')} - Ben Macha Ali | ISI, Stages & Centres d'intérêt`,
-  meta: [
-    { name: 'description', content: 'Formation de Ben Macha Ali : ISI (génie logiciel), stages chez Tuninfo et Glinse, bénévolat et centres d\'intérêt.' },
-  ],
+usePageSeo({
+  title: () => t('seo.education.title'),
+  description: () => t('seo.education.description'),
+  breadcrumb: () => [{ name: t('nav.education'), path: '/education' }],
 })
 </script>
 

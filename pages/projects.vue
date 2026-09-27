@@ -1,6 +1,6 @@
 <template>
   <div class="container page" style="max-width: 960px">
-    <SectionTitle page :eyebrow="$t('projectsUi.eyebrow')" :title="$t('projects.github.title')" />
+    <SectionTitle page :eyebrow="$t('projectsUi.eyebrow')" :title="$t('projects.github.title')" :subtitle="$t('intro.projects')" />
 
     <div class="grid" style="--min: 300px; gap: 28px">
       <div v-for="(project, i) in projects" :key="project.url" class="project">
@@ -47,11 +47,10 @@ function hit(index: number, event: MouseEvent) {
   if (coin) animate(coin, { rotateY: [0, 720] }, { duration: 0.6 })
 }
 
-useHead({
-  title: `${t('projects.title')} - Ben Macha Ali | Open Source Symfony & PHP`,
-  meta: [
-    { name: 'description', content: 'Projets open source de Ben Macha Ali : UberEat PHP SDK, Symfony CRUD Template Bundle, Symfony Mouse Tracker, Symfony Diagram Bundle.' },
-  ],
+usePageSeo({
+  title: () => t('seo.projects.title'),
+  description: () => t('seo.projects.description'),
+  breadcrumb: () => [{ name: t('nav.projects'), path: '/projects' }],
 })
 </script>
 

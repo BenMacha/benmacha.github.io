@@ -44,7 +44,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Docker', 'Production', 'DevOps'],
     translations: {
       en: { title: 'Docker Compose in production', description: 'How to configure Docker Compose for a robust, high-performance production environment.' },
-      ar: { title: 'Docker Compose في بيئة الإنتاج', description: 'كيف تُعدّ Docker Compose لبيئة إنتاج متينة وعالية الأداء.' },
+      ar: { title: 'Docker Compose في بيئة الإنتاج', description: 'كيف تُعدّ Docker Compose لبيئة إنتاج متينة وعالية الأداء: الشبكات والأسرار والموارد وإعادة التشغيل والمراقبة.' },
     },
   },
   {
@@ -57,7 +57,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Docker', 'PHP', 'Développement'],
     translations: {
       en: { title: 'A PHP development environment with Docker', description: 'Build a complete, reproducible PHP development environment with Docker.' },
-      ar: { title: 'بيئة تطوير PHP باستخدام Docker', description: 'أنشئ بيئة تطوير PHP متكاملة وقابلة لإعادة الإنتاج باستخدام Docker.' },
+      ar: { title: 'بيئة تطوير PHP باستخدام Docker', description: 'أنشئ بيئة تطوير PHP متكاملة وقابلة لإعادة الإنتاج باستخدام Docker وDocker Compose، مع Xdebug وقاعدة البيانات.' },
     },
   },
   {
@@ -70,7 +70,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Docker', 'CI/CD', 'DevOps'],
     translations: {
       en: { title: 'Docker in CI/CD pipelines', description: 'Integrate Docker into your CI/CD pipelines for automated, reliable deployments.' },
-      ar: { title: 'Docker في خطوط CI/CD', description: 'ادمج Docker في خطوط CI/CD لديك لعمليات نشر مؤتمتة وموثوقة.' },
+      ar: { title: 'Docker في خطوط CI/CD', description: 'ادمج Docker في خطوط CI/CD لديك لعمليات نشر مؤتمتة وموثوقة: بناء الصور واختبارها ونشرها في بيئة الإنتاج.' },
     },
   },
   {
@@ -82,8 +82,8 @@ export const blogArticles: BlogArticle[] = [
     readTime: '8 min',
     tags: ['Docker', 'Sécurité', 'DevOps'],
     translations: {
-      en: { title: 'Docker security: best practices', description: 'Security best practices for your Docker containers in production.' },
-      ar: { title: 'أمان Docker: أفضل الممارسات', description: 'أفضل ممارسات الأمان لحاويات Docker الخاصة بك في بيئة الإنتاج.' },
+      en: { title: 'Docker security: best practices', description: 'Security best practices for your Docker containers in production: minimal images, non-root users, secrets and scanning.' },
+      ar: { title: 'أمان Docker: أفضل الممارسات', description: 'أفضل ممارسات الأمان لحاويات Docker في بيئة الإنتاج: صور مصغّرة، ومستخدم غير root، وإدارة الأسرار، وفحص الثغرات.' },
     },
   },
   {
@@ -96,7 +96,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Docker', 'Réseau', 'Infrastructure'],
     translations: {
       en: { title: 'Docker networking guide', description: 'Understand and master Docker networking: bridge, overlay, host and macvlan.' },
-      ar: { title: 'دليل الشبكات في Docker', description: 'فهم الشبكات في Docker وإتقانها: bridge وoverlay وhost وmacvlan.' },
+      ar: { title: 'دليل الشبكات في Docker', description: 'فهم الشبكات في Docker وإتقانها: أنواع bridge وoverlay وhost وmacvlan، واتصال الحاويات فيما بينها وعزلها.' },
     },
   },
   {
@@ -122,7 +122,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Linux', 'Monitoring', 'Performance'],
     translations: {
       en: { title: 'Linux performance monitoring', description: 'Tools and techniques for monitoring the performance of your Linux servers.' },
-      ar: { title: 'مراقبة أداء Linux', description: 'الأدوات والتقنيات اللازمة لمراقبة أداء خوادم Linux الخاصة بك.' },
+      ar: { title: 'مراقبة أداء Linux', description: 'الأدوات والتقنيات اللازمة لمراقبة أداء خوادم Linux: المعالج والذاكرة والأقراص والشبكة وتحديد الاختناقات.' },
     },
   },
   {
@@ -154,14 +154,14 @@ export const blogArticles: BlogArticle[] = [
   {
     slug: 'linux-systemd-services',
     title: 'Créer des services systemd',
-    description: 'Apprenez à créer et gérer des services systemd pour vos applications.',
+    description: 'Apprenez à créer et gérer des services systemd pour vos applications : fichiers unit, redémarrage automatique, logs et timers.',
     category: 'Linux',
     date: '25 Sep 2024',
     readTime: '6 min',
     tags: ['Linux', 'Systemd', 'Services'],
     translations: {
       en: { title: 'Creating systemd services', description: 'Learn how to create and manage systemd services for your applications.' },
-      ar: { title: 'إنشاء خدمات systemd', description: 'تعلّم كيفية إنشاء خدمات systemd وإدارتها لتطبيقاتك.' },
+      ar: { title: 'إنشاء خدمات systemd', description: 'تعلّم كيفية إنشاء خدمات systemd وإدارتها لتطبيقاتك: ملفات unit وإعادة التشغيل التلقائي والسجلات والمؤقتات.' },
     },
   },
   {
@@ -187,7 +187,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Symfony', 'API Platform', 'REST'],
     translations: {
       en: { title: 'Building APIs with Symfony API Platform', description: 'A guide to building robust RESTful APIs with Symfony and API Platform.' },
-      ar: { title: 'بناء واجهات API باستخدام Symfony API Platform', description: 'دليل لإنشاء واجهات RESTful API متينة باستخدام Symfony وAPI Platform.' },
+      ar: { title: 'بناء واجهات API باستخدام Symfony API Platform', description: 'دليل لإنشاء واجهات RESTful API متينة باستخدام Symfony وAPI Platform: الموارد والتحقق والأمان والتوثيق.' },
     },
   },
   {
@@ -213,7 +213,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['PHP', 'Performance', 'OPcache'],
     translations: {
       en: { title: 'PHP performance optimization', description: 'Advanced techniques for optimizing the performance of your PHP applications in production.' },
-      ar: { title: 'تحسين أداء PHP', description: 'تقنيات متقدمة لتحسين أداء تطبيقات PHP لديك في بيئة الإنتاج.' },
+      ar: { title: 'تحسين أداء PHP', description: 'تقنيات متقدمة لتحسين أداء تطبيقات PHP في بيئة الإنتاج: OPcache والتخزين المؤقت وقواعد البيانات والتحليل.' },
     },
   },
   {
@@ -252,7 +252,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Symfony', 'Docker', 'Développement'],
     translations: {
       en: { title: 'Symfony development with Docker', description: 'Set up a complete Symfony development environment with Docker and Docker Compose.' },
-      ar: { title: 'تطوير Symfony باستخدام Docker', description: 'أعدّ بيئة تطوير Symfony متكاملة باستخدام Docker وDocker Compose.' },
+      ar: { title: 'تطوير Symfony باستخدام Docker', description: 'أعدّ بيئة تطوير Symfony متكاملة باستخدام Docker وDocker Compose، موحّدة لجميع أعضاء الفريق.' },
     },
   },
   {
@@ -291,7 +291,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Sentry', 'Monitoring', 'PHP'],
     translations: {
       en: { title: 'Application monitoring with Sentry', description: 'Integrate Sentry into your PHP/Symfony applications for real-time error monitoring.' },
-      ar: { title: 'مراقبة التطبيقات باستخدام Sentry', description: 'ادمج Sentry في تطبيقات PHP/Symfony لمراقبة الأخطاء في الوقت الفعلي.' },
+      ar: { title: 'مراقبة التطبيقات باستخدام Sentry', description: 'ادمج Sentry في تطبيقات PHP/Symfony لمراقبة الأخطاء في الوقت الفعلي وتتبّع الأداء والتنبيهات.' },
     },
   },
   {
@@ -317,7 +317,7 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Redis', 'Cache', 'Performance'],
     translations: {
       en: { title: 'Caching strategies with Redis', description: 'Implement effective caching strategies with Redis to improve performance.' },
-      ar: { title: 'استراتيجيات cache باستخدام Redis', description: 'طبّق استراتيجيات cache فعّالة باستخدام Redis لتحسين الأداء.' },
+      ar: { title: 'استراتيجيات cache باستخدام Redis', description: 'طبّق استراتيجيات cache فعّالة باستخدام Redis لتحسين الأداء: cache-aside وانتهاء الصلاحية والإبطال.' },
     },
   },
   {
@@ -330,20 +330,20 @@ export const blogArticles: BlogArticle[] = [
     tags: ['Database', 'Migration', 'DevOps'],
     translations: {
       en: { title: 'Zero-downtime database migrations', description: 'Techniques for running database migrations without interrupting service.' },
-      ar: { title: 'ترحيل قواعد البيانات دون انقطاع', description: 'تقنيات لتنفيذ عمليات ترحيل قواعد البيانات دون إيقاف الخدمة.' },
+      ar: { title: 'ترحيل قواعد البيانات دون انقطاع', description: 'تقنيات لتنفيذ عمليات ترحيل قواعد البيانات دون إيقاف الخدمة: التغييرات المتوافقة والترحيل على مراحل.' },
     },
   },
   {
     slug: 'zapier-api-automation',
     title: 'Automatisation d\'APIs avec Zapier',
-    description: 'Automatisez vos workflows métier en connectant vos APIs avec Zapier.',
+    description: 'Automatisez vos workflows métier en connectant vos APIs avec Zapier : webhooks, déclencheurs, actions et intégration PHP.',
     category: 'DevOps',
     date: '28 Nov 2024',
     readTime: '6 min',
     tags: ['Zapier', 'API', 'Automatisation'],
     translations: {
-      en: { title: 'API automation with Zapier', description: 'Automate your business workflows by connecting your APIs with Zapier.' },
-      ar: { title: 'أتمتة واجهات API باستخدام Zapier', description: 'أتمت سير عملك التجاري بربط واجهات API الخاصة بك مع Zapier.' },
+      en: { title: 'API automation with Zapier', description: 'Automate your business workflows by connecting your APIs with Zapier: webhooks, triggers, actions and PHP integration.' },
+      ar: { title: 'أتمتة واجهات API باستخدام Zapier', description: 'أتمت سير عملك التجاري بربط واجهات API الخاصة بك مع Zapier: الـ webhooks والمشغّلات والإجراءات والدمج مع PHP.' },
     },
   },
   {
@@ -362,66 +362,66 @@ export const blogArticles: BlogArticle[] = [
   {
     slug: 'mcp-server-php',
     title: 'Créer un serveur MCP en PHP',
-    description: 'Exposez vos outils PHP à Claude et aux autres assistants IA grâce au Model Context Protocol et au SDK PHP officiel : outils, ressources, prompts, tests et intégration.',
+    description: 'Exposez vos outils PHP à Claude et aux assistants IA avec le Model Context Protocol et le SDK PHP officiel : outils, ressources, prompts et tests.',
     category: 'PHP',
     date: '22 Sep 2026',
     readTime: '14 min',
     tags: ['PHP', 'MCP', 'IA', 'Symfony'],
     translations: {
-      en: { title: 'Building an MCP server in PHP', description: 'Expose your PHP tools to Claude and other AI assistants with the Model Context Protocol and the official PHP SDK: tools, resources, prompts, testing and integration.' },
-      ar: { title: 'إنشاء خادم MCP باستخدام PHP', description: 'اجعل أدوات PHP الخاصة بك متاحة لـ Claude ولمساعدي الذكاء الاصطناعي الآخرين عبر بروتوكول Model Context Protocol وحزمة SDK الرسمية لـ PHP: الأدوات والموارد والقوالب والاختبار والدمج.' },
+      en: { title: 'Building an MCP server in PHP', description: 'Expose your PHP tools to Claude and other AI assistants with the Model Context Protocol and the official PHP SDK: tools, resources, prompts and tests.' },
+      ar: { title: 'إنشاء خادم MCP باستخدام PHP', description: 'اجعل أدوات PHP متاحة لـ Claude ولمساعدي الذكاء الاصطناعي عبر Model Context Protocol وحزمة SDK الرسمية لـ PHP: الأدوات والموارد والقوالب.' },
     },
   },
   {
     slug: 'nuxt-cloudflare-pages',
-    title: 'Déployer un site Nuxt sur Cloudflare Pages (et éviter les pièges)',
-    description: 'Retour d\'expérience sur le déploiement de ce portfolio Nuxt 3 sur Cloudflare Pages : configuration du build, branche de production, version de Node, lockfile npm et redirections.',
+    title: 'Nuxt sur Cloudflare Pages : déploiement et pièges à éviter',
+    description: 'Retour d\'expérience : déployer un site Nuxt 3 sur Cloudflare Pages, avec la configuration du build, la branche de production, Node et le lockfile npm.',
     category: 'DevOps',
     date: '26 Sep 2026',
     readTime: '8 min',
     tags: ['Nuxt', 'Cloudflare', 'DevOps', 'CI/CD'],
     translations: {
-      en: { title: 'Deploying a Nuxt site to Cloudflare Pages (and avoiding the pitfalls)', description: 'Lessons learned deploying this Nuxt 3 portfolio to Cloudflare Pages: build settings, production branch, Node version, npm lockfile and redirects.' },
+      en: { title: 'Deploying Nuxt to Cloudflare Pages: pitfalls to avoid', description: 'Lessons learned deploying this Nuxt 3 portfolio to Cloudflare Pages: build settings, production branch, Node version, npm lockfile and redirects.' },
       ar: { title: 'نشر موقع Nuxt على Cloudflare Pages (وتجنّب الأخطاء الشائعة)', description: 'خلاصة تجربة نشر هذا الموقع المبني بـ Nuxt 3 على Cloudflare Pages: إعدادات البناء، فرع الإنتاج، إصدار Node، ملف قفل npm وعمليات إعادة التوجيه.' },
     },
   },
   {
     slug: 'symfony-vps-deployment',
-    title: 'Déployer une application Symfony sur un VPS : Nginx, PHP-FPM, MySQL et HTTPS',
-    description: 'Configurer un serveur Ubuntu de A à Z pour héberger une application Symfony en production : Nginx, pool PHP-FPM dédié, MySQL, HTTPS avec Let\'s Encrypt, workers Messenger et crons.',
+    title: 'Déployer Symfony sur un VPS : Nginx, PHP-FPM, MySQL, HTTPS',
+    description: 'Configurer un serveur Ubuntu pour Symfony en production : Nginx, pool PHP-FPM dédié, MySQL, HTTPS avec Let\'s Encrypt, workers Messenger et crons.',
     category: 'Linux',
     date: '08 Sep 2026',
     readTime: '13 min',
     tags: ['Linux', 'Symfony', 'Nginx', 'PHP-FPM', 'MySQL'],
     translations: {
-      en: { title: 'Deploying a Symfony application on a VPS: Nginx, PHP-FPM, MySQL and HTTPS', description: 'Set up an Ubuntu server from scratch to host a Symfony application in production: Nginx, a dedicated PHP-FPM pool, MySQL, HTTPS with Let\'s Encrypt, Messenger workers and cron jobs.' },
-      ar: { title: 'نشر تطبيق Symfony على خادم VPS: Nginx وPHP-FPM وMySQL وHTTPS', description: 'إعداد خادم Ubuntu من الصفر لاستضافة تطبيق Symfony في بيئة الإنتاج: Nginx، مجموعة PHP-FPM مخصصة، MySQL، شهادة HTTPS من Let\'s Encrypt، عمّال Messenger والمهام المجدولة.' },
+      en: { title: 'Deploying Symfony on a VPS: Nginx, PHP-FPM, MySQL, HTTPS', description: 'Set up an Ubuntu server for Symfony in production: Nginx, a dedicated PHP-FPM pool, MySQL, HTTPS with Let\'s Encrypt, Messenger workers and cron jobs.' },
+      ar: { title: 'نشر تطبيق Symfony على خادم VPS: Nginx وPHP-FPM وMySQL وHTTPS', description: 'إعداد خادم Ubuntu لتطبيق Symfony في بيئة الإنتاج: Nginx، مجموعة PHP-FPM مخصصة، MySQL، HTTPS مع Let\'s Encrypt، عمّال Messenger والمهام المجدولة.' },
     },
   },
   {
     slug: 'traefik-docker-https',
     title: 'Traefik et Docker : reverse proxy et HTTPS automatique',
-    description: 'Héberger plusieurs applications Docker sur un même serveur avec Traefik : routage par nom de domaine, certificats Let\'s Encrypt automatiques, middlewares de sécurité et tableau de bord protégé.',
+    description: 'Héberger plusieurs applications Docker sur un serveur avec Traefik : routage par domaine, certificats Let\'s Encrypt automatiques et middlewares de sécurité.',
     category: 'Docker',
     date: '25 Aug 2026',
     readTime: '10 min',
     tags: ['Docker', 'Traefik', 'HTTPS', 'Reverse proxy'],
     translations: {
-      en: { title: 'Traefik and Docker: reverse proxy and automatic HTTPS', description: 'Host several Docker applications on the same server with Traefik: routing by domain name, automatic Let\'s Encrypt certificates, security middlewares and a protected dashboard.' },
+      en: { title: 'Traefik and Docker: reverse proxy and automatic HTTPS', description: 'Host several Docker applications on one server with Traefik: routing by domain name, automatic Let\'s Encrypt certificates and security middlewares.' },
       ar: { title: 'Traefik وDocker: وكيل عكسي وHTTPS تلقائي', description: 'استضافة عدة تطبيقات Docker على الخادم نفسه باستخدام Traefik: توجيه حسب اسم النطاق، شهادات Let\'s Encrypt تلقائية، طبقات أمان وسيطة ولوحة تحكم محمية.' },
     },
   },
   {
     slug: 'server-backups-restic',
-    title: 'Sauvegardes automatisées d\'un serveur : MySQL, fichiers et restic',
-    description: 'Mettre en place des sauvegardes fiables : dump MySQL cohérent, sauvegarde chiffrée et dédupliquée avec restic vers un stockage S3, rotation, planification systemd, alertes et tests de restauration.',
+    title: 'Sauvegardes serveur automatisées : MySQL, fichiers et restic',
+    description: 'Des sauvegardes fiables : dump MySQL cohérent, sauvegarde chiffrée avec restic vers S3, rotation, planification systemd, alertes et tests de restauration.',
     category: 'Linux',
     date: '11 Aug 2026',
     readTime: '11 min',
     tags: ['Linux', 'Sauvegarde', 'MySQL', 'restic', 'systemd'],
     translations: {
-      en: { title: 'Automated server backups: MySQL, files and restic', description: 'Set up reliable backups: a consistent MySQL dump, encrypted and deduplicated backups with restic to S3 storage, retention, systemd scheduling, alerts and restore tests.' },
-      ar: { title: 'النسخ الاحتياطي التلقائي للخادم: MySQL والملفات وrestic', description: 'إعداد نسخ احتياطية موثوقة: تفريغ متّسق لقاعدة MySQL، ونسخ مشفّرة وخالية من التكرار عبر restic إلى تخزين S3، وسياسة احتفاظ، وجدولة بـ systemd، وتنبيهات، واختبارات استعادة.' },
+      en: { title: 'Automated server backups: MySQL, files and restic', description: 'Reliable backups: a consistent MySQL dump, encrypted backups with restic to S3 storage, retention, systemd scheduling, alerts and restore tests.' },
+      ar: { title: 'النسخ الاحتياطي التلقائي للخادم: MySQL والملفات وrestic', description: 'نسخ احتياطية موثوقة: تفريغ متّسق لقاعدة MySQL، ونسخ مشفّرة عبر restic إلى تخزين S3، وسياسة احتفاظ، وجدولة بـ systemd، واختبارات استعادة.' },
     },
   },
 ]

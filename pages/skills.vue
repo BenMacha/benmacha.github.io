@@ -1,6 +1,6 @@
 <template>
   <div class="container page">
-    <SectionTitle page :eyebrow="$t('skillsUi.eyebrow')" :title="$t('skills.title')" />
+    <SectionTitle page :eyebrow="$t('skillsUi.eyebrow')" :title="$t('skills.title')" :subtitle="$t('intro.skills')" />
 
     <div class="grid" style="--min: 340px; gap: 24px">
       <section v-for="section in skillSections" :key="section.key" class="bag inventory">
@@ -21,11 +21,10 @@ import { skillSections } from '~/data/skills'
 
 const { t } = useI18n()
 
-useHead({
-  title: `${t('skills.title')} - Ben Macha Ali | PHP, Symfony, React, Vue.js, Docker`,
-  meta: [
-    { name: 'description', content: 'Compétences techniques de Ben Macha Ali : PHP, Symfony, Laravel, React, Vue.js, Docker, Jenkins, AWS, GraphQL, Kafka, tests automatisés.' },
-  ],
+usePageSeo({
+  title: () => t('seo.skills.title'),
+  description: () => t('seo.skills.description'),
+  breadcrumb: () => [{ name: t('nav.skills'), path: '/skills' }],
 })
 </script>
 

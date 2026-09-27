@@ -48,11 +48,10 @@ const visible = computed(() =>
   active.value === 'all' ? articles.value : articles.value.filter(a => a.category === active.value),
 )
 
-useHead({
-  title: `${t('blog.title')} - Ben Macha Ali | PHP, Symfony, Docker, Linux, DevOps`,
-  meta: [
-    { name: 'description', content: 'Blog technique de Ben Macha Ali : articles sur PHP, Symfony, Docker, Linux et DevOps. Retours d\'expérience et bonnes pratiques.' },
-  ],
+usePageSeo({
+  title: () => t('seo.blog.title'),
+  description: () => t('seo.blog.description'),
+  breadcrumb: () => [{ name: t('nav.blog'), path: '/blog' }],
 })
 </script>
 

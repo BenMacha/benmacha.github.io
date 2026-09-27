@@ -1,7 +1,7 @@
 <template>
   <header class="header" :class="{ 'is-open': menuOpen }">
     <div class="container header__inner">
-      <NuxtLink to="/" class="logo pixel">
+      <NuxtLink :to="localePath('/')" class="logo pixel">
         <span class="logo__block coin-block" aria-hidden="true">?</span>
         <span><span class="logo__tilde">~/</span>benmacha<span class="blink" aria-hidden="true">█</span></span>
       </NuxtLink>
@@ -22,7 +22,7 @@
           <NuxtLink
             v-for="page in navPages"
             :key="page"
-            :to="`/${page}`"
+            :to="localePath(`/${page}`)"
             class="nav__link"
           >
             <span class="nav__dot">./</span>{{ $t(`nav.${page}`) }}
@@ -42,6 +42,7 @@
 import { navPages } from '~/data/site'
 
 const route = useRoute()
+const localePath = useLocalePath()
 const menuOpen = ref(false)
 
 // Close the mobile menu after navigating or on Escape

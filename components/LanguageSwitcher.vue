@@ -1,29 +1,32 @@
 <template>
-  <div class="langs" role="group" aria-label="Language">
-    <button
+  <nav class="langs" :aria-label="$t('language.label')">
+    <NuxtLink
       v-for="item in locales"
       :key="item.code"
-      type="button"
+      :to="switchLocalePath(item.code)"
+      :hreflang="item.language"
+      :lang="item.code"
       class="langs__btn pixel"
       :class="{ 'is-active': item.code === locale }"
-      :aria-pressed="item.code === locale"
+      :aria-current="item.code === locale ? 'true' : undefined"
       :title="item.name"
-      @click="select(item.code)"
+      @click="remember(item.code)"
     >
       {{ item.code.toUpperCase() }}
-    </button>
-  </div>
+    </NuxtLink>
+  </nav>
 </template>
 
 <script setup lang="ts">
 import { LOCALE_COOKIE } from '~/data/site'
 
-const { locale, locales, setLocale } = useI18n()
+// Real links to the translated page: crawlable, and they work without JavaScript
+const { locale, locales } = useI18n()
+const switchLocalePath = useSwitchLocalePath()
 const savedLocale = useCookie(LOCALE_COOKIE, { maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
 
-function select(code: typeof locale.value) {
+function remember(code: string) {
   savedLocale.value = code
-  setLocale(code)
 }
 </script>
 

@@ -1,6 +1,6 @@
 <template>
   <div class="container container--narrow page">
-    <NuxtLink to="/blog" class="back">◀ {{ $t('blog.backToBlog') }}</NuxtLink>
+    <NuxtLink :to="localePath('/blog')" class="back">◀ {{ $t('blog.backToBlog') }}</NuxtLink>
 
     <template v-if="article">
       <header class="head">
@@ -21,12 +21,12 @@
       <article v-if="body" class="content card" :lang="body.lang" :dir="articleDir(body)" v-html="body.html" />
 
       <nav class="pager">
-        <NuxtLink v-if="prev" :to="`/blog/${prev.slug}`" v-lift class="pager__link card">
+        <NuxtLink v-if="prev" :to="localePath(`/blog/${prev.slug}`)" v-lift class="pager__link card">
           <span class="pager__label pixel">◀ {{ $t('blog.previousArticle') }}</span>
           <span class="pager__title" :lang="prev.lang" :dir="articleDir(prev)">{{ prev.title }}</span>
         </NuxtLink>
         <span v-else />
-        <NuxtLink v-if="next" :to="`/blog/${next.slug}`" v-lift class="pager__link pager__link--next card">
+        <NuxtLink v-if="next" :to="localePath(`/blog/${next.slug}`)" v-lift class="pager__link pager__link--next card">
           <span class="pager__label pixel">{{ $t('blog.nextArticle') }} ▶</span>
           <span class="pager__title" :lang="next.lang" :dir="articleDir(next)">{{ next.title }}</span>
         </NuxtLink>
@@ -41,6 +41,7 @@
 import { blogCategories, type BlogCategory } from '~/data/site'
 
 const route = useRoute()
+const localePath = useLocalePath()
 const slug = computed(() => route.params.slug as string)
 
 const articles = useLocalizedArticles()
@@ -54,31 +55,53 @@ if (!article.value) {
   throw createError({ statusCode: 404, statusMessage: 'Article not found', fatal: false })
 }
 
-// Body loaded on demand in the current locale (French in the prerendered HTML);
-// the previous body stays visible while another language loads.
-const { locale } = useI18n()
+// Body in the page's locale (each locale has its own prerendered URL)
+const { t, locale } = useI18n()
 const { data: body } = await useAsyncData(
-  () => `article:${slug.value}`,
+  () => `article:${locale.value}:${slug.value}`,
   () => loadArticleBody(slug.value, locale.value),
-  { watch: [locale] },
 )
 
-useHead(() => ({
-  title: article.value ? `${article.value.title} - Ben Macha Ali` : 'Blog - Ben Macha Ali',
-  meta: [
-    { name: 'description', content: article.value?.description ?? '' },
-    { name: 'keywords', content: article.value?.tags.join(', ') ?? '' },
+const { url } = usePageSeo({
+  title: () => article.value?.title ?? t('blog.title'),
+  description: () => article.value?.description ?? '',
+  type: 'article',
+  breadcrumb: () => [
+    { name: t('nav.blog'), path: '/blog' },
+    { name: article.value?.title ?? '', path: `/blog/${slug.value}` },
   ],
+})
+
+const published = computed(() => (article.value ? new Date(`${article.value.date} UTC`).toISOString().slice(0, 10) : undefined))
+
+useSeoMeta({
+  articlePublishedTime: published,
+  articleModifiedTime: published,
+  articleAuthor: [SITE_URL],
+  articleSection: () => article.value?.category,
+  articleTag: () => article.value?.tags,
+  keywords: () => article.value?.tags.join(', '),
+})
+
+useHead(() => ({
   script: article.value
     ? [{
+        key: 'blog-posting',
         type: 'application/ld+json',
         innerHTML: JSON.stringify({
           '@context': 'https://schema.org',
           '@type': 'BlogPosting',
+          '@id': `${url.value}#article`,
+          'mainEntityOfPage': url.value,
+          'url': url.value,
           'headline': article.value.title,
           'description': article.value.description,
-          'datePublished': new Date(article.value.date).toISOString().slice(0, 10),
-          'author': { '@type': 'Person', 'name': 'Ben Macha Ali' },
+          'image': OG_IMAGE,
+          'inLanguage': body.value?.lang ?? article.value.lang,
+          'datePublished': published.value,
+          'dateModified': published.value,
+          'author': { '@id': PERSON_ID, '@type': 'Person', 'name': SITE_NAME, 'url': SITE_URL },
+          'publisher': { '@id': PERSON_ID },
           'keywords': article.value.tags.join(', '),
           'articleSection': article.value.category,
         }),

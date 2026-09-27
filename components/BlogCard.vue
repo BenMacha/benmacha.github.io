@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink v-lift :to="`/blog/${article.slug}`" class="post card">
+  <NuxtLink v-lift :to="localePath(`/blog/${article.slug}`)" class="post card">
     <div class="post__strip" :style="{ background: category.color }" />
     <div class="post__body">
       <div class="post__meta">
@@ -19,6 +19,7 @@
 import { blogCategories, type BlogCategory } from '~/data/site'
 
 const props = defineProps<{ article: LocalizedArticle }>()
+const localePath = useLocalePath()
 
 const category = computed(() => blogCategories[props.article.category as BlogCategory] ?? blogCategories.DevOps)
 const badgeInk = computed(() => (props.article.category === 'Linux' ? '#10132a' : '#fff'))

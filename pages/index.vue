@@ -14,8 +14,26 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
+
+usePageSeo({
+  title: () => t('seo.home.title'),
+  description: () => t('seo.home.description'),
+  type: 'profile',
+})
+
+// The home page is Ben Macha Ali's profile (schema.org ProfilePage)
 useHead({
-  title: 'Ben Macha Ali - Tech Lead & Full Stack Developer | Symfony, React, Vue.js',
+  script: [{
+    key: 'profile-page',
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      'mainEntity': { '@id': PERSON_ID },
+      'about': { '@id': PERSON_ID },
+    }),
+  }],
 })
 </script>
 
