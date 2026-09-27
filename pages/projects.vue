@@ -1,79 +1,155 @@
 <template>
-  <div class="pt-24 pb-20">
-    <div class="section-container">
-      <SectionTitle :title="$t('projects.github.title')" />
+  <div class="container page" style="max-width: 960px">
+    <SectionTitle page :eyebrow="$t('projectsUi.eyebrow')" :title="$t('projects.github.title')" />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
-        <a
-          v-for="(project, index) in projects"
-          :key="project.name"
-          :href="project.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="reveal glass-card glow-border p-6 group hover:border-accent/40 transition-all duration-300 block"
-          :class="`reveal-delay-${Math.min(index + 1, 5)}`"
-        >
-          <!-- Header -->
-          <div class="flex items-start justify-between mb-4">
-            <span class="text-2xl">{{ project.icon }}</span>
-            <div class="p-1.5 border border-accent/15 text-accent/40 group-hover:border-accent/40 group-hover:text-accent group-hover:bg-accent/5 transition-all">
-              <ExternalLink class="w-3.5 h-3.5" />
-            </div>
-          </div>
+    <div class="grid" style="--min: 300px; gap: 28px">
+      <div v-for="(project, i) in projects" :key="project.url" class="project">
+        <div class="project__block-wrap">
+          <div class="coin" :class="{ 'is-out': hits[i] }" aria-hidden="true" />
+          <button
+            type="button"
+            class="question pixel"
+            :class="{ 'is-hit': hits[i] }"
+            :aria-label="$t('projectsUi.hit')"
+            @click="hit(i, $event)"
+          >
+            {{ hits[i] ? project.icon : '?' }}
+          </button>
+        </div>
 
-          <!-- Content -->
-          <h3 class="font-mono font-bold text-base mb-2 text-gray-700 dark:text-green-400/80 group-hover:text-accent transition-colors">
-            {{ project.name }}
-          </h3>
-          <p class="text-xs text-gray-400 dark:text-green-400/40 leading-relaxed mb-4 font-mono">
-            {{ project.description }}
-          </p>
-
-          <!-- Tasks if available -->
-          <ul v-if="project.tasks?.length" class="space-y-1 mb-4">
-            <li
-              v-for="task in project.tasks"
-              :key="task"
-              class="text-[10px] text-gray-400 dark:text-green-400/30 flex items-start gap-2 font-mono"
-            >
-              <span class="text-accent/40 mt-0.5">&gt;</span>
-              {{ task }}
-            </li>
+        <article v-reveal="i" v-lift class="project__card card">
+          <h2 class="project__name pixel">{{ project.name }}</h2>
+          <p class="project__desc">{{ project.description }}</p>
+          <ul v-if="project.tasks.length" class="bullets project__tasks">
+            <li v-for="task in project.tasks" :key="task">{{ task }}</li>
           </ul>
-
-          <!-- Footer -->
-          <div class="pt-3 border-t border-accent/10 flex items-center gap-2 text-[10px] text-accent/50 font-mono">
-            <Github class="w-3.5 h-3.5" />
-            {{ $t('projects.github.viewOn') }} GitHub
-          </div>
-        </a>
+          <a :href="project.url" target="_blank" rel="noopener" class="project__link">{{ $t('projectsUi.view') }} ↗</a>
+        </article>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ExternalLink, Github } from 'lucide-vue-next'
+import { animate } from 'motion'
 
-const { t, tm, rt } = useI18n()
+const { t } = useI18n()
+const { projects } = useResume()
 
-useScrollReveal()
+const hits = reactive<Record<number, boolean>>({})
 
-const projects = computed(() => {
-  const raw = tm('projects.github.items') as any[]
-  return raw.map((item: any) => ({
-    name: rt(item.name),
-    icon: rt(item.icon),
-    description: rt(item.description),
-    url: rt(item.url),
-    tasks: item.tasks ? (item.tasks as any[]).map((task: any) => rt(task)) : undefined,
-  }))
-})
+function hit(index: number, event: MouseEvent) {
+  hits[index] = true
+  if (prefersReducedMotion()) return
+  const block = event.currentTarget as HTMLElement
+  animate(block, { y: [0, -22, 0] }, { duration: 0.28, ease: 'easeOut' })
+  const coin = block.previousElementSibling
+  if (coin) animate(coin, { rotateY: [0, 720] }, { duration: 0.6 })
+}
 
 useHead({
-  title: `${t('projects.title')} - Ben Macha Ali`,
+  title: `${t('projects.title')} - Ben Macha Ali | Open Source Symfony & PHP`,
   meta: [
-    { name: 'description', content: 'Projets open source de Ben Macha Ali - UberEat PHP SDK, Symfony Bundles et plus sur GitHub.' },
+    { name: 'description', content: 'Projets open source de Ben Macha Ali : UberEat PHP SDK, Symfony CRUD Template Bundle, Symfony Mouse Tracker, Symfony Diagram Bundle.' },
   ],
 })
 </script>
+
+<style scoped>
+.project {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.project__block-wrap {
+  position: relative;
+  height: 92px;
+  margin-inline-start: 20px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.question {
+  position: relative;
+  z-index: 2;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--navy);
+  background: var(--coin);
+  border: 4px solid var(--navy);
+  box-shadow: inset -5px -5px 0 var(--coin-dark), inset 5px 5px 0 var(--coin-light), 5px 5px 0 #000;
+  cursor: pointer;
+}
+
+.question.is-hit {
+  font-size: 28px;
+  background: #c8762c;
+  box-shadow: inset -5px -5px 0 #8a4d15, inset 5px 5px 0 #e6a060, 5px 5px 0 #000;
+}
+
+.coin {
+  position: absolute;
+  z-index: 1;
+  left: 22px;
+  bottom: 20px;
+  width: 28px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--coin);
+  border: 3px solid var(--navy);
+  box-shadow: inset -4px 0 0 var(--coin-dark);
+  opacity: 0;
+  transition: bottom .35s cubic-bezier(.2, 1.6, .4, 1), opacity .2s;
+}
+
+.coin.is-out {
+  bottom: 82px;
+  opacity: 1;
+}
+
+.project__card {
+  align-self: stretch;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 22px;
+}
+
+.project__name {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--accent);
+}
+
+.project__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.project__tasks {
+  gap: 6px;
+}
+
+.project__tasks :deep(li) {
+  font-size: 12px;
+}
+
+.project__link {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 3px dotted var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+</style>

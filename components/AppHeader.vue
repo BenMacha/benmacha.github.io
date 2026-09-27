@@ -1,105 +1,112 @@
 <template>
-  <header
-    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-    :class="[
-      scrolled
-        ? 'bg-white/90 dark:bg-dark/95 backdrop-blur-sm border-b border-gray-200 dark:border-accent/20'
-        : 'bg-transparent'
-    ]"
-  >
-    <nav class="section-container flex items-center justify-between h-14 sm:h-16">
-      <!-- Logo - Terminal style -->
-      <NuxtLink to="/" class="flex items-center gap-2 group">
-        <span class="text-accent dark:text-accent font-mono text-sm sm:text-base font-bold">
-          <span class="text-accent/50">~/</span><span class="group-hover:glow-text transition-all">benmacha</span><span class="animate-blink">_</span>
-        </span>
+  <header class="header">
+    <div class="container header__inner">
+      <NuxtLink to="/" class="logo pixel">
+        <span class="logo__block coin-block" aria-hidden="true">?</span>
+        <span><span class="logo__tilde">~/</span>benmacha<span class="blink" aria-hidden="true">█</span></span>
       </NuxtLink>
 
-      <!-- Desktop Nav - Terminal commands -->
-      <div class="hidden md:flex items-center gap-1">
+      <nav class="nav" aria-label="Main">
         <NuxtLink
-          v-for="link in navLinks"
-          :key="link.to"
-          :to="link.to"
-          class="text-xs font-mono px-3 py-1.5 text-gray-600 dark:text-green-400/70 hover:text-accent hover:bg-accent/10
-                 border border-transparent hover:border-accent/20 transition-all duration-200"
-          active-class="text-accent border-accent/30 bg-accent/5"
+          v-for="page in navPages"
+          :key="page"
+          :to="`/${page}`"
+          class="nav__link"
         >
-          <span class="text-accent/40">./</span>{{ $t(link.label) }}
+          <span class="nav__dot">./</span>{{ $t(`nav.${page}`) }}
         </NuxtLink>
-      </div>
+      </nav>
 
-      <!-- Actions -->
-      <div class="flex items-center gap-1">
+      <div class="header__actions">
         <LanguageSwitcher />
         <ThemeToggle />
-
-        <!-- Mobile menu button -->
-        <button
-          @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden p-2 text-accent hover:bg-accent/10 border border-transparent hover:border-accent/20 transition-colors"
-          aria-label="Toggle menu"
-        >
-          <X v-if="mobileMenuOpen" class="w-4 h-4" />
-          <Terminal v-else class="w-4 h-4" />
-        </button>
       </div>
-    </nav>
-
-    <!-- Mobile Menu -->
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-2"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-2"
-    >
-      <div
-        v-if="mobileMenuOpen"
-        class="md:hidden bg-white/98 dark:bg-dark/98 backdrop-blur-sm border-t border-gray-200 dark:border-accent/10"
-      >
-        <div class="section-container py-3 flex flex-col gap-0.5">
-          <NuxtLink
-            v-for="link in navLinks"
-            :key="link.to"
-            :to="link.to"
-            class="px-4 py-2.5 text-xs font-mono text-gray-600 dark:text-green-400/70 hover:text-accent hover:bg-accent/5 transition-colors border-l-2 border-transparent hover:border-accent"
-            active-class="text-accent border-accent bg-accent/5"
-            @click="mobileMenuOpen = false"
-          >
-            <span class="text-accent/40 mr-1">$</span> cd {{ $t(link.label) }}
-          </NuxtLink>
-        </div>
-      </div>
-    </Transition>
+    </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { Terminal, X } from 'lucide-vue-next'
+import { navPages } from '~/data/site'
+</script>
 
-const mobileMenuOpen = ref(false)
-const scrolled = ref(false)
-
-const navLinks = [
-  { to: '/experience', label: 'nav.experience' },
-  { to: '/skills', label: 'nav.skills' },
-  { to: '/projects', label: 'nav.projects' },
-  { to: '/education', label: 'nav.education' },
-  { to: '/blog', label: 'nav.blog' },
-]
-
-function handleScroll() {
-  scrolled.value = window.scrollY > 20
+<style scoped>
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--bg2);
+  border-bottom: 3px solid var(--line);
+  box-shadow: 0 4px 0 var(--shadow);
 }
 
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
-})
+.header__inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-block: 12px;
+}
 
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
-</script>
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.logo:hover {
+  color: var(--accent);
+}
+
+.logo__block {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  box-shadow: inset -3px -3px 0 var(--coin-dark), inset 3px 3px 0 var(--coin-light);
+}
+
+.logo__tilde {
+  opacity: .6;
+}
+
+.nav {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nav__link {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 11px;
+  border: 3px solid transparent;
+  color: var(--nav-ink);
+}
+
+.nav__link:hover {
+  color: var(--nav-ink);
+  border-color: var(--nav-hover);
+}
+
+.nav__link.router-link-active {
+  background: var(--coin);
+  border-color: var(--navy);
+  color: var(--navy);
+  box-shadow: inset -3px -3px 0 var(--coin-dark);
+}
+
+.nav__dot {
+  opacity: .55;
+}
+
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+</style>

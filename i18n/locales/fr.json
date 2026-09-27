@@ -8,7 +8,7 @@
   },
   "home": {
     "title": "Tech Lead & Développeur Full Stack",
-    "description": "Tech Lead passionné et créatif, spécialisé dans la conception et le développement de solutions web et mobiles. Fort de plus de 8 ans d'expérience, j'ai contribué à l'optimisation de systèmes variés, en utilisant des technologies modernes pour créer des applications performantes et intuitives. Avec mon équipe, j'ai travaillé sur l'intégration de technologies connectées, la gestion en temps réel de commandes, la création de systèmes de notifications personnalisés, et l'analyse de données. Constamment à la recherche de nouveaux défis pour simplifier et améliorer la vie des utilisateurs finaux.",
+    "description": "Tech Lead passionné et créatif, spécialisé dans la conception et le développement de solutions web et mobiles. Fort de plus de 10 ans d'expérience, j'ai contribué à l'optimisation de systèmes variés, en utilisant des technologies modernes pour créer des applications performantes et intuitives. Avec mon équipe, j'ai travaillé sur l'intégration de technologies connectées, la gestion en temps réel de commandes, la création de systèmes de notifications personnalisés, et l'analyse de données. Constamment à la recherche de nouveaux défis pour simplifier et améliorer la vie des utilisateurs finaux.",
     "contact": "Contact",
     "download": "Télécharger mon CV"
   },
@@ -254,7 +254,8 @@
   "404": {
     "title": "Page non trouvée",
     "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
-    "back": "Retour à l'accueil"
+    "back": "Retour à l'accueil",
+    "gameOver": "GAME OVER"
   },
   "blog": {
     "title": "Blog Technique",
@@ -277,6 +278,82 @@
     "articleNotFound": "Article non trouvé."
   },
   "footer": {
-    "rights": "Tous droits réservés."
+    "rights": "Tous droits réservés.",
+    "built": "Built with code, coffee & curiosity // v5.0.0 — Pixel edition"
+  },
+  "hero": {
+    "player": "JOUEUR",
+    "xp": "XP",
+    "years": "×10 ANS",
+    "world": "MONDE",
+    "worldValue": "ILE-DE-FRANCE",
+    "class": "CLASSE",
+    "classValue": "TECH LEAD",
+    "level": "NIVEAU 10",
+    "xpLabel": "10 ANS D'EXPERIENCE · DEPUIS 2016",
+    "terminal": "terminal — bash",
+    "jump": "Saute !"
+  },
+  "sections": {
+    "experience": "MONDE 1 · CARRIÈRE",
+    "skills": "MONDE 2 · INVENTAIRE",
+    "projects": "MONDE 3 · BLOCS BONUS",
+    "blog": "MONDE 4 · LOGS",
+    "arcade": "MONDE 6 · ARCADE",
+    "seeAll": "Tout voir",
+    "openInventory": "Ouvrir l'inventaire",
+    "education": "MONDE 5 · SUCCÈS"
+  },
+  "experienceUi": {
+    "eyebrow": "MONDE 1 · CARTE DES NIVEAUX",
+    "more": "+{n} quêtes",
+    "less": "Réduire",
+    "start": "START · 2016"
+  },
+  "skillsUi": {
+    "eyebrow": "MONDE 2 · INVENTAIRE",
+    "count": "{n} objets"
+  },
+  "projectsUi": {
+    "eyebrow": "MONDE 3 · BLOCS BONUS",
+    "view": "Voir sur GitHub",
+    "hit": "Frapper le bloc"
+  },
+  "educationUi": {
+    "eyebrow": "MONDE 5 · SUCCES DEBLOQUES",
+    "unlocked": "SUCCES OBTENU !"
+  },
+  "blogUi": {
+    "eyebrow": "MONDE 4 · LOGS SERVEUR",
+    "readTime": "de lecture"
+  },
+  "arcade": {
+    "title": "Jeux d'antan",
+    "start": "START",
+    "pressStart": "APPUIE SUR START",
+    "gameOver": "GAME OVER",
+    "pause": "PAUSE · START",
+    "victory": "VICTOIRE !",
+    "score": "SCORE",
+    "best": "BEST",
+    "lines": "LIGNES",
+    "move": "bouger",
+    "rotate": "tourner",
+    "down": "descendre",
+    "drop": "ESPACE chute",
+    "orMouse": "ou souris",
+    "shoot": "ESPACE tirer",
+    "points": "7 pts",
+    "breakout": "CASSE-BRIQUES"
+  },
+  "contactUi": {
+    "eyebrow": "INSERT COIN · PLAYER 2 ?",
+    "title": "Contact",
+    "cv": "CV"
+  },
+  "theme": {
+    "day": "JOUR",
+    "night": "NUIT",
+    "toggle": "Changer de thème"
   }
 }

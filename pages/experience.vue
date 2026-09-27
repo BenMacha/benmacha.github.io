@@ -1,108 +1,219 @@
 <template>
-  <div class="pt-24 pb-20">
-    <div class="section-container">
-      <SectionTitle :title="$t('experience.title')" />
+  <div class="container container--narrow page">
+    <SectionTitle page :eyebrow="$t('experienceUi.eyebrow')" :title="$t('experience.title')" />
 
-      <!-- Timeline -->
-      <div class="relative max-w-3xl mx-auto">
-        <!-- Timeline line - pixelated -->
-        <div class="absolute left-4 sm:left-8 top-0 bottom-0 w-px bg-accent/15" style="box-shadow: 0 0 5px rgba(0,255,65,0.1);" />
+    <ol class="levels">
+      <li v-for="(job, i) in experiences" :key="job.company" class="level-row">
+        <div class="pipe" aria-hidden="true">
+          <div class="pipe__lip" />
+          <div class="pipe__body" />
+        </div>
 
-        <div
-          v-for="(item, index) in experiences"
-          :key="item.company"
-          class="reveal relative pl-12 sm:pl-20 pb-10 last:pb-0"
-          :class="`reveal-delay-${Math.min(index + 1, 5)}`"
-        >
-          <!-- Timeline dot -->
-          <div class="absolute left-3 sm:left-7 top-1 w-2.5 h-2.5 bg-accent border border-accent" style="box-shadow: 0 0 8px rgba(0,255,65,0.5);" />
+        <article v-reveal="i" v-lift class="job card">
+          <div class="job__bar">
+            <span class="level">LVL 1-{{ experiences.length - i }}</span>
+            <span>session://work</span>
+            <span class="job__period">{{ job.period }}</span>
+          </div>
 
-          <!-- Card -->
-          <div class="glass-card glow-border p-5">
-            <!-- Terminal bar -->
-            <div class="flex items-center gap-2 mb-3 text-[10px] text-accent/25 border-b border-accent/10 pb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-accent/30" />
-              <span class="w-1.5 h-1.5 rounded-full bg-accent/20" />
-              <span class="w-1.5 h-1.5 rounded-full bg-accent/15" />
-              <span class="ml-1 font-mono">session://work</span>
+          <div class="job__body">
+            <div>
+              <h2 class="job__company pixel">{{ job.company }}</h2>
+              <p class="job__role">{{ job.role }}</p>
+              <p v-if="job.location" class="job__location">⌖ {{ job.location }}</p>
             </div>
 
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
-              <div>
-                <h3 class="font-mono font-bold text-lg text-accent">{{ item.company }}</h3>
-                <p class="text-sm font-mono font-semibold mt-1 text-gray-600 dark:text-green-400/70">{{ item.role }}</p>
-                <p v-if="item.location" class="text-[10px] text-gray-400 dark:text-green-400/30 flex items-center gap-1 mt-1 font-mono">
-                  <MapPin class="w-3 h-3" />
-                  {{ item.location }}
-                </p>
-              </div>
-              <span class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap self-start">
-                {{ item.period }}
-              </span>
-            </div>
-
-            <!-- Tasks -->
-            <ul class="space-y-1.5 mb-4">
-              <li
-                v-for="task in item.tasks"
-                :key="task"
-                class="text-xs text-gray-400 dark:text-green-400/50 flex items-start gap-2 font-mono"
-              >
-                <span class="text-accent mt-0.5 shrink-0">&gt;</span>
-                {{ task }}
-              </li>
+            <ul class="bullets">
+              <li v-for="task in visibleTasks(job.tasks, i)" :key="task">{{ task }}</li>
             </ul>
 
-            <!-- Stack -->
-            <div v-if="item.stack" class="pt-3 border-t border-accent/10">
-              <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">
-                <span class="text-accent/60 font-medium">$ stack:</span> {{ item.stack }}
-              </p>
+            <button
+              v-if="job.tasks.length > TASK_LIMIT"
+              type="button"
+              class="job__more pixel"
+              :aria-expanded="!!expanded[i]"
+              @click="expanded[i] = !expanded[i]"
+            >
+              {{ expanded[i] ? `▲ ${$t('experienceUi.less')}` : `▼ ${$t('experienceUi.more', { n: job.tasks.length - TASK_LIMIT })}` }}
+            </button>
+
+            <div v-if="job.stack.length" class="job__stack">
+              <span class="job__stack-label">$ stack:</span>
+              <span v-for="tech in job.stack" :key="tech" class="tag">{{ tech }}</span>
             </div>
 
-            <!-- Website -->
-            <a
-              v-if="item.website"
-              :href="item.website"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 mt-3 text-[10px] text-accent/50 hover:text-accent font-mono transition-colors"
-            >
-              <ExternalLink class="w-3 h-3" />
-              {{ item.website }}
-            </a>
+            <a v-if="job.website" :href="job.website" target="_blank" rel="noopener" class="job__site">↗ {{ job.website }}</a>
           </div>
-        </div>
-      </div>
-    </div>
+        </article>
+      </li>
+
+      <li class="level-row level-row--start">
+        <div class="flag" aria-hidden="true"><span /></div>
+        <div class="pixel start-label">{{ $t('experienceUi.start') }}</div>
+      </li>
+    </ol>
   </div>
 </template>
 
 <script setup lang="ts">
-import { MapPin, ExternalLink } from 'lucide-vue-next'
+const TASK_LIMIT = 6
 
-useScrollReveal()
+const { t } = useI18n()
+const { experiences } = useResume()
+const expanded = reactive<Record<number, boolean>>({})
 
-const { t, tm, rt } = useI18n()
-
-const experiences = computed(() => {
-  const raw = tm('experience.items') as any[]
-  return raw.map((item: any) => ({
-    company: rt(item.company),
-    period: rt(item.period),
-    role: rt(item.role),
-    location: item.location ? rt(item.location) : undefined,
-    tasks: (item.tasks || []).map((task: any) => rt(task)),
-    stack: item.stack ? rt(item.stack) : undefined,
-    website: item.website ? rt(item.website) : undefined,
-  }))
-})
+function visibleTasks(tasks: string[], index: number) {
+  return expanded[index] ? tasks : tasks.slice(0, TASK_LIMIT)
+}
 
 useHead({
   title: `${t('experience.title')} - Ben Macha Ali | ORPI, CCM Benchmark, Keytchens, Matalto`,
   meta: [
     { name: 'description', content: 'Expériences professionnelles de Ben Macha Ali - Chef de projet SI chez ORPI, Lead Dev PHP chez CCM Benchmark, Tech Lead chez Keytchens, Consultant chez Matalto/Manymore. Symfony, React, Vue.js, Docker, GraphQL.' },
-    { name: 'keywords', content: 'Ben Macha Ali expérience, ORPI chef de projet SI, CCM Benchmark lead dev PHP, Keytchens tech lead, Matalto consultant Symfony, Manymore développeur, Pixel Trade, Argolife, UKN' },
   ],
 })
 </script>
+
+<style scoped>
+.levels {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.level-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* Green warp pipe running down the timeline */
+.pipe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pipe__lip {
+  width: 56px;
+  height: 26px;
+  background: var(--pipe);
+  border: 3px solid #000;
+  box-shadow: inset 6px 0 0 #7ee07e, inset -8px 0 0 #1f7a2a;
+}
+
+.pipe__body {
+  flex: 1;
+  width: 40px;
+  min-height: 40px;
+  background: var(--pipe);
+  border-inline: 3px solid #000;
+  box-shadow: inset 5px 0 0 #7ee07e, inset -7px 0 0 #1f7a2a;
+}
+
+.job {
+  margin-bottom: 32px;
+}
+
+.job__bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 3px solid var(--line);
+  background: var(--bar);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.job__period {
+  margin-inline-start: auto;
+}
+
+.job__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.job__company {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--accent);
+}
+
+.job__role {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.job__location {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.job__more {
+  align-self: flex-start;
+  font-size: 9px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--accent);
+  border: 2px dashed var(--accent);
+  cursor: pointer;
+}
+
+.job__stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 3px dotted var(--border);
+}
+
+.job__stack-label {
+  padding: 4px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.job__site {
+  font-size: 12px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* Flag at the start of the level map */
+.level-row--start {
+  align-items: center;
+}
+
+.flag {
+  position: relative;
+  justify-self: center;
+  width: 6px;
+  height: 60px;
+  background: #fff;
+  border: 2px solid #000;
+}
+
+.flag span {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 26px;
+  height: 18px;
+  background: var(--grass);
+  border: 2px solid #000;
+}
+
+.start-label {
+  font-size: 10px;
+  color: var(--muted);
+}
+</style>

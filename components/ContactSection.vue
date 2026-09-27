@@ -1,49 +1,67 @@
 <template>
-  <section class="py-20">
-    <div class="section-container text-center">
-      <div class="reveal max-w-2xl mx-auto">
-        <!-- Terminal box -->
-        <div class="glass-card border border-accent/20 p-8">
-          <div class="flex items-center gap-2 mb-4 text-[10px] text-accent/30 border-b border-accent/10 pb-2 justify-center">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500/60" />
-            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500/60" />
-            <span class="w-1.5 h-1.5 rounded-full bg-green-500/60" />
-            <span class="ml-2 font-mono">contact@benmacha.tn</span>
-          </div>
-
-          <h2 class="text-2xl sm:text-3xl font-mono font-bold mb-3 text-accent">
-            <span class="text-accent/30">&gt; </span>{{ $t('home.contact') }}
-          </h2>
-          <div class="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent mb-4" />
-          <p class="text-gray-400 dark:text-green-400/40 mb-8 font-mono text-sm">
-            // {{ $t('home.description') }}
-          </p>
-
-          <div class="flex flex-wrap items-center justify-center gap-4">
-            <a
-              :href="`mailto:${socialLinks.email}`"
-              class="btn-primary"
-            >
-              <Mail class="w-4 h-4" />
-              {{ socialLinks.email }}
-            </a>
-            <a
-              :href="socialLinks.linkedin"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-secondary"
-            >
-              <Linkedin class="w-4 h-4" />
-              LinkedIn
-            </a>
-          </div>
-        </div>
-      </div>
+  <section class="contact card">
+    <div class="contact__text">
+      <div class="contact__eyebrow pixel">{{ $t('contactUi.eyebrow') }}</div>
+      <h2 class="contact__title pixel">{{ $t('contactUi.title') }}</h2>
+      <p class="contact__details">
+        {{ socialLinks.email }} · linkedin.com/in/benmacha · github.com/BenMacha
+      </p>
+    </div>
+    <div class="contact__actions">
+      <a :href="`mailto:${socialLinks.email}`" class="btn btn--red">✉ {{ $t('home.contact') }}</a>
+      <a :href="socialLinks.cv" target="_blank" class="btn btn--coin">▼ {{ $t('contactUi.cv') }}</a>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { Mail, Linkedin } from 'lucide-vue-next'
-import { socialLinks } from '~/data/skills'
+import { socialLinks } from '~/data/site'
 </script>
+
+<style scoped>
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 40px 32px;
+  box-shadow: inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo), 8px 8px 0 var(--shadow);
+}
+
+.contact__text {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.contact__eyebrow {
+  font-size: 10px;
+  color: var(--coin);
+}
+
+html.light .contact__eyebrow {
+  color: var(--eyebrow);
+}
+
+.contact__title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.contact__details {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.contact__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+</style>

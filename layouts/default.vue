@@ -1,31 +1,56 @@
 <template>
-  <div class="min-h-screen flex flex-col relative"
-    :class="isDark ? 'bg-dark pixel-grid' : 'bg-gray-100'"
-  >
-    <!-- Matrix Rain Background (dark mode only) -->
-    <ClientOnly>
-      <MatrixRain v-if="isDark" />
-    </ClientOnly>
-
-    <!-- Scanline overlay (dark mode only) -->
-    <div
-      v-if="isDark"
-      class="fixed inset-0 pointer-events-none z-[1] opacity-30"
-      style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);"
-    />
-
-    <!-- Content -->
-    <div class="relative z-10">
-      <AppHeader />
-      <main class="flex-1">
-        <slot />
-      </main>
-      <AppFooter />
-    </div>
+  <div class="layout">
+    <div ref="progressBar" class="progress" aria-hidden="true" />
+    <AppHeader />
+    <main>
+      <slot />
+    </main>
+    <AppFooter />
   </div>
 </template>
 
 <script setup lang="ts">
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
+import { animate, scroll } from 'motion'
+
+const i18nHead = useLocaleHead()
+
+useHead(() => ({
+  htmlAttrs: {
+    lang: i18nHead.value.htmlAttrs?.lang,
+    dir: i18nHead.value.htmlAttrs?.dir,
+  },
+}))
+
+// Rainbow reading-progress bar, driven by Motion's scroll timeline
+const progressBar = ref<HTMLElement | null>(null)
+let stopProgress: (() => void) | undefined
+
+onMounted(() => {
+  if (progressBar.value) stopProgress = scroll(animate(progressBar.value, { scaleX: [0, 1] }, { ease: 'linear' }))
+})
+
+onBeforeUnmount(() => stopProgress?.())
 </script>
+
+<style scoped>
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+.progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 5px;
+  z-index: 70;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, #e52521, #fbd000, #5cb338, #2496ed);
+}
+</style>

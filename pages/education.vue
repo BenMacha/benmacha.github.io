@@ -1,163 +1,117 @@
 <template>
-  <div class="pt-24 pb-20">
-    <div class="section-container">
-      <SectionTitle :title="$t('education.title')" />
+  <div class="container container--narrow page education">
+    <SectionTitle page :eyebrow="$t('educationUi.eyebrow')" :title="$t('education.title')" />
 
-      <!-- Education -->
-      <div class="max-w-3xl mx-auto space-y-14">
-
-        <!-- Formal Education -->
-        <div>
-          <div class="grid gap-4">
-            <div
-              v-for="(item, index) in educationItems"
-              :key="item.school"
-              class="reveal glass-card glow-border p-5"
-              :class="`reveal-delay-${index + 1}`"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2.5 border border-accent/20 text-accent">
-                  <GraduationCap class="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 class="font-mono font-bold text-base text-accent">{{ item.school }}</h3>
-                  <p class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono">{{ item.type }} // {{ item.period }}</p>
-                </div>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="skill in item.skills"
-                  :key="skill"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
-                >
-                  {{ skill }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Internships -->
-        <div>
-          <h3 class="reveal font-mono font-bold text-xl mb-5 flex items-center gap-3">
-            <Briefcase class="w-5 h-5 text-accent" />
-            <span class="text-accent/30">&gt; </span>
-            <span class="text-accent">{{ $t('education.internships.title') }}</span>
-          </h3>
-          <div class="grid gap-4">
-            <div
-              v-for="(item, index) in internships"
-              :key="item.company"
-              class="reveal glass-card glow-border p-5"
-              :class="`reveal-delay-${index + 1}`"
-            >
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                <div>
-                  <h4 class="font-mono font-bold text-sm text-accent">{{ item.company }}</h4>
-                  <p class="text-xs text-accent/50 font-mono">{{ item.role }}</p>
-                </div>
-                <span class="text-[10px] text-gray-300 dark:text-green-400/25 font-mono">{{ item.period }}</span>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="skill in item.skills"
-                  :key="skill"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-gray-400 dark:text-green-400/50 border border-accent/10"
-                >
-                  {{ skill }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Interests -->
-        <div>
-          <h3 class="reveal font-mono font-bold text-xl mb-5 flex items-center gap-3">
-            <Heart class="w-5 h-5 text-accent" />
-            <span class="text-accent/30">&gt; </span>
-            <span class="text-accent">{{ $t('education.interests.title') }}</span>
-          </h3>
-          <div class="grid sm:grid-cols-2 gap-4">
-            <!-- Sports -->
-            <div class="reveal glass-card glow-border p-5 reveal-delay-1">
-              <h4 class="font-mono font-semibold text-sm mb-3 text-gray-600 dark:text-green-400/70">
-                {{ $t('education.interests.items.sports.title') }}
-              </h4>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="item in sportsItems"
-                  :key="item"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
-                >
-                  {{ item }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Associations -->
-            <div class="reveal glass-card glow-border p-5 reveal-delay-2">
-              <h4 class="font-mono font-semibold text-sm mb-3 text-gray-600 dark:text-green-400/70">
-                {{ $t('education.interests.items.associations.title') }}
-              </h4>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="item in associationItems"
-                  :key="item"
-                  class="px-2 py-0.5 text-[10px] font-mono bg-accent/5 text-accent/60 border border-accent/10"
-                >
-                  {{ item }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="stack">
+      <AchievementCard v-for="(degree, i) in education" :key="degree.school" v-reveal="i" :degree="degree" />
     </div>
+
+    <section class="stack">
+      <h2 class="subtitle pixel"><span>&gt;</span> {{ $t('education.internships.title') }}</h2>
+      <div class="grid" style="--min: 280px; gap: 18px">
+        <article v-for="(internship, i) in internships" :key="internship.company" v-reveal="i" v-lift class="entry card">
+          <div class="entry__head">
+            <div>
+              <h3 class="entry__company pixel">{{ internship.company }}</h3>
+              <p class="entry__role">{{ internship.role }}</p>
+            </div>
+            <span class="entry__period">{{ internship.period }}</span>
+          </div>
+          <div class="tags">
+            <span v-for="skill in internship.skills" :key="skill" class="tag">{{ skill }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="stack">
+      <h2 class="subtitle pixel"><span>&gt;</span> {{ $t('education.interests.title') }}</h2>
+      <div class="grid" style="--min: 280px; gap: 18px">
+        <article v-for="(interest, i) in interests" :key="interest.title" v-reveal="i" v-lift class="entry card">
+          <h3 class="entry__title">{{ interest.title }}</h3>
+          <div class="tags">
+            <span v-for="item in interest.items" :key="item" class="tag">{{ item }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { GraduationCap, Briefcase, Heart } from 'lucide-vue-next'
-
-const { t, tm, rt } = useI18n()
-
-useScrollReveal()
-
-const educationItems = computed(() => {
-  const raw = tm('education.items') as any[]
-  return raw.map((item: any) => ({
-    school: rt(item.school),
-    type: rt(item.type),
-    period: rt(item.period),
-    skills: (item.skills || []).map((s: any) => rt(s)),
-  }))
-})
-
-const internships = computed(() => {
-  const raw = tm('education.internships.items') as any[]
-  return raw.map((item: any) => ({
-    company: rt(item.company),
-    period: rt(item.period),
-    role: rt(item.role),
-    skills: (item.skills || []).map((s: any) => rt(s)),
-  }))
-})
-
-const sportsItems = computed(() => {
-  const raw = tm('education.interests.items.sports.items') as any[]
-  return raw.map((item: any) => rt(item))
-})
-
-const associationItems = computed(() => {
-  const raw = tm('education.interests.items.associations.items') as any[]
-  return raw.map((item: any) => rt(item))
-})
+const { t } = useI18n()
+const { education, internships, interests } = useResume()
 
 useHead({
-  title: `${t('education.title')} - Ben Macha Ali`,
+  title: `${t('education.title')} - Ben Macha Ali | ISI, Stages & Centres d'intérêt`,
   meta: [
-    { name: 'description', content: 'Formation et éducation de Ben Macha Ali - ISI, stages en développement web et sécurité informatique.' },
+    { name: 'description', content: 'Formation de Ben Macha Ali : ISI (génie logiciel), stages chez Tuninfo et Glinse, bénévolat et centres d\'intérêt.' },
   ],
 })
 </script>
+
+<style scoped>
+.education {
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+}
+
+.education :deep(.section-title--page) {
+  margin-bottom: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--h2);
+}
+
+.subtitle span {
+  color: var(--coin);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.entry__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.entry__company {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.entry__role,
+.entry__period {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.entry__period {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.entry__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+</style>

@@ -1,10 +1,9 @@
 <template>
-  <GameOver />
+  <NuxtLayout>
+    <GameOver @home="clearError({ redirect: '/' })" />
+  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-const event = useRequestEvent()
-if (event) setResponseStatus(event, 404)
-
 useHead({ title: '404 - Ben Macha Ali', meta: [{ name: 'robots', content: 'noindex' }] })
 </script>

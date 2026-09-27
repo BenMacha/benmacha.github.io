@@ -1,68 +1,67 @@
 <template>
-  <section class="py-20">
-    <div class="section-container">
-      <SectionTitle :title="$t('experience.title')" />
-
-      <div class="grid gap-4 max-w-3xl mx-auto">
-        <div
-          v-for="(item, index) in previewItems"
-          :key="item.company"
-          class="reveal glass-card glow-border p-5 claw-marks"
-          :class="`reveal-delay-${index + 1}`"
-        >
-          <!-- Terminal header bar -->
-          <div class="flex items-center gap-2 mb-3 text-[10px] text-accent/30 border-b border-accent/10 pb-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-accent/40" />
-            <span class="w-1.5 h-1.5 rounded-full bg-accent/30" />
-            <span class="w-1.5 h-1.5 rounded-full bg-accent/20" />
-            <span class="ml-1 font-mono">process://{{ item.company.toLowerCase().replace(/\s/g, '-') }}</span>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-            <div>
-              <h3 class="font-mono font-bold text-base text-accent">{{ item.company }}</h3>
-              <p class="text-accent/60 text-xs font-mono">{{ item.role }}</p>
-            </div>
-            <span class="text-[10px] text-gray-400 dark:text-green-400/30 font-mono bg-accent/5 px-2 py-1 border border-accent/10 whitespace-nowrap">
-              {{ item.period }}
-            </span>
-          </div>
-          <ul class="space-y-1">
-            <li
-              v-for="task in item.tasks.slice(0, 3)"
-              :key="task"
-              class="text-xs text-gray-500 dark:text-green-400/60 flex items-start gap-2 font-mono"
-            >
-              <span class="text-accent mt-0.5">&gt;</span>
-              {{ task }}
-            </li>
-          </ul>
+  <section class="home-section">
+    <SectionTitle
+      :eyebrow="$t('sections.experience')"
+      :title="$t('experience.title')"
+      to="/experience"
+      :link-label="$t('sections.seeAll')"
+    />
+    <div class="grid">
+      <article v-for="(job, i) in latest" :key="job.company" v-reveal="i" v-lift class="job card">
+        <div class="job__head">
+          <span class="level">LVL 1-{{ experiences.length - i }}</span>
+          <span class="job__period">{{ job.period }}</span>
         </div>
-      </div>
-
-      <div class="text-center mt-10 reveal">
-        <NuxtLink to="/experience" class="btn-secondary">
-          <Briefcase class="w-4 h-4" />
-          {{ $t('nav.experience') }}
-          <ArrowRight class="w-4 h-4" />
-        </NuxtLink>
-      </div>
+        <h3 class="job__company pixel">{{ job.company }}</h3>
+        <p class="job__role">{{ job.role }}</p>
+        <p class="job__task">▸ {{ job.tasks[0] }}</p>
+      </article>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { Briefcase, ArrowRight } from 'lucide-vue-next'
-
-const { tm, rt } = useI18n()
-
-const previewItems = computed(() => {
-  const raw = tm('experience.items') as any[]
-  return raw.slice(0, 3).map((item: any) => ({
-    company: rt(item.company),
-    period: rt(item.period),
-    role: rt(item.role),
-    tasks: (item.tasks || []).map((t: any) => rt(t)),
-  }))
-})
+const { experiences } = useResume()
+const latest = computed(() => experiences.value.slice(0, 3))
 </script>
+
+<style scoped>
+.job {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.job__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.job__period {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.job__company {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--accent);
+}
+
+.job__role {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.job__task {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+</style>

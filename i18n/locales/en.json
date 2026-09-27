@@ -8,7 +8,7 @@
   },
   "home": {
     "title": "Tech Lead & Full Stack Developer",
-    "description": "Passionate and creative Tech Lead, specialized in designing and developing web and mobile solutions. With over 8 years of experience, I have contributed to optimizing various systems using modern technologies to create high-performance and intuitive applications. With my team, I have worked on integrating connected technologies, real-time order management, custom notification systems, and data analysis. Constantly seeking new challenges to simplify and improve the end-user experience.",
+    "description": "Passionate and creative Tech Lead, specialized in designing and developing web and mobile solutions. With over 10 years of experience, I have contributed to optimizing various systems using modern technologies to create high-performance and intuitive applications. With my team, I have worked on integrating connected technologies, real-time order management, custom notification systems, and data analysis. Constantly seeking new challenges to simplify and improve the end-user experience.",
     "contact": "Contact",
     "download": "Download CV"
   },
@@ -254,7 +254,8 @@
   "404": {
     "title": "Page Not Found",
     "description": "The page you're looking for doesn't exist or has been moved.",
-    "back": "Back to Home"
+    "back": "Back to Home",
+    "gameOver": "GAME OVER"
   },
   "blog": {
     "title": "Tech Blog",
@@ -277,6 +278,82 @@
     "articleNotFound": "Article not found."
   },
   "footer": {
-    "rights": "All rights reserved."
+    "rights": "All rights reserved.",
+    "built": "Built with code, coffee & curiosity // v5.0.0 — Pixel edition"
+  },
+  "hero": {
+    "player": "PLAYER",
+    "xp": "XP",
+    "years": "×10 YRS",
+    "world": "WORLD",
+    "worldValue": "ILE-DE-FRANCE",
+    "class": "CLASS",
+    "classValue": "TECH LEAD",
+    "level": "LEVEL 10",
+    "xpLabel": "10 YEARS OF EXPERIENCE · SINCE 2016",
+    "terminal": "terminal — bash",
+    "jump": "Jump!"
+  },
+  "sections": {
+    "experience": "WORLD 1 · CAREER",
+    "skills": "WORLD 2 · INVENTORY",
+    "projects": "WORLD 3 · BONUS BLOCKS",
+    "blog": "WORLD 4 · LOGS",
+    "arcade": "WORLD 6 · ARCADE",
+    "seeAll": "See all",
+    "openInventory": "Open inventory",
+    "education": "WORLD 5 · ACHIEVEMENTS"
+  },
+  "experienceUi": {
+    "eyebrow": "WORLD 1 · LEVEL MAP",
+    "more": "+{n} quests",
+    "less": "Collapse",
+    "start": "START · 2016"
+  },
+  "skillsUi": {
+    "eyebrow": "WORLD 2 · INVENTORY",
+    "count": "{n} items"
+  },
+  "projectsUi": {
+    "eyebrow": "WORLD 3 · BONUS BLOCKS",
+    "view": "View on GitHub",
+    "hit": "Hit the block"
+  },
+  "educationUi": {
+    "eyebrow": "WORLD 5 · ACHIEVEMENTS",
+    "unlocked": "ACHIEVEMENT UNLOCKED!"
+  },
+  "blogUi": {
+    "eyebrow": "WORLD 4 · SERVER LOGS",
+    "readTime": "read"
+  },
+  "arcade": {
+    "title": "Retro games",
+    "start": "START",
+    "pressStart": "PRESS START",
+    "gameOver": "GAME OVER",
+    "pause": "PAUSED · START",
+    "victory": "VICTORY!",
+    "score": "SCORE",
+    "best": "BEST",
+    "lines": "LINES",
+    "move": "move",
+    "rotate": "rotate",
+    "down": "soft drop",
+    "drop": "SPACE drop",
+    "orMouse": "or mouse",
+    "shoot": "SPACE shoot",
+    "points": "7 pts",
+    "breakout": "BREAKOUT"
+  },
+  "contactUi": {
+    "eyebrow": "INSERT COIN · PLAYER 2 ?",
+    "title": "Contact",
+    "cv": "CV"
+  },
+  "theme": {
+    "day": "DAY",
+    "night": "NIGHT",
+    "toggle": "Toggle theme"
   }
 }
