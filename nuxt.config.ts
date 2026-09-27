@@ -2,7 +2,7 @@ import { blogArticles } from './data/blog'
 
 const SITE_URL = 'https://benmacha.tn'
 const TITLE = 'Ben Macha Ali - Tech Lead & Full Stack Developer'
-const DESCRIPTION = 'Ben Macha Ali - Tech Lead & Développeur Full Stack. Chef de projet SI chez ORPI, ex-Lead Dev PHP chez CCM Benchmark, ex-Tech Lead chez Keytchens. Spécialisé en Symfony, React, Vue.js, Docker. Blog technique sur PHP, DevOps, Linux, Docker.'
+const DESCRIPTION = 'Ben Macha Ali - Tech Lead & Développeur Full Stack, créateur du projet Keytchens et fondateur de Pepprio. Chef de projet SI chez ORPI, ex-Lead Dev PHP chez CCM Benchmark (groupe Le Figaro). Symfony, React, Vue.js, Docker. Blog technique sur PHP, DevOps, Linux, Docker.'
 const OG_IMAGE = `${SITE_URL}/images/avatar.jpeg`
 
 const staticPages = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
@@ -30,7 +30,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: DESCRIPTION },
         { name: 'author', content: 'Ben Macha Ali' },
-        { name: 'keywords', content: 'Ben Macha Ali, ORPI développeur, CCM Benchmark lead dev, Keytchens tech lead, Matalto, Manymore, développeur PHP Symfony, React, Vue.js, Docker, DevOps, Linux, Paris, France, chef de projet SI, blog technique' },
+        { name: 'keywords', content: 'Ben Macha Ali, créateur de Keytchens, Keytchens, fondateur de Pepprio, Pepprio, ORPI chef de projet SI, CCM Benchmark lead dev, Matalto, Manymore, développeur PHP Symfony, React, Vue.js, Docker, DevOps, Linux, Paris, France, chef de projet SI, blog technique' },
         { name: 'robots', content: 'index, follow' },
         { name: 'theme-color', content: '#0b0e1f' },
         { property: 'og:type', content: 'website' },
@@ -47,6 +47,8 @@ export default defineNuxtConfig({
       link: [
         { rel: 'canonical', href: SITE_URL },
         { rel: 'icon', type: 'image/jpeg', href: '/logo.jpeg' },
+        // Markdown profile for AI assistants (https://llmstxt.org)
+        { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'Ben Macha Ali — profil pour les IA' },
       ],
     },
     pageTransition: { name: 'page', mode: 'out-in' },
@@ -97,7 +99,7 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
-      routes: [...staticPages, ...blogPages],
+      routes: [...staticPages, ...blogPages, '/llms.txt', '/llms-full.txt'],
       crawlLinks: true,
     },
   },
