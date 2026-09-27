@@ -1,0 +1,52 @@
+<h2>API Platform: the API framework for Symfony</h2>
+<p>API Platform is the go-to framework for building modern APIs with Symfony. It automatically generates a REST and GraphQL API from your entities.</p>
+<h3>Installation and configuration</h3>
+<pre><code>composer require api
+# Automatically creates the API Platform configuration</code></pre>
+<h3>Creating an API resource</h3>
+<pre><code>use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+
+#[ApiResource(
+    operations: [
+        new GetCollection(),
+        new Get(),
+        new Post(security: "is_granted('ROLE_ADMIN')"),
+    ],
+    paginationItemsPerPage: 20,
+)]
+#[ORM\Entity]
+class Product
+{
+    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    private string $name;
+
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
+    private string $price;
+
+    // Getters and setters...
+}</code></pre>
+<h3>Filters and search</h3>
+<pre><code>#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
+#[ApiFilter(RangeFilter::class, properties: ['price'])]
+#[ApiFilter(OrderFilter::class, properties: ['name', 'price'])]</code></pre>
+<h3>Serialization Groups</h3>
+<pre><code>#[ApiResource(
+    normalizationContext: ['groups' => ['product:read']],
+    denormalizationContext: ['groups' => ['product:write']],
+)]</code></pre>
+<h3>Benefits</h3>
+<ul>
+<li>Automatically generated OpenAPI documentation</li>
+<li>JSON-LD and Hydra support</li>
+<li>Built-in pagination, filtering and sorting</li>
+<li>Automatic validation through Symfony constraints</li>
+<li>Native GraphQL support</li>
+</ul>
+<p>Platforms such as CCM Benchmark use API Platform to expose their internal services through standardized APIs.</p>

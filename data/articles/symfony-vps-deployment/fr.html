@@ -1,0 +1,165 @@
+<h2>Du VPS nu à l'application en production</h2>
+<p>Docker et les PaaS sont pratiques, mais un simple VPS bien configuré reste une option solide, économique et parfaitement maîtrisée pour une application Symfony. Ce guide part d'un serveur <strong>Ubuntu 24.04 LTS</strong> fraîchement installé et aboutit à une application servie en HTTPS, avec ses workers et ses tâches planifiées.</p>
+<p>La sécurisation de base (utilisateur non-root, clés SSH, pare-feu, fail2ban) est détaillée dans l'article <a href="/blog/linux-server-hardening">Sécurisation d'un serveur Linux</a> : faites-la en premier.</p>
+
+<h3>1. Paquets de base</h3>
+<p>Ubuntu 24.04 fournit PHP 8.3 dans ses dépôts officiels, avec les extensions nécessaires à Symfony et Doctrine :</p>
+<pre><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y nginx mysql-server unzip git \
+  php8.3-fpm php8.3-cli php8.3-mysql php8.3-intl php8.3-mbstring \
+  php8.3-xml php8.3-curl php8.3-zip php8.3-opcache
+
+# Composer
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer</code></pre>
+<p>Ouvrez le pare-feu pour le web (en plus de SSH) :</p>
+<pre><code>sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable</code></pre>
+
+<h3>2. Un utilisateur système par application</h3>
+<p>Chaque application tourne sous son propre utilisateur : une faille dans l'une ne donne pas accès aux fichiers des autres.</p>
+<pre><code>sudo adduser --system --group --home /var/www/app --shell /bin/bash app
+sudo mkdir -p /var/www/app &amp;&amp; sudo chown app:app /var/www/app</code></pre>
+
+<h3>3. Un pool PHP-FPM dédié</h3>
+<p>Plutôt que le pool <code>www</code> par défaut, créez <code>/etc/php/8.3/fpm/pool.d/app.conf</code>. Le pool tourne avec l'utilisateur <code>app</code>, et seul Nginx (<code>www-data</code>) peut parler à son socket :</p>
+<pre><code>[app]
+user = app
+group = app
+
+listen = /run/php/app.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+
+pm = dynamic
+pm.max_children = 20
+pm.start_servers = 4
+pm.min_spare_servers = 2
+pm.max_spare_servers = 6
+pm.max_requests = 500
+
+php_admin_value[memory_limit] = 256M
+php_admin_value[error_log] = /var/log/php/app-error.log
+php_admin_flag[log_errors] = on</code></pre>
+<p>Pour dimensionner <code>pm.max_children</code> : divisez la RAM allouée à PHP par la mémoire moyenne d'un processus (visible avec <code>ps -o rss -C php-fpm8.3</code>). Sur un VPS de 4 Go, 20 processus à 80 Mo laissent de la marge pour MySQL.</p>
+<pre><code>sudo mkdir -p /var/log/php &amp;&amp; sudo chown app:app /var/log/php
+sudo systemctl restart php8.3-fpm</code></pre>
+
+<h3>4. OPcache réglé pour la production</h3>
+<p>Dans <code>/etc/php/8.3/fpm/conf.d/99-production.ini</code> :</p>
+<pre><code>opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+<p>Avec <code>validate_timestamps=0</code>, PHP ne vérifie plus si les fichiers ont changé : il faut <strong>recharger PHP-FPM à chaque déploiement</strong>. C'est le prix d'un gain de performance important.</p>
+
+<h3>5. MySQL : une base et un utilisateur dédiés</h3>
+<pre><code>sudo mysql</code></pre>
+<pre><code>CREATE DATABASE app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'app'@'localhost' IDENTIFIED BY 'un-mot-de-passe-long-et-aleatoire';
+GRANT ALL PRIVILEGES ON app.* TO 'app'@'localhost';
+FLUSH PRIVILEGES;</code></pre>
+<p>MySQL n'écoute que sur <code>127.0.0.1</code> par défaut sur Ubuntu : gardez-le ainsi, et ne l'exposez jamais sur Internet.</p>
+
+<h3>6. Le virtual host Nginx</h3>
+<p>Voici la configuration recommandée pour Symfony, dans <code>/etc/nginx/sites-available/app</code>. Seul <code>index.php</code> est exécutable : tout autre fichier <code>.php</code> renvoie une 404, ce qui neutralise les scripts qui auraient été uploadés.</p>
+<pre><code>server {
+    listen 80;
+    server_name app.example.com;
+    root /var/www/app/current/public;
+
+    client_max_body_size 20M;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass unix:/run/php/app.sock;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+
+    location ~* \.(?:css|js|woff2|svg|png|jpg|webp)$ {
+        expires 30d;
+        access_log off;
+    }
+
+    error_log /var/log/nginx/app_error.log;
+    access_log /var/log/nginx/app_access.log;
+}</code></pre>
+<p><code>$realpath_root</code> (au lieu de <code>$document_root</code>) est essentiel si vous déployez via un lien symbolique <code>current</code> : Nginx résout le vrai chemin, et OPcache ne sert pas l'ancienne version après une bascule.</p>
+<pre><code>sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code></pre>
+
+<h3>7. HTTPS avec Let's Encrypt</h3>
+<p>Une fois le DNS pointé vers le serveur, Certbot obtient le certificat, modifie la configuration Nginx et ajoute la redirection HTTP vers HTTPS :</p>
+<pre><code>sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d app.example.com
+sudo certbot renew --dry-run   # vérifie le renouvellement automatique</code></pre>
+
+<h3>8. Déployer le code</h3>
+<p>Une structure <code>releases/</code> + lien <code>current</code> permet des déploiements atomiques et un retour arrière instantané :</p>
+<pre><code>sudo -iu app
+cd /var/www/app
+RELEASE=releases/$(date +%Y%m%d%H%M%S)
+git clone --depth 1 git@github.com:moi/app.git "$RELEASE"
+cd "$RELEASE"
+
+composer install --no-dev --optimize-autoloader --classmap-authoritative
+composer dump-env prod          # compile .env en .env.local.php
+php bin/console cache:clear
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console asset-map:compile   # si vous utilisez AssetMapper
+
+cd /var/www/app &amp;&amp; ln -sfn "$RELEASE" current
+exit
+sudo systemctl reload php8.3-fpm</code></pre>
+<p>Les secrets (<code>DATABASE_URL</code>, <code>APP_SECRET</code>) se placent dans un fichier <code>.env.local</code> partagé entre les releases, ou mieux, dans le coffre de secrets de Symfony (<code>secrets:set</code>). Des outils comme Deployer automatisent exactement ce cycle.</p>
+
+<h3>9. Workers Messenger avec systemd</h3>
+<p>Un worker Messenger doit redémarrer s'il plante, et être relancé régulièrement pour libérer la mémoire. Créez <code>/etc/systemd/system/app-messenger@.service</code> :</p>
+<pre><code>[Unit]
+Description=Symfony Messenger worker %i
+After=network.target mysql.service
+
+[Service]
+User=app
+WorkingDirectory=/var/www/app/current
+ExecStart=/usr/bin/php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now app-messenger@1 app-messenger@2</code></pre>
+<p>Pensez à ajouter <code>php bin/console messenger:stop-workers</code> à la fin du déploiement : les workers terminent leur message en cours, puis systemd les relance sur le nouveau code.</p>
+
+<h3>10. Tâches planifiées</h3>
+<p>Avec Symfony Scheduler, un seul worker suffit (<code>messenger:consume scheduler_default</code>). Sinon, la crontab de l'utilisateur <code>app</code> (<code>sudo crontab -u app -e</code>) :</p>
+<pre><code>*/5 * * * * cd /var/www/app/current &amp;&amp; php bin/console app:sync-data --no-interaction &gt;&gt; /var/log/php/cron.log 2&gt;&amp;1</code></pre>
+
+<h3>La checklist finale</h3>
+<ul>
+<li><code>APP_ENV=prod</code> et <code>APP_DEBUG=0</code> : jamais de profiler en production</li>
+<li>Pare-feu actif, seuls les ports 22, 80 et 443 ouverts</li>
+<li>MySQL et Redis n'écoutent que sur localhost</li>
+<li>Certificat renouvelé automatiquement (<code>systemctl list-timers | grep certbot</code>)</li>
+<li>Logs rotés (<code>logrotate</code> gère Nginx ; ajoutez <code>/var/log/php/*.log</code>)</li>
+<li>Sauvegardes automatiques et <strong>testées</strong> de la base et des fichiers uploadés</li>
+<li>Monitoring des erreurs (Sentry) et de la disponibilité</li>
+</ul>
+<p>Cette configuration encaisse sans difficulté plusieurs milliers d'utilisateurs quotidiens sur un VPS à quelques euros par mois. Et comme chaque brique est standard, elle se diagnostique facilement quand quelque chose ne va pas.</p>

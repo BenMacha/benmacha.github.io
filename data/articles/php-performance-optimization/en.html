@@ -1,0 +1,47 @@
+<h2>Optimizing PHP for production</h2>
+<p>PHP performance is critical for high-traffic applications. At CCM Benchmark, where the sites serve millions of visitors every day, every millisecond counts.</p>
+<h3>OPcache: the foundation</h3>
+<pre><code>; php.ini - Optimal OPcache configuration
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+opcache.save_comments=1
+opcache.preload=/var/www/app/config/preload.php
+opcache.preload_user=www-data</code></pre>
+<h3>PHP 8 preloading</h3>
+<pre><code>// config/preload.php
+require dirname(__DIR__).'/vendor/autoload.php';
+
+// Preload frequently used classes
+$files = glob(dirname(__DIR__).'/src/Entity/*.php');
+foreach ($files as $file) {
+    opcache_compile_file($file);
+}</code></pre>
+<h3>Profiling with Blackfire</h3>
+<pre><code># Install the Blackfire agent
+curl -s https://packagecloud.io/install/repositories/blackfire/agent/script.deb.sh | sudo bash
+sudo apt install blackfire-agent
+
+# Profile a request
+blackfire curl http://localhost/api/products</code></pre>
+<h3>Doctrine optimizations</h3>
+<ul>
+<li>Enable the query and result caches</li>
+<li>Use DQL queries with partial selects</li>
+<li>Avoid lazy loading by using explicit joins</li>
+<li>Configure the second-level cache</li>
+</ul>
+<pre><code>// Doctrine query cache
+$query = $em->createQuery('SELECT p FROM App\Entity\Product p')
+    ->enableResultCache(3600, 'products_list');
+
+$results = $query->getResult();</code></pre>
+<h3>PHP-FPM tuning</h3>
+<pre><code>; PHP-FPM configuration for high performance
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 10
+pm.min_spare_servers = 5
+pm.max_spare_servers = 20
+pm.max_requests = 500</code></pre>

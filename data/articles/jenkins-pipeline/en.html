@@ -1,0 +1,72 @@
+<h2>Jenkins Pipeline: advanced automation</h2>
+<p>Jenkins remains a popular CI/CD solution for organizations that need full control over their build infrastructure.</p>
+<h3>Declarative pipeline</h3>
+<pre><code>pipeline {
+    agent {
+        docker {
+            image 'php:8.3-cli'
+        }
+    }
+
+    environment {
+        APP_ENV = 'test'
+        DATABASE_URL = credentials('database-url')
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'composer install --prefer-dist'
+            }
+        }
+
+        stage('Quality') {
+            parallel {
+                stage('PHPStan') {
+                    steps {
+                        sh 'vendor/bin/phpstan analyse src'
+                    }
+                }
+                stage('CS Fixer') {
+                    steps {
+                        sh 'vendor/bin/php-cs-fixer fix --dry-run --diff'
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'php bin/phpunit --log-junit results.xml'
+            }
+            post {
+                always {
+                    junit 'results.xml'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh './deploy.sh production'
+            }
+        }
+    }
+
+    post {
+        failure {
+            slackSend channel: '#ci', message: "Build FAILED: ${env.JOB_NAME}"
+        }
+    }
+}</code></pre>
+<h3>Jenkins best practices</h3>
+<ul>
+<li>Use Docker agents for isolation</li>
+<li>Run independent stages in parallel</li>
+<li>Store credentials in Jenkins Credentials</li>
+<li>Set up notifications for failures</li>
+<li>Archive build artifacts</li>
+</ul>

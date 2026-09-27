@@ -1,0 +1,39 @@
+<h2>Les modes réseau Docker</h2>
+<p>Docker propose plusieurs drivers réseau, chacun adapté à des cas d'usage spécifiques.</p>
+<h3>Bridge (par défaut)</h3>
+<p>Le mode bridge crée un réseau isolé pour les conteneurs sur un même hôte :</p>
+<pre><code>docker network create --driver bridge mon-reseau
+docker run --network mon-reseau --name app myapp
+docker run --network mon-reseau --name db mysql</code></pre>
+<p>Les conteneurs sur le même réseau bridge peuvent communiquer via leur nom de conteneur comme hostname.</p>
+<h3>Host</h3>
+<p>Le mode host supprime l'isolation réseau. Le conteneur utilise directement le réseau de l'hôte :</p>
+<pre><code>docker run --network host nginx</code></pre>
+<p>Utile pour les performances maximales mais sans isolation.</p>
+<h3>Overlay</h3>
+<p>Pour les clusters Docker Swarm, le réseau overlay permet la communication entre conteneurs sur différents nœuds :</p>
+<pre><code>docker network create --driver overlay --attachable mon-overlay</code></pre>
+<h3>DNS interne</h3>
+<p>Docker intègre un serveur DNS permettant la résolution par nom de service :</p>
+<pre><code>services:
+  app:
+    networks:
+      - frontend
+      - backend
+  nginx:
+    networks:
+      - frontend
+  db:
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:</code></pre>
+<h3>Bonnes pratiques réseau</h3>
+<ul>
+<li>Isolez les services par réseau (frontend, backend, monitoring)</li>
+<li>Utilisez des réseaux internes pour les services non exposés</li>
+<li>Documentez vos topologies réseau</li>
+<li>Limitez les ports exposés au strict minimum</li>
+</ul>

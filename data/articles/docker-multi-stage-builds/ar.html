@@ -1,0 +1,31 @@
+<h2>لماذا نستخدم البناء متعدد المراحل (multi-stage builds)؟</h2>
+<p>يتيح البناء متعدد المراحل فصل بيئة البناء عن بيئة التشغيل. والنتيجة: صور أخف وزناً وأكثر أماناً.</p>
+<h3>مشكلة الصور الأحادية</h3>
+<p>يمكن لصورة PHP تقليدية تضم جميع اعتماديات التطوير أن تتجاوز بسهولة 1 غيغابايت. أما في بيئة الإنتاج، فلا حاجة لك بـ Composer ولا بأدوات الاختبار ولا بملفات المصدر غير المُترجَمة.</p>
+<h3>مثال على Dockerfile متعدد المراحل</h3>
+<pre><code># Stage 1: Build
+FROM composer:2 AS builder
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader
+COPY . .
+
+# Stage 2: Production
+FROM php:8.3-fpm-alpine
+COPY --from=builder /app /var/www/html
+RUN docker-php-ext-install pdo pdo_mysql opcache
+EXPOSE 9000
+CMD ["php-fpm"]</code></pre>
+<h3>مزايا ملموسة</h3>
+<ul>
+<li><strong>حجم أصغر</strong>: الانتقال من 800 ميغابايت إلى أقل من 150 ميغابايت</li>
+<li><strong>الأمان</strong>: لا أدوات تطوير في بيئة الإنتاج</li>
+<li><strong>ذاكرة Docker المؤقتة (cache)</strong>: تُخزَّن كل مرحلة مؤقتاً بشكل مستقل</li>
+<li><strong>قابلية إعادة الإنتاج</strong>: النتيجة نفسها في جميع البيئات</li>
+</ul>
+<h3>أفضل الممارسات</h3>
+<p>استخدم Alpine كصورة أساسية لتقليص سطح الهجوم. ثبّت فقط امتدادات PHP الضرورية. واضبط OPcache لبيئة الإنتاج بالإعدادات المثلى.</p>
+<pre><code>RUN echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini</code></pre>
+<p>يُستخدم هذا النهج بنجاح على منصات مثل Keytchens لنشر تطبيقات Symfony مع تقليص زمن البناء بنسبة 60%.</p>

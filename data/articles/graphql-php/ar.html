@@ -1,0 +1,61 @@
+<h2>GraphQL: بديل قوي لـ REST</h2>
+<p>يتيح GraphQL للعملاء طلب البيانات التي يحتاجونها بالضبط. في مشاريع مثل مشاريع Matalto وManymore، ساعدت هذه المرونة على تقليل عدد طلبات API بشكل كبير.</p>
+<h3>التثبيت مع Symfony</h3>
+<pre><code>composer require overblog/graphql-bundle
+composer require overblog/graphiql-bundle --dev</code></pre>
+<h3>تعريف المخطط (schema)</h3>
+<pre><code># config/graphql/types/Product.types.yaml
+Product:
+    type: object
+    config:
+        fields:
+            id:
+                type: "ID!"
+            name:
+                type: "String!"
+            price:
+                type: "Float!"
+            category:
+                type: "Category"
+                resolve: "@=resolver('product_category', [value])"</code></pre>
+<h3>Resolver</h3>
+<pre><code>class ProductResolver implements ResolverInterface
+{
+    public function __construct(
+        private ProductRepository $repository,
+    ) {}
+
+    public function resolve(Argument $args): array
+    {
+        if (isset($args['id'])) {
+            return $this->repository->find($args['id']);
+        }
+        return $this->repository->findAll();
+    }
+}
+
+class ProductCategoryResolver implements ResolverInterface
+{
+    public function resolve(Product $product): Category
+    {
+        return $product->getCategory();
+    }
+}</code></pre>
+<h3>استعلام GraphQL</h3>
+<pre><code>query {
+  products(first: 10) {
+    id
+    name
+    price
+    category {
+      name
+    }
+  }
+}</code></pre>
+<h3>المزايا مقارنةً بـ REST</h3>
+<ul>
+<li><strong>لا جلب زائد (over-fetching)</strong>: العميل يختار الحقول</li>
+<li><strong>لا جلب ناقص (under-fetching)</strong>: طلب واحد للبيانات المترابطة</li>
+<li><strong>أنواع صارمة</strong>: مخطط يوثّق نفسه بنفسه</li>
+<li><strong>تطوّر سهل</strong>: إضافة حقول دون كسر العملاء الحاليين</li>
+</ul>

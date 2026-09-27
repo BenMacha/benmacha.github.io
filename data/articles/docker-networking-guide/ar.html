@@ -1,0 +1,39 @@
+<h2>أوضاع الشبكة في Docker</h2>
+<p>يوفّر Docker عدة مشغّلات شبكة (network drivers)، يناسب كلٌّ منها حالات استخدام محددة.</p>
+<h3>Bridge (الوضع الافتراضي)</h3>
+<p>ينشئ وضع bridge شبكة معزولة للحاويات الموجودة على المضيف (host) نفسه:</p>
+<pre><code>docker network create --driver bridge my-network
+docker run --network my-network --name app myapp
+docker run --network my-network --name db mysql</code></pre>
+<p>تستطيع الحاويات المتصلة بشبكة bridge نفسها التواصل فيما بينها باستخدام اسم الحاوية كاسم مضيف (hostname).</p>
+<h3>Host</h3>
+<p>يلغي وضع host العزل الشبكي، إذ تستخدم الحاوية شبكة المضيف مباشرة:</p>
+<pre><code>docker run --network host nginx</code></pre>
+<p>مفيد للحصول على أقصى أداء، لكن دون أي عزل.</p>
+<h3>Overlay</h3>
+<p>في عناقيد Docker Swarm، تتيح شبكة overlay التواصل بين الحاويات الموزعة على عُقد مختلفة:</p>
+<pre><code>docker network create --driver overlay --attachable my-overlay</code></pre>
+<h3>خادم DNS الداخلي</h3>
+<p>يتضمن Docker خادم DNS مدمجاً يتيح الوصول إلى الخدمات بأسمائها:</p>
+<pre><code>services:
+  app:
+    networks:
+      - frontend
+      - backend
+  nginx:
+    networks:
+      - frontend
+  db:
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:</code></pre>
+<h3>أفضل ممارسات الشبكات</h3>
+<ul>
+<li>اعزل الخدمات حسب الشبكة (frontend، backend، monitoring)</li>
+<li>استخدم شبكات داخلية للخدمات غير المكشوفة للخارج</li>
+<li>وثّق طوبولوجيا الشبكات لديك</li>
+<li>قلّص المنافذ (ports) المكشوفة إلى الحد الأدنى الضروري</li>
+</ul>

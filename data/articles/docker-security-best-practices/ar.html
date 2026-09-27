@@ -1,0 +1,38 @@
+<h2>تأمين حاويات Docker الخاصة بك</h2>
+<p>أمان الحاويات موضوع بالغ الأهمية. إليك الممارسات الأساسية لحماية تطبيقاتك المعبّأة في حاويات.</p>
+<h3>مبدأ الحد الأدنى من الصلاحيات</h3>
+<pre><code># NEVER run as root
+FROM php:8.3-fpm-alpine
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+WORKDIR /app
+COPY --chown=appuser:appgroup . .</code></pre>
+<h3>فحص الثغرات الأمنية</h3>
+<p>أدمج أداة لفحص الثغرات في خط الأنابيب (pipeline) الخاص بك:</p>
+<pre><code># With Trivy
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy image myapp:latest
+
+# With Docker Scout
+docker scout cves myapp:latest</code></pre>
+<h3>الشبكات والعزل</h3>
+<ul>
+<li>أنشئ شبكات مخصصة لعزل الخدمات</li>
+<li>لا تكشف أبداً منافذ قواعد البيانات</li>
+<li>استخدم أسرار Docker (secrets) بدلاً من متغيرات البيئة للبيانات الحساسة</li>
+<li>فعّل وضع القراءة فقط (read-only) للحاويات عديمة الحالة (stateless)</li>
+</ul>
+<h3>إدارة الأسرار</h3>
+<pre><code>services:
+  app:
+    secrets:
+      - db_password
+      - api_key
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  api_key:
+    external: true</code></pre>
+<h3>صور موثوقة</h3>
+<p>استخدم فقط الصور الرسمية أو المُتحقَّق منها. ثبّت الإصدارات الدقيقة بدلاً من استخدام <code>latest</code>. ووقّع صورك باستخدام Docker Content Trust.</p>

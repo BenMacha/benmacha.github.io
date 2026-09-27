@@ -1,0 +1,126 @@
+<h2>النسخة الاحتياطية التي لم تُستعَد قط غير موجودة</h2>
+<p>الجميع "لديه نسخ احتياطية" إلى أن يأتي يوم الاستعادة: التفريغ فارغ منذ ثلاثة أشهر، أو الأرشيف موجود على قرص الخادم نفسه، أو لا أحد يعرف كلمة مرور التشفير. الاستراتيجية الجيدة تختصرها <strong>قاعدة 3-2-1</strong>: ثلاث نسخ من البيانات، على وسيطين مختلفين، إحداها خارج الموقع. ويختصرها انضباط واحد: <strong>اختبار الاستعادة</strong>.</p>
+<p>يُعدّ هذا الدليل على خادم Linux يستضيف تطبيق ويب ما يلي:</p>
+<ul>
+<li>تفريغاً متّسقاً لقاعدة MySQL دون تعطيل التطبيق؛</li>
+<li>نسخاً احتياطياً <strong>مشفّراً وخالياً من التكرار وتزايدياً</strong> عبر restic إلى تخزين كائنات S3؛</li>
+<li>سياسة احتفاظ وجدولة عبر systemd وتنبيهاً عند الفشل.</li>
+</ul>
+
+<h3>1. تفريغ MySQL</h3>
+<p>نسخ ملفات <code>/var/lib/mysql</code> أثناء عمل الخادم يعطي نسخة غير متّسقة. استخدم <code>mysqldump</code> مع الخيار <code>--single-transaction</code>: بالنسبة لجداول InnoDB يُؤخذ التفريغ داخل معاملة (transaction)، فيكون متّسقاً دون قفل عمليات الكتابة.</p>
+<p>أولاً، مستخدم مخصص للنسخ الاحتياطي بالحد الأدنى من الصلاحيات:</p>
+<pre><code>CREATE USER 'backup'@'localhost' IDENTIFIED BY 'long-password';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, PROCESS ON *.* TO 'backup'@'localhost';</code></pre>
+<p>توضع بيانات اعتماده في ملف لا يقرؤه إلا root، حتى لا تظهر أبداً في قائمة العمليات:</p>
+<pre><code># /root/.my-backup.cnf  (chmod 600)
+[client]
+user=backup
+password=long-password</code></pre>
+<pre><code>mysqldump --defaults-extra-file=/root/.my-backup.cnf \
+  --single-transaction --quick --routines --triggers --events \
+  --databases app | gzip &gt; /var/backups/mysql/app.sql.gz</code></pre>
+<p>يقرأ الخيار <code>--quick</code> الصفوف واحداً تلو الآخر بدلاً من تحميل كل جدول في الذاكرة، وهذا ضروري للجداول الكبيرة. وبعد بضع عشرات من الغيغابايتات انتقل إلى نسخ احتياطي فيزيائي (Percona XtraBackup أو MySQL Enterprise Backup).</p>
+
+<h3>2. لماذا restic</h3>
+<p>الأرشيف اليومي بصيغة <code>tar.gz</code> ينسخ كل شيء كل يوم. أما <strong>restic</strong> فيقسّم الملفات إلى كتل، ويخزّن كل كتلة مرة واحدة فقط، ويشفّر كل شيء على جهازك (AES-256) قبل الإرسال. النتيجة: نسخ يومية لا تكلّف إلا حجم التغييرات، وتخزين بعيد لا يرى بياناتك مكشوفة أبداً، وإمكانية الاستعادة إلى أي نقطة زمنية محفوظة.</p>
+<pre><code>sudo apt install -y restic</code></pre>
+<p>توضع إعدادات المستودع في ملف بيئة محمي هو <code>/etc/restic/env</code> (<code>chmod 600</code>). ويصلح أي تخزين متوافق مع S3 (AWS وScaleway وOVH وBackblaze B2 وCloudflare R2…):</p>
+<pre><code>RESTIC_REPOSITORY=s3:https://s3.fr-par.scw.cloud/my-backup-bucket/web-server
+RESTIC_PASSWORD_FILE=/etc/restic/password
+AWS_ACCESS_KEY_ID=xxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxx</code></pre>
+<pre><code>sudo sh -c 'openssl rand -base64 48 &gt; /etc/restic/password &amp;&amp; chmod 600 /etc/restic/password'
+sudo sh -c 'set -a; . /etc/restic/env; restic init'</code></pre>
+<p><strong>احتفظ بكلمة مرور restic خارج الخادم</strong> في مدير كلمات مرور. بدونها لا يمكن استرجاع المستودع، وهذا مقصود. فإذا احترق الخادم ومعه النسخة الوحيدة من كلمة المرور، احترقت نسخك الاحتياطية معه.</p>
+
+<h3>3. سكربت النسخ الاحتياطي</h3>
+<p>الملف <code>/usr/local/bin/backup.sh</code>:</p>
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+set -a; . /etc/restic/env; set +a
+
+DUMP_DIR=/var/backups/mysql
+mkdir -p "$DUMP_DIR"
+
+# 1. MySQL dump (temporary file, then rename: never a half-written dump)
+mysqldump --defaults-extra-file=/root/.my-backup.cnf \
+  --single-transaction --quick --routines --triggers --events \
+  --databases app | gzip &gt; "$DUMP_DIR/app.sql.gz.tmp"
+mv "$DUMP_DIR/app.sql.gz.tmp" "$DUMP_DIR/app.sql.gz"
+
+# 2. Back up the dumps, the uploaded files and the configuration
+restic backup \
+  "$DUMP_DIR" \
+  /var/www/app/shared \
+  /etc/nginx /etc/php \
+  --tag daily \
+  --exclude-caches
+
+# 3. Retention: 7 days, 4 weeks, 6 months
+restic forget --tag daily --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+
+# 4. Verify a sample of the data
+restic check --read-data-subset=5%</code></pre>
+<p>السطر <code>set -euo pipefail</code> حاسم: بدون <code>pipefail</code> يمرّ فشل <code>mysqldump</code> متبوعاً بنجاح <code>gzip</code> دون أن يلاحظه أحد، فتنسخ ملفاً فارغاً لأشهر.</p>
+<pre><code>sudo chmod 700 /usr/local/bin/backup.sh</code></pre>
+
+<h3>4. الجدولة بمؤقّت systemd</h3>
+<p>لمؤقّت systemd ميزتان مقارنة بـ cron: السجلات تذهب إلى journald، والخيار <code>Persistent=true</code> يعوّض أي تنفيذ فائت إذا كان الخادم مطفأً.</p>
+<pre><code># /etc/systemd/system/backup.service
+[Unit]
+Description=MySQL + files backup to restic
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+Nice=10
+IOSchedulingClass=idle</code></pre>
+<pre><code># /etc/systemd/system/backup.timer
+[Unit]
+Description=Daily backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now backup.timer
+systemctl list-timers backup.timer      # next run
+sudo systemctl start backup.service     # first manual run
+journalctl -u backup.service -e         # logs</code></pre>
+
+<h3>5. التنبيه عند الفشل</h3>
+<p>النسخة الاحتياطية التي تفشل بصمت هي أسوأ سيناريو. أبسط حل هو خدمة من نوع "dead man's switch" (مثل Healthchecks.io أو Uptime Kuma أو Better Stack): يرسل السكربت إشارة (ping) عند كل نجاح، وتنبّهك الخدمة إذا لم يصلها شيء في المهلة المتوقعة. أضف في نهاية <code>backup.sh</code>:</p>
+<pre><code>curl -fsS -m 10 --retry 3 https://hc-ping.com/your-uuid &gt; /dev/null</code></pre>
+<p>بفضل <code>set -e</code> لا تُرسَل الإشارة إلا إذا نجحت كل الخطوات السابقة.</p>
+
+<h3>6. اختبار الاستعادة (فعلياً)</h3>
+<p>خطّط لاختبار استعادة منتظم، شهرياً مثلاً، على جهاز آخر:</p>
+<pre><code>set -a; . /etc/restic/env; set +a
+
+restic snapshots --tag daily                       # list the backups
+restic restore latest --target /tmp/restore        # latest version
+restic restore latest --target /tmp/restore --include /var/www/app/shared/uploads
+
+# Restore the database into a test database
+mysql -e 'CREATE DATABASE app_restore_test'
+zcat /tmp/restore/var/backups/mysql/app.sql.gz \
+  | sed 's/`app`/`app_restore_test`/g' | mysql
+mysql -e 'SELECT COUNT(*) FROM app_restore_test.user'</code></pre>
+<p>احسب الوقت الذي تستغرقه العملية: إنه <strong>RTO</strong> الحقيقي لديك (الوقت اللازم للعودة إلى الخدمة). وعمر آخر نسخة ناجحة هو <strong>RPO</strong> (كمية البيانات التي تقبل خسارتها). إذا لم تناسب هاتان القيمتان احتياجات العمل، فالآن هو وقت اكتشاف ذلك، لا أثناء حادث.</p>
+
+<h3>باختصار</h3>
+<ul>
+<li>تفريغ متّسق بالخيار <code>--single-transaction</code>، وبيانات اعتماد بعيدة عن سطر الأوامر</li>
+<li>restic: مشفّر، بلا تكرار، خارج الموقع، مع سياسة احتفاظ واضحة</li>
+<li>جدولة systemd مع <code>Persistent=true</code>، وتنبيه إذا لم تصل الإشارة</li>
+<li>كلمة مرور المستودع محفوظة في مكان آخر غير الخادم</li>
+<li>استعادة تُختبر بانتظام ويُقاس وقتها</li>
+</ul>

@@ -1,0 +1,60 @@
+<h2>Redis : stratégies de cache avancées</h2>
+<p>Redis est bien plus qu'un simple cache clé-valeur. Voici les stratégies pour en tirer le maximum.</p>
+<h3>Patterns de cache</h3>
+<h3>Cache-Aside (Lazy Loading)</h3>
+<pre><code>class ProductService
+{
+    public function getProduct(int $id): Product
+    {
+        $cacheKey = "product:{$id}";
+        $cached = $this->redis->get($cacheKey);
+
+        if ($cached !== null) {
+            return unserialize($cached);
+        }
+
+        $product = $this->repository->find($id);
+        $this->redis->setex($cacheKey, 3600, serialize($product));
+
+        return $product;
+    }
+}</code></pre>
+<h3>Write-Through</h3>
+<pre><code>public function updateProduct(Product $product): void
+{
+    $this->repository->save($product);
+    $this->redis->setex(
+        "product:{$product->getId()}",
+        3600,
+        serialize($product)
+    );
+}</code></pre>
+<h3>Cache avec Symfony</h3>
+<pre><code># config/packages/cache.yaml
+framework:
+    cache:
+        pools:
+            app.cache.products:
+                adapter: cache.adapter.redis
+                default_lifetime: 3600
+                provider: 'redis://redis:6379'</code></pre>
+<pre><code>class ProductController
+{
+    public function list(CacheInterface $productsCache): Response
+    {
+        $products = $productsCache->get('products_list', function (ItemInterface $item) {
+            $item->expiresAfter(3600);
+            $item->tag(['products']);
+            return $this->repository->findAll();
+        });
+
+        return $this->json($products);
+    }
+}</code></pre>
+<h3>Invalidation du cache</h3>
+<ul>
+<li><strong>TTL</strong> : expiration automatique après un délai</li>
+<li><strong>Tags</strong> : invalidation par groupe avec les tags Symfony</li>
+<li><strong>Events</strong> : invalidation sur événement Doctrine</li>
+<li><strong>Versioning</strong> : clés de cache versionnées</li>
+</ul>

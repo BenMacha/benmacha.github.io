@@ -1,0 +1,49 @@
+<h2>بيئة تطوير واحدة متطابقة للفريق بأكمله</h2>
+<p>انتهى زمن عبارة "يعمل على جهازي". يضمن Docker أن يعمل كل مطوّر في بيئة متطابقة، ما يقضي على مشكلات التوافق.</p>
+<h3>حزمة تطوير متكاملة</h3>
+<pre><code>version: '3.8'
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/var/www/html
+      - composer-cache:/root/.composer
+    environment:
+      - APP_ENV=dev
+      - XDEBUG_MODE=debug
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+
+volumes:
+  composer-cache:
+  mysql-data:</code></pre>
+<h3>إعداد Xdebug</h3>
+<p>التنقيح (debugging) أمر أساسي أثناء التطوير. إليك الإعداد الأمثل لـ Xdebug:</p>
+<pre><code>[xdebug]
+xdebug.mode=debug
+xdebug.start_with_request=yes
+xdebug.client_host=host.docker.internal
+xdebug.client_port=9003</code></pre>
+<h3>إعادة التحميل الفوري (Hot reload) والأداء</h3>
+<p>على macOS وWindows قد تكون المجلدات المركّبة (volumes) بطيئة. استخدم استراتيجيات للمزامنة:</p>
+<ul>
+<li>Mutagen لمزامنة الملفات بسرعة</li>
+<li>استثناء <code>vendor/</code> و<code>node_modules/</code> من التركيب</li>
+<li>استخدام volumes مسمّاة للاعتماديات</li>
+</ul>
+<p>يتيح هذا النهج لأي مطوّر جديد ينضم إلى الفريق الحصول على بيئة تطوير جاهزة للعمل في أقل من 5 دقائق.</p>

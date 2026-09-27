@@ -1,0 +1,35 @@
+<h2>Nginx vs Apache: which web server should you choose?</h2>
+<p>Choosing between Nginx and Apache depends on your use case. Here is an objective comparison.</p>
+<h3>Architecture</h3>
+<p><strong>Apache</strong> uses a process/thread-based model (prefork or worker). Each connection is handled by a dedicated process or thread.</p>
+<p><strong>Nginx</strong> uses an asynchronous, event-driven architecture. A single worker process can handle thousands of concurrent connections.</p>
+<h3>Performance</h3>
+<pre><code># Benchmark with ab (Apache Bench)
+ab -n 10000 -c 100 http://localhost/
+
+# Nginx: ~15000 req/s for static content
+# Apache: ~5000 req/s for static content</code></pre>
+<h3>PHP configuration</h3>
+<p><strong>Apache with mod_php:</strong></p>
+<pre><code>&lt;VirtualHost *:80&gt;
+    DocumentRoot /var/www/html/public
+    &lt;Directory /var/www/html/public&gt;
+        AllowOverride All
+    &lt;/Directory&gt;
+&lt;/VirtualHost&gt;</code></pre>
+<p><strong>Nginx with PHP-FPM:</strong></p>
+<pre><code>server {
+    root /var/www/html/public;
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}</code></pre>
+<h3>When to choose which?</h3>
+<ul>
+<li><strong>Nginx</strong>: static content, reverse proxy, high concurrency, microservices</li>
+<li><strong>Apache</strong>: .htaccess required, specific modules, legacy compatibility</li>
+<li><strong>Both</strong>: Nginx as a reverse proxy in front of Apache for the best of both worlds</li>
+</ul>
+<p>In high-traffic environments such as CCM Benchmark, Nginx is preferred for its efficient handling of concurrent connections.</p>

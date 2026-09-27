@@ -1,0 +1,52 @@
+<h2>API Platform: إطار عمل الـ API لـ Symfony</h2>
+<p>يُعدّ API Platform الإطار المرجعي لبناء واجهات API حديثة باستخدام Symfony، إذ يولّد تلقائياً واجهة REST وGraphQL انطلاقاً من الكيانات (entities) الخاصة بك.</p>
+<h3>التثبيت والإعداد</h3>
+<pre><code>composer require api
+# Automatically creates the API Platform configuration</code></pre>
+<h3>إنشاء مورد API</h3>
+<pre><code>use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+
+#[ApiResource(
+    operations: [
+        new GetCollection(),
+        new Get(),
+        new Post(security: "is_granted('ROLE_ADMIN')"),
+    ],
+    paginationItemsPerPage: 20,
+)]
+#[ORM\Entity]
+class Product
+{
+    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    private string $name;
+
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
+    private string $price;
+
+    // Getters and setters...
+}</code></pre>
+<h3>الفلاتر والبحث</h3>
+<pre><code>#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
+#[ApiFilter(RangeFilter::class, properties: ['price'])]
+#[ApiFilter(OrderFilter::class, properties: ['name', 'price'])]</code></pre>
+<h3>مجموعات التسلسل (Serialization Groups)</h3>
+<pre><code>#[ApiResource(
+    normalizationContext: ['groups' => ['product:read']],
+    denormalizationContext: ['groups' => ['product:write']],
+)]</code></pre>
+<h3>المزايا</h3>
+<ul>
+<li>توثيق OpenAPI يُولَّد تلقائياً</li>
+<li>دعم JSON-LD وHydra</li>
+<li>ترقيم الصفحات (pagination) والفلترة والترتيب مدمجة</li>
+<li>تحقق تلقائي من صحة البيانات عبر قيود (constraints) Symfony</li>
+<li>دعم أصلي لـ GraphQL</li>
+</ul>
+<p>تستخدم منصات مثل CCM Benchmark إطار API Platform لعرض خدماتها الداخلية عبر واجهات API موحّدة.</p>

@@ -1,0 +1,50 @@
+<h2>Zapier لأتمتة العمليات التجارية</h2>
+<p>في بيئة مؤسسية مثل ORPI، تُعدّ أتمتة العمليات التجارية عبر واجهات API أمراً أساسياً لرفع الكفاءة.</p>
+<h3>حالات استخدام شائعة</h3>
+<ul>
+<li>مزامنة CRM مع قاعدة بيانات داخلية</li>
+<li>إشعارات Slack عند وقوع أحداث تجارية</li>
+<li>توليد التقارير تلقائياً</li>
+<li>ربط نماذج الويب بنظام المعلومات</li>
+</ul>
+<h3>إنشاء webhook مخصص</h3>
+<pre><code>// Symfony endpoint receiving Zapier webhooks
+#[Route('/api/webhook/zapier', methods: ['POST'])]
+class ZapierWebhookController extends AbstractController
+{
+    public function __invoke(
+        Request $request,
+        MessageBusInterface $bus,
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        // Validate the token
+        if ($request->headers->get('X-Zapier-Token') !== $this->zapierToken) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Dispatch the processing
+        $bus->dispatch(new ProcessZapierDataMessage($data));
+
+        return $this->json(['status' => 'received']);
+    }
+}</code></pre>
+<h3>واجهة API لمشغّلات Zapier (Triggers)</h3>
+<pre><code>#[Route('/api/zapier/new-leads', methods: ['GET'])]
+public function newLeads(LeadRepository $repo): JsonResponse
+{
+    $leads = $repo->findRecent(limit: 50);
+    return $this->json(array_map(fn(Lead $l) => [
+        'id' => $l->getId(),
+        'name' => $l->getName(),
+        'email' => $l->getEmail(),
+        'created_at' => $l->getCreatedAt()->format('c'),
+    ], $leads));
+}</code></pre>
+<h3>أفضل الممارسات</h3>
+<ul>
+<li>تأمين الـ webhooks باستخدام tokens</li>
+<li>تسجيل جميع التفاعلات لتسهيل تصحيح الأخطاء</li>
+<li>استخدام طوابير الانتظار (queues) للمعالجة غير المتزامنة</li>
+<li>توثيق واجهات API باستخدام OpenAPI لتسهيل التكامل مع Zapier</li>
+</ul>

@@ -1,0 +1,36 @@
+<h2>Zero-downtime database migrations</h2>
+<p>Database migrations are often the riskiest part of a deployment. Here is how to run them without any downtime.</p>
+<h3>Ground rules</h3>
+<ul>
+<li>Never drop a column that production code still uses</li>
+<li>Always add new columns as nullable</li>
+<li>Keep schema migrations separate from data migrations</li>
+<li>Test migrations on a copy of the production database</li>
+</ul>
+<h3>The Expand-Contract pattern</h3>
+<p><strong>Phase 1 - Expand:</strong> Add the new structure</p>
+<pre><code>-- Migration 1: Add the new column
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
+
+-- Migration 2: Backfill the data
+UPDATE users SET email_verified = TRUE WHERE verified_at IS NOT NULL;</code></pre>
+<p><strong>Phase 2 - Deploy the code</strong> that uses both columns</p>
+<p><strong>Phase 3 - Contract:</strong> Remove the old structure</p>
+<pre><code>-- Migration 3: Drop the old column
+ALTER TABLE users DROP COLUMN verified_at;</code></pre>
+<h3>Optimized Doctrine migrations</h3>
+<pre><code>public function up(Schema $schema): void
+{
+    // Use non-blocking operations
+    $this->addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
+
+    // For large tables, use pt-online-schema-change
+    // or gh-ost to avoid locks
+}</code></pre>
+<h3>Recommended tools</h3>
+<ul>
+<li><strong>pt-online-schema-change</strong>: lock-free migrations for MySQL</li>
+<li><strong>gh-ost</strong>: GitHub's alternative for online migrations</li>
+<li><strong>Doctrine Migrations</strong>: versioned migration management</li>
+<li><strong>Flyway</strong>: multi-database migration tool</li>
+</ul>

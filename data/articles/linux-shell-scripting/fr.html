@@ -1,0 +1,60 @@
+<h2>L'art du shell scripting</h2>
+<p>Le shell scripting reste un outil fondamental pour tout ingénieur DevOps. Voici les patterns et bonnes pratiques essentiels.</p>
+<h3>Structure d'un script robuste</h3>
+<pre><code>#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# Variables
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly LOG_FILE="/var/log/deploy.log"
+
+# Fonctions
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+cleanup() {
+    log "Nettoyage en cours..."
+    rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
+# Script principal
+main() {
+    log "Démarrage du déploiement"
+    # ...
+    log "Déploiement terminé"
+}
+
+main "$@"</code></pre>
+<h3>Patterns utiles</h3>
+<pre><code># Vérifier si un service est actif
+check_service() {
+    if systemctl is-active --quiet "$1"; then
+        echo "$1 est actif"
+    else
+        echo "$1 est inactif" && return 1
+    fi
+}
+
+# Retry avec backoff
+retry() {
+    local max_attempts=$1; shift
+    local attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if "$@"; then return 0; fi
+        echo "Tentative $attempt/$max_attempts échouée"
+        sleep $((attempt * 2))
+        ((attempt++))
+    done
+    return 1
+}</code></pre>
+<h3>Bonnes pratiques</h3>
+<ul>
+<li>Toujours utiliser <code>set -euo pipefail</code></li>
+<li>Documenter les variables et fonctions</li>
+<li>Utiliser des fonctions pour la lisibilité</li>
+<li>Gérer les erreurs avec <code>trap</code></li>
+<li>Tester avec shellcheck</li>
+</ul>

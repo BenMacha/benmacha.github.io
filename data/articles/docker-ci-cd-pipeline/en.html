@@ -1,0 +1,45 @@
+<h2>Docker and continuous integration</h2>
+<p>Docker has become essential in modern CI/CD pipelines. It guarantees consistency between test and production environments.</p>
+<h3>A GitHub Actions pipeline with Docker</h3>
+<pre><code>name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build test image
+        run: docker build --target test -t app:test .
+      - name: Run tests
+        run: docker run app:test php bin/phpunit
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build --target production -t app:latest .
+      - name: Push to registry
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login -u user --password-stdin
+          docker push app:latest</code></pre>
+<h3>Cache optimization</h3>
+<p>Docker layer caching is crucial for pipeline speed:</p>
+<pre><code>- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3
+- name: Build with cache
+  uses: docker/build-push-action@v5
+  with:
+    cache-from: type=gha
+    cache-to: type=gha,mode=max</code></pre>
+<h3>Parallel tests</h3>
+<ul>
+<li>Use Docker Compose to spin up test services (DB, Redis)</li>
+<li>Parallelize test suites across separate containers</li>
+<li>Clean up resources after each run</li>
+</ul>
+<p>This strategy cuts deployment time from 30 minutes to under 5 minutes.</p>

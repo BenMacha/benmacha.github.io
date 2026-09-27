@@ -1,0 +1,68 @@
+<h2>Un portfolio servi depuis le réseau de Cloudflare</h2>
+<p>Ce site est une application <strong>Nuxt 3</strong> dont toutes les pages sont pré-rendues au build : l'accueil, les pages de CV et chacun des articles du blog. Cloudflare Pages est un hébergement idéal pour ce cas : HTML servi depuis le réseau mondial de Cloudflare, HTTPS automatique, un déploiement à chaque push, et un aperçu par branche. Voici la configuration, et surtout les trois pièges rencontrés lors de la dernière refonte.</p>
+
+<h3>La configuration du build</h3>
+<p>Dans le tableau de bord (<em>Workers et Pages → votre projet → Paramètres → Build</em>) :</p>
+<ul>
+<li><strong>Commande de build</strong> : <code>npm run build</code></li>
+<li><strong>Répertoire de sortie</strong> : <code>dist</code></li>
+<li><strong>Branche de production</strong> : <code>master</code> (ou <code>main</code>)</li>
+</ul>
+<p>Nuxt détecte automatiquement l'environnement Cloudflare Pages et utilise le preset Nitro <code>cloudflare-pages</code> : les routes déclarées au prérendu deviennent des fichiers HTML statiques dans <code>dist/</code>, et le reste est servi par un Worker. Pour un site 100 % statique, déclarez les routes à pré-rendre dans <code>nuxt.config.ts</code>. Les générer depuis vos données évite d'oublier un article :</p>
+<pre><code>import { blogArticles } from './data/blog'
+
+const staticPages = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+const blogPages = blogArticles.map(article =&gt; `/blog/${article.slug}`)
+
+export default defineNuxtConfig({
+  nitro: {
+    prerender: {
+      routes: [...staticPages, ...blogPages],
+      crawlLinks: true,
+    },
+  },
+})</code></pre>
+<p>Le même tableau alimente le sitemap : un nouvel article est automatiquement pré-rendu et référencé, sans rien toucher d'autre.</p>
+
+<h3>Piège n°1 : la branche de production</h3>
+<p>Après la refonte, poussée sur <code>master</code>, le site en ligne n'avait pas changé. Le build avait pourtant réussi. En réalité, la branche de production du projet était restée sur une ancienne branche de travail : chaque push sur <code>master</code> ne produisait qu'un <strong>déploiement d'aperçu</strong>, sur une URL <code>*.pages.dev</code>, sans toucher au domaine principal.</p>
+<p>À vérifier dans <em>Paramètres → Build → Contrôle de branche</em>. Et changer la branche de production ne redéploie rien : il faut un nouveau commit sur cette branche (ou relancer un déploiement) pour que la production se mette à jour.</p>
+
+<h3>Piège n°2 : la version de Node</h3>
+<p>Nuxt 3.21, Vite 7 et Nitro exigent <strong>Node <code>^20.19</code> ou <code>&gt;=22.12</code></strong>. Le système de build de Cloudflare lit la version dans un fichier <code>.node-version</code> ou <code>.nvmrc</code> à la racine du dépôt (ou dans la variable d'environnement <code>NODE_VERSION</code>). Un simple <code>20</code> est ambigu : fixez une version majeure récente, clairement compatible.</p>
+<pre><code>echo 22 &gt; .node-version
+echo 22 &gt; .nvmrc</code></pre>
+
+<h3>Piège n°3 : le lockfile et <code>npm ci</code></h3>
+<p>Le build échouait en quelques secondes avec ce message :</p>
+<pre><code>npm error `npm ci` can only install packages when your package.json and
+package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: oxc-parser@0.151.0 from lock file
+npm error Missing: esbuild@0.28.2 from lock file
+...</code></pre>
+<p>Pourtant, <code>npm install</code> et le build passaient parfaitement en local. La cause : le <code>package-lock.json</code> avait été généré avec <strong>npm 11</strong> (livré avec Node 24), alors que Cloudflare installe les dépendances avec <code>npm ci</code> en <strong>npm 10</strong>. Les deux versions ne résolvent pas les dépendances optionnelles de la même façon, et npm 10 considérait le lockfile comme désynchronisé.</p>
+<p>La correction : régénérer le lockfile avec la même version de npm que la CI, déclarée dans le champ <code>packageManager</code> du <code>package.json</code> :</p>
+<pre><code>npx npm@10.9.4 install --package-lock-only</code></pre>
+<p>Et surtout, <strong>reproduire la CI en local</strong> avant de pousser, sur une copie propre du dépôt :</p>
+<pre><code>git clone . /tmp/ci-check &amp;&amp; cd /tmp/ci-check
+npx npm@10.9.4 ci
+npm run build</code></pre>
+<p>Si ces deux commandes passent, le build Cloudflare passera aussi.</p>
+
+<h3>Les redirections avec slash final</h3>
+<p>Une fois en ligne, <code>curl -I https://benmacha.tn/experience</code> renvoie un <strong>308</strong> vers <code>/experience/</code>. Ce n'est pas une erreur : chaque page pré-rendue est un fichier <code>experience/index.html</code>, et Cloudflare Pages redirige vers l'URL de répertoire. Pour le SEO, gardez des liens internes et des URL canoniques cohérents avec ce comportement, pour éviter une redirection à chaque clic.</p>
+
+<h3>Suivre un déploiement sans ouvrir le tableau de bord</h3>
+<p>Cloudflare publie l'état de chaque build sur GitHub, sous forme de <em>check run</em> attaché au commit. Avec la CLI GitHub, on suit le déploiement depuis le terminal :</p>
+<pre><code>gh api repos/MOI/MON-REPO/commits/$(git rev-parse HEAD)/check-runs \
+  --jq '.check_runs[] | select(.name=="Cloudflare Pages") | "\(.status) \(.conclusion)"'</code></pre>
+<p>Le résultat passe de <code>in_progress</code> à <code>completed success</code>, ou <code>completed failure</code>. Dans ce dernier cas, le lien <code>details_url</code> du check mène directement aux logs du build.</p>
+
+<h3>En résumé</h3>
+<ul>
+<li>Vérifiez que la <strong>branche de production</strong> est bien celle sur laquelle vous poussez</li>
+<li>Fixez la <strong>version de Node</strong> dans <code>.node-version</code>, compatible avec vos dépendances</li>
+<li>Générez le <strong>lockfile</strong> avec la même version de npm que la CI, et testez <code>npm ci</code> en local</li>
+<li>Générez les routes pré-rendues et le sitemap <strong>depuis vos données</strong></li>
+</ul>
+<p>Une fois ces points réglés, le cycle devient idéal : un <code>git push</code>, une minute de build, et le site est à jour partout dans le monde.</p>

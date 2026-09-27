@@ -1,0 +1,67 @@
+<h2>GitHub Actions لمشاريع PHP الخاصة بك</h2>
+<p>يوفّر GitHub Actions حلّ CI/CD مدمجاً مباشرةً في مستودعك. إليك طريقة إعداد خط أنابيب (pipeline) متكامل.</p>
+<h3>سير عمل الاختبارات</h3>
+<pre><code>name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, intl
+          coverage: xdebug
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse src
+
+      - name: Run tests
+        run: php bin/phpunit --coverage-clover coverage.xml
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/test</code></pre>
+<h3>النشر التلقائي</h3>
+<pre><code>  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/app
+            git pull origin main
+            composer install --no-dev
+            php bin/console cache:clear
+            php bin/console doctrine:migrations:migrate -n</code></pre>
+<h3>أفضل الممارسات</h3>
+<ul>
+<li>استخدام cache اعتماديات Composer</li>
+<li>تشغيل مهام الاختبار والتدقيق (lint) بالتوازي</li>
+<li>حماية الفروع بفحوصات حالة (status checks) إلزامية</li>
+<li>تخزين الأسرار في GitHub Secrets</li>
+</ul>

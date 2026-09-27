@@ -1,0 +1,67 @@
+<h2>GitHub Actions pour vos projets PHP</h2>
+<p>GitHub Actions offre une solution de CI/CD intégrée directement dans votre dépôt. Voici comment configurer un pipeline complet.</p>
+<h3>Workflow de test</h3>
+<pre><code>name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, intl
+          coverage: xdebug
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse src
+
+      - name: Run tests
+        run: php bin/phpunit --coverage-clover coverage.xml
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/test</code></pre>
+<h3>Déploiement automatique</h3>
+<pre><code>  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/app
+            git pull origin main
+            composer install --no-dev
+            php bin/console cache:clear
+            php bin/console doctrine:migrations:migrate -n</code></pre>
+<h3>Bonnes pratiques</h3>
+<ul>
+<li>Utiliser le cache des dépendances Composer</li>
+<li>Paralléliser les jobs de test et de lint</li>
+<li>Protéger les branches avec des status checks requis</li>
+<li>Stocker les secrets dans GitHub Secrets</li>
+</ul>

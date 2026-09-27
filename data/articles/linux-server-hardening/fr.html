@@ -1,0 +1,34 @@
+<h2>Sécuriser votre serveur Linux</h2>
+<p>La sécurisation d'un serveur Linux est la première étape avant tout déploiement en production. Voici les mesures essentielles.</p>
+<h3>Configuration SSH</h3>
+<pre><code># /etc/ssh/sshd_config
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+Port 2222
+MaxAuthTries 3
+AllowUsers deploy</code></pre>
+<h3>Firewall avec UFW</h3>
+<pre><code>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 2222/tcp    # SSH
+sudo ufw allow 80/tcp      # HTTP
+sudo ufw allow 443/tcp     # HTTPS
+sudo ufw enable</code></pre>
+<h3>Mises à jour automatiques</h3>
+<pre><code>sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+<h3>Fail2Ban</h3>
+<p>Protégez-vous contre les attaques par force brute :</p>
+<pre><code>sudo apt install fail2ban
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
+<h3>Checklist de sécurité</h3>
+<ul>
+<li>Désactiver le login root par SSH</li>
+<li>Utiliser uniquement l'authentification par clé</li>
+<li>Configurer un firewall restrictif</li>
+<li>Installer et configurer Fail2Ban</li>
+<li>Activer les mises à jour automatiques de sécurité</li>
+<li>Configurer les logs centralisés</li>
+<li>Mettre en place un monitoring système</li>
+</ul>

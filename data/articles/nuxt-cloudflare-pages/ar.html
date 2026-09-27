@@ -1,0 +1,68 @@
+<h2>موقع شخصي يُقدَّم من شبكة Cloudflare</h2>
+<p>هذا الموقع تطبيق <strong>Nuxt 3</strong> تُولَّد جميع صفحاته مسبقاً أثناء البناء: الصفحة الرئيسية وصفحات السيرة الذاتية وكل مقالات المدونة. وCloudflare Pages استضافة مثالية لهذه الحالة: صفحات HTML تُقدَّم من شبكة Cloudflare العالمية، وHTTPS تلقائي، ونشر مع كل عملية push، ومعاينة لكل فرع. إليك الإعداد، والأهم من ذلك الأخطاء الثلاثة التي واجهتها أثناء إعادة التصميم الأخيرة.</p>
+
+<h3>إعدادات البناء</h3>
+<p>في لوحة التحكم (<em>Workers &amp; Pages ← مشروعك ← الإعدادات ← البناء</em>):</p>
+<ul>
+<li><strong>أمر البناء</strong>: <code>npm run build</code></li>
+<li><strong>مجلد المخرجات</strong>: <code>dist</code></li>
+<li><strong>فرع الإنتاج</strong>: <code>master</code> (أو <code>main</code>)</li>
+</ul>
+<p>يكتشف Nuxt بيئة Cloudflare Pages تلقائياً ويستخدم إعداد Nitro المسبق <code>cloudflare-pages</code>: تصبح المسارات المولَّدة مسبقاً ملفات HTML ثابتة في <code>dist/</code>، ويخدم Worker كل ما عداها. ولموقع ثابت بالكامل، صرّح بالمسارات المطلوب توليدها في <code>nuxt.config.ts</code>. وتوليدها من بياناتك يضمن ألّا تنسى أي مقال:</p>
+<pre><code>import { blogArticles } from './data/blog'
+
+const staticPages = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+const blogPages = blogArticles.map(article =&gt; `/blog/${article.slug}`)
+
+export default defineNuxtConfig({
+  nitro: {
+    prerender: {
+      routes: [...staticPages, ...blogPages],
+      crawlLinks: true,
+    },
+  },
+})</code></pre>
+<p>المصفوفة نفسها تغذّي خريطة الموقع (sitemap): أي مقال جديد يُولَّد ويُفهرس تلقائياً دون تعديل أي شيء آخر.</p>
+
+<h3>الفخ الأول: فرع الإنتاج</h3>
+<p>بعد دفع التصميم الجديد إلى <code>master</code> لم يتغير الموقع المنشور، مع أن البناء نجح. السبب أن فرع الإنتاج في المشروع كان ما يزال مضبوطاً على فرع عمل قديم، فكانت كل عملية push إلى <code>master</code> تنتج <strong>نشر معاينة</strong> فقط على رابط <code>*.pages.dev</code> دون المساس بالنطاق الرئيسي.</p>
+<p>تحقق من ذلك في <em>الإعدادات ← البناء ← التحكم في الفروع</em>. وتغيير فرع الإنتاج لا يعيد النشر وحده: تحتاج إلى commit جديد على ذلك الفرع (أو إعادة تشغيل عملية نشر) لتحديث بيئة الإنتاج.</p>
+
+<h3>الفخ الثاني: إصدار Node</h3>
+<p>يتطلب Nuxt 3.21 وVite 7 وNitro الإصدار <strong>Node <code>^20.19</code> أو <code>&gt;=22.12</code></strong>. يقرأ نظام البناء في Cloudflare الإصدار من ملف <code>.node-version</code> أو <code>.nvmrc</code> في جذر المستودع (أو من متغير البيئة <code>NODE_VERSION</code>). القيمة <code>20</code> وحدها غامضة: ثبّت إصداراً رئيسياً حديثاً متوافقاً بوضوح.</p>
+<pre><code>echo 22 &gt; .node-version
+echo 22 &gt; .nvmrc</code></pre>
+
+<h3>الفخ الثالث: ملف القفل و<code>npm ci</code></h3>
+<p>كان البناء يفشل خلال ثوانٍ بهذه الرسالة:</p>
+<pre><code>npm error `npm ci` can only install packages when your package.json and
+package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: oxc-parser@0.151.0 from lock file
+npm error Missing: esbuild@0.28.2 from lock file
+...</code></pre>
+<p>ومع ذلك كان <code>npm install</code> والبناء يعملان محلياً دون أي مشكلة. السبب أن الملف <code>package-lock.json</code> وُلِّد باستخدام <strong>npm 11</strong> (المرفق مع Node 24)، بينما تثبّت Cloudflare الاعتماديات بالأمر <code>npm ci</code> على <strong>npm 10</strong>. لا يحلّ الإصداران الاعتماديات الاختيارية بالطريقة نفسها، فاعتبر npm 10 ملف القفل غير متزامن.</p>
+<p>الحل: إعادة توليد ملف القفل بإصدار npm نفسه المستخدم في بيئة CI، والمصرَّح به في الحقل <code>packageManager</code> من ملف <code>package.json</code>:</p>
+<pre><code>npx npm@10.9.4 install --package-lock-only</code></pre>
+<p>والأهم: <strong>أعد إنتاج بيئة CI محلياً</strong> قبل الدفع، على نسخة نظيفة من المستودع:</p>
+<pre><code>git clone . /tmp/ci-check &amp;&amp; cd /tmp/ci-check
+npx npm@10.9.4 ci
+npm run build</code></pre>
+<p>إذا نجح هذان الأمران فسينجح البناء على Cloudflare أيضاً.</p>
+
+<h3>إعادة التوجيه إلى الشرطة المائلة الختامية</h3>
+<p>بعد النشر، يُرجع الأمر <code>curl -I https://benmacha.tn/experience</code> الرمز <strong>308</strong> نحو <code>/experience/</code>. هذا ليس خطأ: كل صفحة مولَّدة مسبقاً هي ملف <code>experience/index.html</code>، وتعيد Cloudflare Pages التوجيه إلى رابط المجلد. ولتحسين محركات البحث، اجعل الروابط الداخلية والروابط القانونية (canonical) متسقة مع هذا السلوك لتجنّب إعادة توجيه عند كل نقرة.</p>
+
+<h3>متابعة النشر دون فتح لوحة التحكم</h3>
+<p>تنشر Cloudflare حالة كل عملية بناء على GitHub على شكل <em>check run</em> مرتبط بالـ commit. وباستخدام أداة GitHub CLI يمكنك متابعة النشر من الطرفية:</p>
+<pre><code>gh api repos/MOI/MON-REPO/commits/$(git rev-parse HEAD)/check-runs \
+  --jq '.check_runs[] | select(.name=="Cloudflare Pages") | "\(.status) \(.conclusion)"'</code></pre>
+<p>تنتقل النتيجة من <code>in_progress</code> إلى <code>completed success</code> أو <code>completed failure</code>، وفي الحالة الأخيرة يقودك الرابط <code>details_url</code> مباشرة إلى سجلات البناء.</p>
+
+<h3>باختصار</h3>
+<ul>
+<li>تأكد أن <strong>فرع الإنتاج</strong> هو الفرع الذي تدفع إليه</li>
+<li>ثبّت <strong>إصدار Node</strong> في <code>.node-version</code> بما يتوافق مع اعتمادياتك</li>
+<li>ولّد <strong>ملف القفل</strong> بإصدار npm نفسه المستخدم في CI، واختبر <code>npm ci</code> محلياً</li>
+<li>ولّد المسارات المسبقة وخريطة الموقع <strong>من بياناتك</strong></li>
+</ul>
+<p>بعد ضبط هذه النقاط تصبح دورة العمل مثالية: <code>git push</code> واحد، ودقيقة من البناء، ويصبح الموقع محدَّثاً في كل أنحاء العالم.</p>

@@ -1,0 +1,50 @@
+<h2>Zapier for business automation</h2>
+<p>In a corporate environment such as ORPI, automating business processes through APIs is essential to working more efficiently.</p>
+<h3>Common use cases</h3>
+<ul>
+<li>Syncing the CRM to an internal database</li>
+<li>Slack notifications on business events</li>
+<li>Automated report generation</li>
+<li>Integrating web forms with the information system</li>
+</ul>
+<h3>Creating a custom webhook</h3>
+<pre><code>// Symfony endpoint receiving Zapier webhooks
+#[Route('/api/webhook/zapier', methods: ['POST'])]
+class ZapierWebhookController extends AbstractController
+{
+    public function __invoke(
+        Request $request,
+        MessageBusInterface $bus,
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        // Validate the token
+        if ($request->headers->get('X-Zapier-Token') !== $this->zapierToken) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Dispatch the processing
+        $bus->dispatch(new ProcessZapierDataMessage($data));
+
+        return $this->json(['status' => 'received']);
+    }
+}</code></pre>
+<h3>API for Zapier Triggers</h3>
+<pre><code>#[Route('/api/zapier/new-leads', methods: ['GET'])]
+public function newLeads(LeadRepository $repo): JsonResponse
+{
+    $leads = $repo->findRecent(limit: 50);
+    return $this->json(array_map(fn(Lead $l) => [
+        'id' => $l->getId(),
+        'name' => $l->getName(),
+        'email' => $l->getEmail(),
+        'created_at' => $l->getCreatedAt()->format('c'),
+    ], $leads));
+}</code></pre>
+<h3>Best practices</h3>
+<ul>
+<li>Secure webhooks with tokens</li>
+<li>Log every interaction for debugging</li>
+<li>Use queues for asynchronous processing</li>
+<li>Document the APIs with OpenAPI for the Zapier integration</li>
+</ul>

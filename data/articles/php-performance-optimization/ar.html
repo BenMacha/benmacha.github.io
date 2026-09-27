@@ -1,0 +1,47 @@
+<h2>تحسين أداء PHP لبيئة الإنتاج</h2>
+<p>أداء PHP عامل حاسم في التطبيقات ذات الحركة العالية. في CCM Benchmark، حيث تستقبل المواقع ملايين الزوار يومياً، كل جزء من الألف من الثانية له أهميته.</p>
+<h3>OPcache: الأساس</h3>
+<pre><code>; php.ini - Optimal OPcache configuration
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+opcache.save_comments=1
+opcache.preload=/var/www/app/config/preload.php
+opcache.preload_user=www-data</code></pre>
+<h3>التحميل المسبق (Preloading) في PHP 8</h3>
+<pre><code>// config/preload.php
+require dirname(__DIR__).'/vendor/autoload.php';
+
+// Preload frequently used classes
+$files = glob(dirname(__DIR__).'/src/Entity/*.php');
+foreach ($files as $file) {
+    opcache_compile_file($file);
+}</code></pre>
+<h3>التحليل (Profiling) باستخدام Blackfire</h3>
+<pre><code># Install the Blackfire agent
+curl -s https://packagecloud.io/install/repositories/blackfire/agent/script.deb.sh | sudo bash
+sudo apt install blackfire-agent
+
+# Profile a request
+blackfire curl http://localhost/api/products</code></pre>
+<h3>تحسينات Doctrine</h3>
+<ul>
+<li>تفعيل التخزين المؤقت (cache) للاستعلامات والنتائج</li>
+<li>استخدام استعلامات DQL مع اختيار جزئي للحقول</li>
+<li>تجنّب التحميل الكسول (lazy loading) باستخدام عمليات ربط (joins) صريحة</li>
+<li>إعداد التخزين المؤقت من المستوى الثاني (second-level cache)</li>
+</ul>
+<pre><code>// Doctrine query cache
+$query = $em->createQuery('SELECT p FROM App\Entity\Product p')
+    ->enableResultCache(3600, 'products_list');
+
+$results = $query->getResult();</code></pre>
+<h3>ضبط PHP-FPM</h3>
+<pre><code>; PHP-FPM configuration for high performance
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 10
+pm.min_spare_servers = 5
+pm.max_spare_servers = 20
+pm.max_requests = 500</code></pre>

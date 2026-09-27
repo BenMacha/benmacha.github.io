@@ -1,0 +1,126 @@
+<h2>Une sauvegarde qui n'a jamais été restaurée n'existe pas</h2>
+<p>Tout le monde « a des sauvegardes », jusqu'au jour où il faut restaurer : le dump est vide depuis trois mois, l'archive est sur le même disque que le serveur, ou personne ne connaît le mot de passe de chiffrement. Une bonne stratégie tient en une règle, la <strong>règle 3-2-1</strong> : 3 copies des données, sur 2 supports différents, dont 1 hors site. Et en une discipline : <strong>tester la restauration</strong>.</p>
+<p>Ce guide met en place, sur un serveur Linux qui héberge une application web :</p>
+<ul>
+<li>un dump MySQL cohérent, sans bloquer l'application ;</li>
+<li>une sauvegarde <strong>chiffrée, dédupliquée et incrémentale</strong> avec restic vers un stockage objet S3 ;</li>
+<li>une politique de rétention, une planification systemd et une alerte en cas d'échec.</li>
+</ul>
+
+<h3>1. Le dump MySQL</h3>
+<p>Copier les fichiers de <code>/var/lib/mysql</code> à chaud donne une sauvegarde incohérente. Utilisez <code>mysqldump</code> avec <code>--single-transaction</code> : pour les tables InnoDB, le dump est pris dans une transaction, donc cohérent, sans verrouiller les écritures.</p>
+<p>D'abord, un utilisateur dédié aux sauvegardes, avec le strict nécessaire :</p>
+<pre><code>CREATE USER 'backup'@'localhost' IDENTIFIED BY 'mot-de-passe-long';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, PROCESS ON *.* TO 'backup'@'localhost';</code></pre>
+<p>Ses identifiants vont dans un fichier lisible par root seulement, pour ne jamais apparaître dans la liste des processus :</p>
+<pre><code># /root/.my-backup.cnf  (chmod 600)
+[client]
+user=backup
+password=mot-de-passe-long</code></pre>
+<pre><code>mysqldump --defaults-extra-file=/root/.my-backup.cnf \
+  --single-transaction --quick --routines --triggers --events \
+  --databases app | gzip &gt; /var/backups/mysql/app.sql.gz</code></pre>
+<p><code>--quick</code> lit les lignes une par une au lieu de charger chaque table en mémoire : indispensable pour les grosses tables. Au-delà de quelques dizaines de Go, passez à une sauvegarde physique (Percona XtraBackup ou MySQL Enterprise Backup).</p>
+
+<h3>2. Pourquoi restic</h3>
+<p>Une archive <code>tar.gz</code> quotidienne recopie tout, chaque jour. <strong>restic</strong> découpe les fichiers en blocs, ne stocke chaque bloc qu'une fois, et chiffre tout côté client (AES-256) avant l'envoi. Résultat : des sauvegardes quotidiennes qui ne coûtent que la taille des changements, un stockage distant qui ne voit jamais vos données en clair, et une restauration possible à n'importe quelle date conservée.</p>
+<pre><code>sudo apt install -y restic</code></pre>
+<p>Les paramètres du dépôt vont dans un fichier d'environnement protégé, <code>/etc/restic/env</code> (<code>chmod 600</code>). N'importe quel stockage compatible S3 convient (AWS, Scaleway, OVH, Backblaze B2, Cloudflare R2…) :</p>
+<pre><code>RESTIC_REPOSITORY=s3:https://s3.fr-par.scw.cloud/mon-bucket-backups/serveur-web
+RESTIC_PASSWORD_FILE=/etc/restic/password
+AWS_ACCESS_KEY_ID=xxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxx</code></pre>
+<pre><code>sudo sh -c 'openssl rand -base64 48 &gt; /etc/restic/password &amp;&amp; chmod 600 /etc/restic/password'
+sudo sh -c 'set -a; . /etc/restic/env; restic init'</code></pre>
+<p><strong>Conservez le mot de passe restic hors du serveur</strong>, dans un gestionnaire de mots de passe. Sans lui, le dépôt est irrécupérable, et c'est voulu. Si le serveur brûle avec sa seule copie du mot de passe, vos sauvegardes brûlent avec lui.</p>
+
+<h3>3. Le script de sauvegarde</h3>
+<p><code>/usr/local/bin/backup.sh</code> :</p>
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+set -a; . /etc/restic/env; set +a
+
+DUMP_DIR=/var/backups/mysql
+mkdir -p "$DUMP_DIR"
+
+# 1. Dump MySQL (fichier temporaire puis renommage : jamais de dump à moitié écrit)
+mysqldump --defaults-extra-file=/root/.my-backup.cnf \
+  --single-transaction --quick --routines --triggers --events \
+  --databases app | gzip &gt; "$DUMP_DIR/app.sql.gz.tmp"
+mv "$DUMP_DIR/app.sql.gz.tmp" "$DUMP_DIR/app.sql.gz"
+
+# 2. Sauvegarde des dumps, des fichiers uploadés et de la configuration
+restic backup \
+  "$DUMP_DIR" \
+  /var/www/app/shared \
+  /etc/nginx /etc/php \
+  --tag daily \
+  --exclude-caches
+
+# 3. Rétention : 7 jours, 4 semaines, 6 mois
+restic forget --tag daily --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+
+# 4. Vérification d'un échantillon des données
+restic check --read-data-subset=5%</code></pre>
+<p><code>set -euo pipefail</code> est crucial : sans <code>pipefail</code>, un <code>mysqldump</code> en échec suivi d'un <code>gzip</code> réussi passe inaperçu, et vous sauvegardez un fichier vide pendant des mois.</p>
+<pre><code>sudo chmod 700 /usr/local/bin/backup.sh</code></pre>
+
+<h3>4. Planification avec un timer systemd</h3>
+<p>Un timer systemd a deux avantages sur cron : les logs sont dans journald, et <code>Persistent=true</code> rattrape une exécution manquée si le serveur était éteint.</p>
+<pre><code># /etc/systemd/system/backup.service
+[Unit]
+Description=Sauvegarde MySQL + fichiers vers restic
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+Nice=10
+IOSchedulingClass=idle</code></pre>
+<pre><code># /etc/systemd/system/backup.timer
+[Unit]
+Description=Sauvegarde quotidienne
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now backup.timer
+systemctl list-timers backup.timer      # prochaine exécution
+sudo systemctl start backup.service     # premier lancement manuel
+journalctl -u backup.service -e         # logs</code></pre>
+
+<h3>5. Être prévenu quand ça échoue</h3>
+<p>Une sauvegarde qui échoue en silence est le pire scénario. La solution la plus simple est un service de type « dead man's switch » (Healthchecks.io, Uptime Kuma, Better Stack…) : le script envoie un ping à chaque succès, et le service vous alerte s'il ne reçoit rien dans le délai prévu. Ajoutez à la fin de <code>backup.sh</code> :</p>
+<pre><code>curl -fsS -m 10 --retry 3 https://hc-ping.com/votre-uuid &gt; /dev/null</code></pre>
+<p>Grâce à <code>set -e</code>, le ping n'est envoyé que si toutes les étapes précédentes ont réussi.</p>
+
+<h3>6. Tester la restauration (vraiment)</h3>
+<p>Planifiez un test de restauration régulier, par exemple tous les mois, sur une autre machine :</p>
+<pre><code>set -a; . /etc/restic/env; set +a
+
+restic snapshots --tag daily                       # liste des sauvegardes
+restic restore latest --target /tmp/restore        # dernière version
+restic restore latest --target /tmp/restore --include /var/www/app/shared/uploads
+
+# Restaurer la base dans une base de test
+mysql -e 'CREATE DATABASE app_restore_test'
+zcat /tmp/restore/var/backups/mysql/app.sql.gz \
+  | sed 's/`app`/`app_restore_test`/g' | mysql
+mysql -e 'SELECT COUNT(*) FROM app_restore_test.user'</code></pre>
+<p>Chronométrez l'opération : c'est votre <strong>RTO</strong> réel (le temps pour revenir en service). L'ancienneté de la dernière sauvegarde réussie est votre <strong>RPO</strong> (la quantité de données que vous acceptez de perdre). Si ces deux valeurs ne conviennent pas au métier, c'est le moment de le découvrir, pas pendant un incident.</p>
+
+<h3>En résumé</h3>
+<ul>
+<li>Dump cohérent avec <code>--single-transaction</code>, identifiants hors de la ligne de commande</li>
+<li>restic : chiffré, dédupliqué, hors site, avec une rétention claire</li>
+<li>Planification systemd avec <code>Persistent=true</code>, et une alerte si le ping n'arrive pas</li>
+<li>Mot de passe du dépôt conservé ailleurs que sur le serveur</li>
+<li>Restauration testée régulièrement et chronométrée</li>
+</ul>

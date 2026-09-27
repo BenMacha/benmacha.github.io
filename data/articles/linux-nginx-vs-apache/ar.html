@@ -1,0 +1,35 @@
+<h2>Nginx أم Apache: أي خادم ويب تختار؟</h2>
+<p>يعتمد الاختيار بين Nginx وApache على حالة الاستخدام لديك. إليك مقارنة موضوعية.</p>
+<h3>البنية</h3>
+<p>يعتمد <strong>Apache</strong> نموذجاً قائماً على العمليات/الخيوط (prefork أو worker)، إذ يُعالَج كل اتصال بواسطة عملية أو خيط مخصص له.</p>
+<p>يعتمد <strong>Nginx</strong> بنية غير متزامنة قائمة على الأحداث (event-driven)، إذ تستطيع عملية worker واحدة معالجة آلاف الاتصالات المتزامنة.</p>
+<h3>الأداء</h3>
+<pre><code># Benchmark with ab (Apache Bench)
+ab -n 10000 -c 100 http://localhost/
+
+# Nginx: ~15000 req/s for static content
+# Apache: ~5000 req/s for static content</code></pre>
+<h3>إعداد PHP</h3>
+<p><strong>Apache مع mod_php:</strong></p>
+<pre><code>&lt;VirtualHost *:80&gt;
+    DocumentRoot /var/www/html/public
+    &lt;Directory /var/www/html/public&gt;
+        AllowOverride All
+    &lt;/Directory&gt;
+&lt;/VirtualHost&gt;</code></pre>
+<p><strong>Nginx مع PHP-FPM:</strong></p>
+<pre><code>server {
+    root /var/www/html/public;
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}</code></pre>
+<h3>متى تختار هذا أو ذاك؟</h3>
+<ul>
+<li><strong>Nginx</strong>: المحتوى الثابت، الـ reverse proxy، التزامن العالي، الخدمات المصغّرة (microservices)</li>
+<li><strong>Apache</strong>: عند الحاجة إلى ملفات .htaccess، أو وحدات (modules) محددة، أو التوافق مع الأنظمة القديمة</li>
+<li><strong>كلاهما</strong>: Nginx كـ reverse proxy أمام Apache للجمع بين مزايا الاثنين</li>
+</ul>
+<p>في البيئات ذات الحركة الكثيفة، كما هو الحال في CCM Benchmark، يُفضَّل Nginx لكفاءته في إدارة الاتصالات المتزامنة.</p>

@@ -1,0 +1,72 @@
+<h2>Jenkins Pipeline: أتمتة متقدمة</h2>
+<p>يبقى Jenkins حلاً شائعاً للتكامل والنشر المستمرين (CI/CD) لدى المؤسسات التي تحتاج إلى تحكم كامل في بنية البناء (build) الخاصة بها.</p>
+<h3>الـ Pipeline التصريحي (Declarative)</h3>
+<pre><code>pipeline {
+    agent {
+        docker {
+            image 'php:8.3-cli'
+        }
+    }
+
+    environment {
+        APP_ENV = 'test'
+        DATABASE_URL = credentials('database-url')
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'composer install --prefer-dist'
+            }
+        }
+
+        stage('Quality') {
+            parallel {
+                stage('PHPStan') {
+                    steps {
+                        sh 'vendor/bin/phpstan analyse src'
+                    }
+                }
+                stage('CS Fixer') {
+                    steps {
+                        sh 'vendor/bin/php-cs-fixer fix --dry-run --diff'
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'php bin/phpunit --log-junit results.xml'
+            }
+            post {
+                always {
+                    junit 'results.xml'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh './deploy.sh production'
+            }
+        }
+    }
+
+    post {
+        failure {
+            slackSend channel: '#ci', message: "Build FAILED: ${env.JOB_NAME}"
+        }
+    }
+}</code></pre>
+<h3>أفضل ممارسات Jenkins</h3>
+<ul>
+<li>استخدام وكلاء (agents) Docker لضمان العزل</li>
+<li>تشغيل المراحل (stages) المستقلة بالتوازي</li>
+<li>تخزين بيانات الاعتماد في Jenkins Credentials</li>
+<li>إعداد التنبيهات عند الفشل</li>
+<li>أرشفة مخرجات البناء (build artifacts)</li>
+</ul>

@@ -1,0 +1,41 @@
+<h2>ترحيل Symfony دون انقطاع في الخدمة</h2>
+<p>يُعدّ ترحيل تطبيق Symfony من الإصدار 2.8 إلى 6.4 تحدياً كبيراً. في Keytchens، أنجزنا هذا الترحيل على منصة قيد الإنتاج تدير الطلبات في الزمن الحقيقي، دون أي انقطاع في الخدمة.</p>
+<h3>استراتيجية ترحيل تدريجية</h3>
+<p>بدلاً من إعادة الكتابة الكاملة، اخترنا الترحيل التدريجي:</p>
+<ul>
+<li><strong>المرحلة 1</strong>: Symfony 2.8 → 3.4 (التوافق التصاعدي)</li>
+<li><strong>المرحلة 2</strong>: Symfony 3.4 → 4.4 (الانتقال إلى بنية Flex)</li>
+<li><strong>المرحلة 3</strong>: Symfony 4.4 → 5.4 (إزالة العناصر المُهمَلة (deprecations))</li>
+<li><strong>المرحلة 4</strong>: Symfony 5.4 → 6.4 (اعتماد PHP 8.1+)</li>
+</ul>
+<h3>أدوات لا غنى عنها</h3>
+<pre><code># Detect deprecations
+composer require symfony/phpunit-bridge
+PHPUnit_SYMFONY_DEPRECATIONS_HELPER=max[total]=0 php bin/phpunit
+
+# Fix automatically
+composer require rector/rector
+vendor/bin/rector process src --set symfony54</code></pre>
+<h3>نقاط حرجة</h3>
+<pre><code># Service migration (before - services.yml)
+services:
+    app.manager.order:
+        class: App\Manager\OrderManager
+        arguments: ['@doctrine.orm.entity_manager']
+
+# After - services.yaml with autowiring
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+    App\:
+        resource: '../src/'</code></pre>
+<h3>ضمان عدم التوقف (zero-downtime)</h3>
+<p>للحفاظ على الخدمة أثناء الترحيل:</p>
+<ul>
+<li>النشر بأسلوب blue-green مع Docker</li>
+<li>مفاتيح الميزات (feature flags) لتفعيل الوظائف الجديدة تدريجياً</li>
+<li>اختبارات انحدار (regression) مؤتمتة تغطي 85% من الشيفرة</li>
+<li>تراجع (rollback) تلقائي عند اكتشاف أخطاء</li>
+</ul>
+<p>أتاح هذا الترحيل تحسين الأداء بنسبة 40% وتقليص الدين التقني بشكل ملحوظ.</p>

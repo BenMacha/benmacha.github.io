@@ -1,0 +1,68 @@
+<h2>A portfolio served from Cloudflare's network</h2>
+<p>This site is a <strong>Nuxt 3</strong> application where every page is prerendered at build time: the home page, the resume pages and every blog article. Cloudflare Pages is an ideal host for this: HTML served from Cloudflare's global network, automatic HTTPS, a deployment on every push and a preview for every branch. Here is the setup, and above all the three pitfalls I ran into during the latest redesign.</p>
+
+<h3>Build settings</h3>
+<p>In the dashboard (<em>Workers &amp; Pages → your project → Settings → Build</em>):</p>
+<ul>
+<li><strong>Build command</strong>: <code>npm run build</code></li>
+<li><strong>Output directory</strong>: <code>dist</code></li>
+<li><strong>Production branch</strong>: <code>master</code> (or <code>main</code>)</li>
+</ul>
+<p>Nuxt automatically detects the Cloudflare Pages environment and uses the <code>cloudflare-pages</code> Nitro preset: prerendered routes become static HTML files in <code>dist/</code>, and everything else is served by a Worker. For a 100% static site, declare the routes to prerender in <code>nuxt.config.ts</code>. Generating them from your data means you never forget an article:</p>
+<pre><code>import { blogArticles } from './data/blog'
+
+const staticPages = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+const blogPages = blogArticles.map(article =&gt; `/blog/${article.slug}`)
+
+export default defineNuxtConfig({
+  nitro: {
+    prerender: {
+      routes: [...staticPages, ...blogPages],
+      crawlLinks: true,
+    },
+  },
+})</code></pre>
+<p>The same array feeds the sitemap: a new article is prerendered and listed automatically, without touching anything else.</p>
+
+<h3>Pitfall #1: the production branch</h3>
+<p>After the redesign was pushed to <code>master</code>, the live site had not changed, even though the build succeeded. The project's production branch was still set to an old work branch, so every push to <code>master</code> only produced a <strong>preview deployment</strong> on a <code>*.pages.dev</code> URL, without touching the main domain.</p>
+<p>Check it under <em>Settings → Build → Branch control</em>. And changing the production branch does not redeploy anything: you need a new commit on that branch (or to retry a deployment) for production to be updated.</p>
+
+<h3>Pitfall #2: the Node version</h3>
+<p>Nuxt 3.21, Vite 7 and Nitro require <strong>Node <code>^20.19</code> or <code>&gt;=22.12</code></strong>. Cloudflare's build system reads the version from a <code>.node-version</code> or <code>.nvmrc</code> file at the root of the repository (or from the <code>NODE_VERSION</code> environment variable). A bare <code>20</code> is ambiguous: pin a recent major version that is clearly compatible.</p>
+<pre><code>echo 22 &gt; .node-version
+echo 22 &gt; .nvmrc</code></pre>
+
+<h3>Pitfall #3: the lockfile and <code>npm ci</code></h3>
+<p>The build failed within seconds with this message:</p>
+<pre><code>npm error `npm ci` can only install packages when your package.json and
+package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: oxc-parser@0.151.0 from lock file
+npm error Missing: esbuild@0.28.2 from lock file
+...</code></pre>
+<p>Yet <code>npm install</code> and the build worked perfectly locally. The cause: the <code>package-lock.json</code> had been generated with <strong>npm 11</strong> (shipped with Node 24), while Cloudflare installs dependencies with <code>npm ci</code> on <strong>npm 10</strong>. The two versions do not resolve optional dependencies the same way, and npm 10 considered the lockfile out of sync.</p>
+<p>The fix: regenerate the lockfile with the same npm version as the CI, declared in the <code>packageManager</code> field of <code>package.json</code>:</p>
+<pre><code>npx npm@10.9.4 install --package-lock-only</code></pre>
+<p>And above all, <strong>reproduce the CI locally</strong> before pushing, on a clean copy of the repository:</p>
+<pre><code>git clone . /tmp/ci-check &amp;&amp; cd /tmp/ci-check
+npx npm@10.9.4 ci
+npm run build</code></pre>
+<p>If these two commands succeed, the Cloudflare build will too.</p>
+
+<h3>Trailing slash redirects</h3>
+<p>Once live, <code>curl -I https://benmacha.tn/experience</code> returns a <strong>308</strong> to <code>/experience/</code>. This is not a bug: each prerendered page is an <code>experience/index.html</code> file, and Cloudflare Pages redirects to the directory URL. For SEO, keep internal links and canonical URLs consistent with this behavior to avoid a redirect on every click.</p>
+
+<h3>Following a deployment without opening the dashboard</h3>
+<p>Cloudflare reports the status of each build to GitHub as a <em>check run</em> attached to the commit. With the GitHub CLI, you can follow the deployment from the terminal:</p>
+<pre><code>gh api repos/MOI/MON-REPO/commits/$(git rev-parse HEAD)/check-runs \
+  --jq '.check_runs[] | select(.name=="Cloudflare Pages") | "\(.status) \(.conclusion)"'</code></pre>
+<p>The result goes from <code>in_progress</code> to <code>completed success</code>, or <code>completed failure</code>. In the latter case, the check's <code>details_url</code> link leads straight to the build logs.</p>
+
+<h3>In short</h3>
+<ul>
+<li>Make sure the <strong>production branch</strong> is the one you push to</li>
+<li>Pin the <strong>Node version</strong> in <code>.node-version</code>, compatible with your dependencies</li>
+<li>Generate the <strong>lockfile</strong> with the same npm version as the CI, and test <code>npm ci</code> locally</li>
+<li>Generate the prerendered routes and the sitemap <strong>from your data</strong></li>
+</ul>
+<p>Once these points are sorted, the workflow is ideal: one <code>git push</code>, a minute of build, and the site is up to date all over the world.</p>

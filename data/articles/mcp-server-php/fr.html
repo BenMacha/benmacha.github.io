@@ -1,0 +1,192 @@
+<h2>MCP : donner des mains à un assistant IA</h2>
+<p>Le <strong>Model Context Protocol</strong> (MCP) est un protocole ouvert qui standardise la façon dont une application d'IA (Claude, un IDE, un agent) se connecte à des sources de données et à des actions externes. Au lieu d'écrire une intégration spécifique pour chaque assistant, vous écrivez <strong>un serveur MCP</strong>, et tous les clients compatibles savent l'utiliser.</p>
+<p>Un serveur MCP expose trois types de capacités :</p>
+<ul>
+<li><strong>Tools</strong> : des actions que le modèle peut appeler (vérifier un service, créer un ticket, lancer une requête SQL en lecture…)</li>
+<li><strong>Resources</strong> : des données que le client peut lire (configuration, documentation, état d'un serveur)</li>
+<li><strong>Prompts</strong> : des modèles de messages réutilisables, paramétrables par l'utilisateur</li>
+</ul>
+<p>Le client et le serveur échangent des messages <strong>JSON-RPC 2.0</strong>, soit via l'entrée/sortie standard (<code>stdio</code>, idéal en local), soit via HTTP (Streamable HTTP, pour un serveur distant).</p>
+
+<h3>Le SDK PHP officiel</h3>
+<p>Depuis 2025, PHP dispose d'un SDK officiel : <code>mcp/sdk</code>, développé conjointement par la <strong>PHP Foundation</strong> et le <strong>projet Symfony</strong>, à partir du travail de PHP-MCP et de Symfony AI. Il est agnostique du framework et suit la promesse de rétrocompatibilité de Symfony. Il reste marqué expérimental avant sa version 1.0 : figez la version dans votre <code>composer.json</code>.</p>
+<p>Prérequis : PHP 8.1 minimum. Installation :</p>
+<pre><code>composer require mcp/sdk symfony/finder</code></pre>
+<p><strong>Piège n°1</strong> : <code>symfony/finder</code> n'est qu'une dépendance <em>suggérée</em>, mais elle est indispensable à la découverte automatique des outils par attributs. Sans elle, le serveur échoue au démarrage… et comme l'erreur part sur la sortie d'erreur, le client voit simplement un serveur sans aucun outil.</p>
+
+<h3>Un premier serveur : un assistant DevOps</h3>
+<p>Construisons un serveur utile au quotidien : il vérifie qu'une URL répond, contrôle l'espace disque, expose des informations système et propose un prompt de rapport d'incident. Commencez par déclarer l'autoload de vos classes :</p>
+<pre><code>{
+    "require": {
+        "mcp/sdk": "^0.8",
+        "symfony/finder": "^8.1"
+    },
+    "autoload": {
+        "psr-4": { "App\\": "src/" }
+    }
+}</code></pre>
+<p>Les capacités sont de simples méthodes PHP annotées. Le SDK génère le schéma JSON des paramètres à partir des types PHP, et la description à partir du docblock :</p>
+<pre><code>&lt;?php
+
+namespace App;
+
+use Mcp\Capability\Attribute\McpPrompt;
+use Mcp\Capability\Attribute\McpResource;
+use Mcp\Capability\Attribute\McpTool;
+use Mcp\Capability\Attribute\Schema;
+use Mcp\Exception\ToolCallException;
+
+final class DevOpsTools
+{
+    /**
+     * Vérifie qu'une URL répond et renvoie son code HTTP et son temps de réponse.
+     */
+    #[McpTool(name: 'check_url')]
+    public function checkUrl(
+        #[Schema(format: 'uri', description: 'URL complète, ex. https://benmacha.tn')]
+        string $url,
+    ): array {
+        if (!preg_match('#^https?://#', $url)) {
+            throw new ToolCallException('Seules les URL http(s) sont acceptées.');
+        }
+
+        $start = microtime(true);
+        $context = stream_context_create(['http' =&gt; ['method' =&gt; 'HEAD', 'timeout' =&gt; 5, 'ignore_errors' =&gt; true]]);
+        $headers = @get_headers($url, true, $context);
+
+        if ($headers === false) {
+            return ['url' =&gt; $url, 'up' =&gt; false, 'error' =&gt; 'Hôte injoignable'];
+        }
+
+        preg_match('#\s(\d{3})\s#', $headers[0], $m);
+        $status = (int) ($m[1] ?? 0);
+
+        return [
+            'url' =&gt; $url,
+            'up' =&gt; $status &gt; 0 &amp;&amp; $status &lt; 400,
+            'status' =&gt; $status,
+            'time_ms' =&gt; (int) round((microtime(true) - $start) * 1000),
+        ];
+    }
+
+    /**
+     * Retourne l'espace disque utilisé et disponible pour un chemin.
+     */
+    #[McpTool(name: 'disk_usage')]
+    public function diskUsage(
+        #[Schema(description: 'Chemin à analyser')]
+        string $path = '/',
+    ): array {
+        $total = @disk_total_space($path);
+        $free = @disk_free_space($path);
+
+        if ($total === false || $free === false) {
+            throw new ToolCallException(sprintf('Chemin illisible : %s', $path));
+        }
+
+        return [
+            'path' =&gt; $path,
+            'total_gb' =&gt; round($total / 1e9, 1),
+            'free_gb' =&gt; round($free / 1e9, 1),
+            'used_percent' =&gt; round(100 * ($total - $free) / $total, 1),
+        ];
+    }
+
+    #[McpResource(uri: 'server://info', name: 'server_info', mimeType: 'application/json')]
+    public function serverInfo(): array
+    {
+        return ['hostname' =&gt; gethostname(), 'os' =&gt; PHP_OS_FAMILY, 'php' =&gt; PHP_VERSION];
+    }
+
+    /**
+     * Prépare un rapport d'incident à partir d'un service et d'un symptôme.
+     */
+    #[McpPrompt(name: 'incident_report')]
+    public function incidentReport(string $service, string $symptom): array
+    {
+        return [[
+            'role' =&gt; 'user',
+            'content' =&gt; "Le service « $service » présente ce symptôme : $symptom. "
+                . "Utilise check_url et disk_usage pour diagnostiquer, puis rédige un rapport "
+                . "d'incident court : impact, cause probable, actions immédiates.",
+        ]];
+    }
+}</code></pre>
+<p>Le point d'entrée tient en quelques lignes : on déclare le serveur, on lui demande de scanner le dossier <code>src</code>, et on le lance sur le transport stdio.</p>
+<pre><code>#!/usr/bin/env php
+&lt;?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Mcp\Server;
+use Mcp\Server\Transport\StdioTransport;
+
+exit(Server::builder()
+    -&gt;setServerInfo('DevOps Assistant', '1.0.0')
+    -&gt;setDiscovery(__DIR__, ['src'])
+    -&gt;build()
+    -&gt;run(new StdioTransport()));</code></pre>
+
+<h3>Ce que voit le client</h3>
+<p>À partir de la signature <code>checkUrl(string $url)</code>, du docblock et de l'attribut <code>#[Schema]</code>, le SDK publie cette définition d'outil :</p>
+<pre><code>{
+  "name": "check_url",
+  "description": "Vérifie qu'une URL répond et renvoie son code HTTP et son temps de réponse.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "format": "uri", "description": "URL complète, ex. https://benmacha.tn" }
+    },
+    "required": ["url"]
+  }
+}</code></pre>
+<p>Pour <code>disk_usage</code>, la valeur par défaut <code>'/'</code> devient un <code>"default"</code> et le paramètre n'est pas obligatoire. Quand un outil retourne un tableau, le SDK le renvoie à la fois en texte JSON et en <code>structuredContent</code>, directement exploitable par le client.</p>
+
+<h3>Gérer les erreurs correctement</h3>
+<p><strong>Piège n°2</strong> : n'importe quelle exception ne convient pas. Une exception quelconque (<code>InvalidArgumentException</code>, <code>RuntimeException</code>…) est transformée en erreur JSON-RPC générique, « Error while executing tool » : le modèle ne sait pas ce qui s'est passé. Levez plutôt une <code>Mcp\Exception\ToolCallException</code> : le message est renvoyé dans un résultat marqué <code>isError: true</code>, que le modèle peut lire pour corriger son appel (par exemple, réessayer avec une URL en https).</p>
+
+<h3>Tester sans assistant : le client PHP et l'Inspector</h3>
+<p>Le SDK contient aussi un client, parfait pour des tests automatisés :</p>
+<pre><code>use Mcp\Client;
+use Mcp\Client\Transport\StdioTransport;
+
+$client = Client::builder()-&gt;setClientInfo('Tests', '1.0.0')-&gt;build();
+$client-&gt;connect(new StdioTransport(command: 'php', args: [__DIR__.'/server.php']));
+
+foreach ($client-&gt;listTools()-&gt;tools as $tool) {
+    echo $tool-&gt;name, ' : ', $tool-&gt;description, PHP_EOL;
+}
+
+$result = $client-&gt;callTool('check_url', ['url' =&gt; 'https://benmacha.tn']);
+var_dump($result-&gt;structuredContent); // ['url' =&gt; ..., 'up' =&gt; true, 'status' =&gt; 200, 'time_ms' =&gt; ...]
+
+$client-&gt;disconnect();</code></pre>
+<p>Pour explorer le serveur visuellement, l'<strong>MCP Inspector</strong> officiel lance le serveur et affiche outils, ressources et prompts :</p>
+<pre><code>npx @modelcontextprotocol/inspector php server.php</code></pre>
+
+<h3>Brancher le serveur sur Claude</h3>
+<p>Avec <strong>Claude Code</strong>, une seule commande suffit :</p>
+<pre><code>claude mcp add devops -- php /chemin/absolu/vers/server.php</code></pre>
+<p>Avec <strong>Claude Desktop</strong>, ajoutez le serveur dans <code>claude_desktop_config.json</code> :</p>
+<pre><code>{
+  "mcpServers": {
+    "devops": {
+      "command": "php",
+      "args": ["/chemin/absolu/vers/server.php"]
+    }
+  }
+}</code></pre>
+<p>Demandez ensuite : « benmacha.tn répond-il correctement, et reste-t-il de la place sur le disque ? ». L'assistant appelle <code>check_url</code> puis <code>disk_usage</code>, et synthétise les résultats.</p>
+
+<h3>Les règles d'or en production</h3>
+<ul>
+<li><strong>Ne jamais écrire sur stdout</strong> en mode stdio : la sortie standard est réservée au protocole. Un <code>echo</code> ou un <code>var_dump</code> oublié corrompt les échanges. Loggez sur stderr ou dans un fichier (le builder accepte un logger PSR-3).</li>
+<li><strong>Des outils étroits plutôt qu'un outil « exécuter une commande »</strong> : exposer un shell ou du SQL libre revient à donner les clés du serveur au modèle.</li>
+<li><strong>Valider chaque entrée</strong> : le schéma JSON aide le modèle, mais ne remplace pas la validation côté serveur (listes blanches de chemins, d'hôtes, de tables).</li>
+<li><strong>Moindre privilège</strong> : faites tourner le serveur avec un utilisateur système dédié et un compte de base de données en lecture seule quand c'est possible.</li>
+<li><strong>Des descriptions soignées</strong> : c'est la seule documentation que lit le modèle pour choisir le bon outil et le bon paramètre.</li>
+</ul>
+
+<h3>Aller plus loin</h3>
+<p>Le SDK fournit aussi un transport HTTP (Streamable HTTP) pour héberger un serveur distant partagé par une équipe, avec gestion des sessions et de l'autorisation, et il prend en charge les deux générations du protocole, y compris la révision sans état <code>2026-07-28</code>. Côté frameworks, <code>symfony/mcp-bundle</code> intègre le SDK à Symfony (vos services deviennent des outils MCP, avec l'injection de dépendances), et <code>api-platform/mcp</code> expose directement vos ressources API Platform.</p>
+<p>C'est l'approche que j'utilise pour connecter des assistants IA aux données métier : quelques outils bien délimités, en lecture seule, avec des descriptions précises, et l'IA devient capable de répondre à des questions qui demandaient auparavant une requête SQL ou un export manuel.</p>

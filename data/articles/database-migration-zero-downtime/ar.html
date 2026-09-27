@@ -1,0 +1,36 @@
+<h2>ترحيل قواعد البيانات دون أي انقطاع (Zero-downtime)</h2>
+<p>غالباً ما تكون عمليات ترحيل قاعدة البيانات (migrations) الجزء الأكثر خطورة في عملية النشر. إليك كيف تنفّذها دون أي انقطاع في الخدمة.</p>
+<h3>القواعد الأساسية</h3>
+<ul>
+<li>لا تحذف أبداً عموداً ما زالت الشيفرة في بيئة الإنتاج تستخدمه</li>
+<li>أضف الأعمدة الجديدة دائماً كأعمدة تقبل القيمة الفارغة (nullable)</li>
+<li>افصل عمليات ترحيل البنية (schema) عن عمليات ترحيل البيانات</li>
+<li>اختبر عمليات الترحيل على نسخة من قاعدة بيانات الإنتاج</li>
+</ul>
+<h3>نمط Expand-Contract</h3>
+<p><strong>المرحلة 1 - التوسيع (Expand):</strong> إضافة البنية الجديدة</p>
+<pre><code>-- Migration 1: Add the new column
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
+
+-- Migration 2: Backfill the data
+UPDATE users SET email_verified = TRUE WHERE verified_at IS NOT NULL;</code></pre>
+<p><strong>المرحلة 2 - نشر الشيفرة</strong> التي تستخدم العمودين معاً</p>
+<p><strong>المرحلة 3 - التقليص (Contract):</strong> حذف البنية القديمة</p>
+<pre><code>-- Migration 3: Drop the old column
+ALTER TABLE users DROP COLUMN verified_at;</code></pre>
+<h3>عمليات ترحيل Doctrine محسّنة</h3>
+<pre><code>public function up(Schema $schema): void
+{
+    // Use non-blocking operations
+    $this->addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
+
+    // For large tables, use pt-online-schema-change
+    // or gh-ost to avoid locks
+}</code></pre>
+<h3>الأدوات الموصى بها</h3>
+<ul>
+<li><strong>pt-online-schema-change</strong>: ترحيل دون أقفال (locks) لـ MySQL</li>
+<li><strong>gh-ost</strong>: بديل GitHub لعمليات الترحيل أثناء التشغيل</li>
+<li><strong>Doctrine Migrations</strong>: إدارة عمليات الترحيل بنظام الإصدارات</li>
+<li><strong>Flyway</strong>: أداة ترحيل تدعم قواعد بيانات متعددة</li>
+</ul>

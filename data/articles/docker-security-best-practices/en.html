@@ -1,0 +1,38 @@
+<h2>Securing your Docker containers</h2>
+<p>Container security is a critical topic. Here are the essential practices to protect your containerized applications.</p>
+<h3>Principle of least privilege</h3>
+<pre><code># NEVER run as root
+FROM php:8.3-fpm-alpine
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+WORKDIR /app
+COPY --chown=appuser:appgroup . .</code></pre>
+<h3>Scanning for vulnerabilities</h3>
+<p>Integrate a vulnerability scanner into your pipeline:</p>
+<pre><code># With Trivy
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy image myapp:latest
+
+# With Docker Scout
+docker scout cves myapp:latest</code></pre>
+<h3>Networking and isolation</h3>
+<ul>
+<li>Create dedicated networks to isolate services</li>
+<li>Never expose database ports</li>
+<li>Use Docker secrets rather than environment variables for sensitive data</li>
+<li>Enable read-only mode for stateless containers</li>
+</ul>
+<h3>Secrets management</h3>
+<pre><code>services:
+  app:
+    secrets:
+      - db_password
+      - api_key
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  api_key:
+    external: true</code></pre>
+<h3>Trusted images</h3>
+<p>Use only official or verified images. Pin exact versions rather than using <code>latest</code>. Sign your images with Docker Content Trust.</p>

@@ -1,0 +1,47 @@
+<h2>Optimiser PHP pour la production</h2>
+<p>Les performances PHP sont cruciales pour les applications à fort trafic. Chez CCM Benchmark, où les sites gèrent des millions de visiteurs quotidiens, chaque milliseconde compte.</p>
+<h3>OPcache : la base</h3>
+<pre><code>; php.ini - Configuration optimale OPcache
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+opcache.save_comments=1
+opcache.preload=/var/www/app/config/preload.php
+opcache.preload_user=www-data</code></pre>
+<h3>Preloading PHP 8</h3>
+<pre><code>// config/preload.php
+require dirname(__DIR__).'/vendor/autoload.php';
+
+// Précharger les classes fréquemment utilisées
+$files = glob(dirname(__DIR__).'/src/Entity/*.php');
+foreach ($files as $file) {
+    opcache_compile_file($file);
+}</code></pre>
+<h3>Profilage avec Blackfire</h3>
+<pre><code># Installer l'agent Blackfire
+curl -s https://packagecloud.io/install/repositories/blackfire/agent/script.deb.sh | sudo bash
+sudo apt install blackfire-agent
+
+# Profiler une requête
+blackfire curl http://localhost/api/products</code></pre>
+<h3>Optimisations Doctrine</h3>
+<ul>
+<li>Activer le cache de requêtes et de résultats</li>
+<li>Utiliser les requêtes DQL avec des sélections partielles</li>
+<li>Éviter le lazy loading avec des jointures explicites</li>
+<li>Configurer le cache de second niveau</li>
+</ul>
+<pre><code>// Cache de requêtes Doctrine
+$query = $em->createQuery('SELECT p FROM App\Entity\Product p')
+    ->enableResultCache(3600, 'products_list');
+
+$results = $query->getResult();</code></pre>
+<h3>PHP-FPM tuning</h3>
+<pre><code>; Configuration PHP-FPM pour haute performance
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 10
+pm.min_spare_servers = 5
+pm.max_spare_servers = 20
+pm.max_requests = 500</code></pre>

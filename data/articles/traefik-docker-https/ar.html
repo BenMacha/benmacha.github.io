@@ -1,0 +1,133 @@
+<h2>لماذا Traefik؟</h2>
+<p>بمجرد أن يستضيف خادمٌ عدة تطبيقات داخل حاويات، تحتاج إلى <strong>وكيل عكسي</strong> (reverse proxy) أمامها: نقطة دخول واحدة على المنفذين 80 و443، توجّه كل نطاق إلى الحاوية المناسبة وتتولى HTTPS. يؤدي Nginx هذه المهمة جيداً، لكن كل تطبيق جديد يتطلب كتابة مضيف افتراضي وإعادة تحميل الإعدادات وتوليد شهادة.</p>
+<p>أما <strong>Traefik</strong> فيعكس المنطق: يقرأ واجهة Docker البرمجية، ويكتشف الحاويات، ويضبطها انطلاقاً من <strong>الوسوم</strong> (labels) الخاصة بها. يكفي تشغيل حاوية لنشرها عبر HTTPS بشهادة Let's Encrypt يُحصل عليها وتُجدَّد تلقائياً.</p>
+
+<h3>الشبكة المشتركة</h3>
+<p>يجب أن يتشارك Traefik والتطبيقات التي يعرضها شبكة Docker واحدة. أنشئها مرة واحدة:</p>
+<pre><code>docker network create proxy</code></pre>
+
+<h3>Traefik نفسه</h3>
+<p>ملف <code>/opt/traefik/compose.yaml</code>:</p>
+<pre><code>services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=contact@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`traefik.example.com`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=le
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=dashboard-auth
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$Hq3vN2kS$$exempleDeHashAremplacer
+
+networks:
+  proxy:
+    external: true</code></pre>
+<p>بعض النقاط المهمة:</p>
+<ul>
+<li><strong><code>exposedbydefault=false</code></strong>: لا تُنشر أي حاوية دون الوسم <code>traefik.enable=true</code>. بدون هذا الخيار قد تُكشف قاعدة بيانات شُغّلت عن طريق الخطأ.</li>
+<li><strong>إعادة التوجيه من HTTP إلى HTTPS</strong> مصرَّح بها مرة واحدة على مستوى نقطة الدخول <code>web</code>.</li>
+<li><strong>مقبس Docker</strong> مركَّب للقراءة فقط، لكنه يمنح مع ذلك صلاحيات واسعة على المضيف: لتأمين إضافي، ضع وكيلاً للمقبس (مثل <code>tecnativa/docker-socket-proxy</code>) بين Traefik وDocker.</li>
+<li>في ملف Compose يجب مضاعفة علامات <code>$</code> في التجزئة (<code>$$</code>). ولّد التجزئة بالأمر <code>htpasswd -nb admin password</code> (من الحزمة <code>apache2-utils</code>).</li>
+</ul>
+<pre><code>cd /opt/traefik &amp;&amp; docker compose up -d
+docker compose logs -f traefik</code></pre>
+
+<h3>نشر تطبيق</h3>
+<p>من جهة التطبيق، يكفي الانضمام إلى الشبكة <code>proxy</code> ووصف التوجيه بالوسوم. مثال بحاوية Symfony (PHP-FPM وNginx داخل الصورة، على المنفذ 8080):</p>
+<pre><code>services:
+  app:
+    image: ghcr.io/moi/app:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    networks:
+      - proxy
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`app.example.com`) || Host(`www.app.example.com`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=le
+      - traefik.http.routers.app.middlewares=secure-headers,rate-limit
+      - traefik.http.services.app.loadbalancer.server.port=8080
+      - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.secure-headers.headers.frameDeny=true
+      - traefik.http.middlewares.rate-limit.ratelimit.average=50
+      - traefik.http.middlewares.rate-limit.ratelimit.burst=100
+
+  database:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external: true
+  internal:
+
+volumes:
+  db-data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt</code></pre>
+<p>قاعدة البيانات مرتبطة بالشبكة <code>internal</code> فقط: لا يستطيع Traefik الوصول إليها، ولا تنشر أي منفذ. عند أول تنفيذ للأمر <code>docker compose up -d</code> يكتشف Traefik الحاوية، ويحصل على الشهادة للنطاقين، ويبدأ توجيه الحركة خلال ثوانٍ ودون أي إعادة تشغيل.</p>
+
+<h3>قراءة وسم توجيه</h3>
+<p>تتبع كل الوسوم القواعد نفسها: <code>traefik.http.&lt;type&gt;.&lt;name&gt;.&lt;option&gt;</code>.</p>
+<ul>
+<li><strong>routers</strong>: أي طلب (قاعدة <code>Host</code> أو <code>PathPrefix</code>…) يصل إلى أي نقطة دخول، مع أي إعدادات TLS وأي طبقات وسيطة</li>
+<li><strong>services</strong>: إلى أي منفذ في الحاوية تُرسَل الحركة (ضروري إذا كانت الصورة تعرض عدة منافذ)</li>
+<li><strong>middlewares</strong>: التحويلات المطبَّقة في الطريق (الترويسات، المصادقة، تحديد معدل الطلبات، إعادة التوجيه، الضغط)</li>
+</ul>
+<p>يمكن إعادة استخدام طبقة وسيطة معرَّفة على حاوية ما في الحاويات الأخرى: عرّف ترويسات الأمان مرة واحدة على حاوية Traefik، ثم أشر إليها باللاحقة <code>@docker</code>، مثل <code>secure-headers@docker</code>.</p>
+
+<h3>شهادات wildcard عبر تحدي DNS</h3>
+<p>يتطلب تحدي HTTP أن يكون الخادم متاحاً على المنفذ 80. وللحصول على شهادة <code>*.example.com</code>، أو لخادم غير مكشوف، استخدم تحدي DNS. مع Cloudflare مثلاً:</p>
+<pre><code>      - --certificatesresolvers.le.acme.dnschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_token</code></pre>
+<p>لا يحتاج رمز Cloudflare إلا إلى صلاحية <em>Zone ← DNS ← Edit</em> على النطاق المعني.</p>
+
+<h3>استكشاف الأخطاء</h3>
+<ul>
+<li><strong>الخطأ 404 "page not found"</strong>: الموجِّه غير موجود. تحقق من <code>traefik.enable=true</code> ومن قاعدة <code>Host</code> (علامات backtick إلزامية).</li>
+<li><strong>الخطأ 502 Bad Gateway</strong>: يجد Traefik الحاوية لكنه لا يصل إليها. هل الحاوية على الشبكة <code>proxy</code>؟ وهل منفذ <code>loadbalancer</code> صحيح؟</li>
+<li><strong>شهادة موقَّعة ذاتياً "TRAEFIK DEFAULT CERT"</strong>: فشل تحدي ACME. راجع سجلات Traefik: هل يشير DNS إلى الخادم، وهل المنفذ 80 مفتوح؟</li>
+<li><strong>حدود Let's Encrypt</strong>: أثناء التجارب استخدم خادم الاختبار (<code>--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory</code>) حتى لا تستنفد الحصص.</li>
+</ul>
+<p>بعد الإعداد، تصبح إضافة تطبيق جديد مسألة ثلاثة أو أربعة وسوم. وهذا ما يجعل Traefik مريحاً جداً لخادم شخصي أو بنية تحتية صغيرة تستضيف خدمات كثيرة.</p>

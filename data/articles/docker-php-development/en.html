@@ -1,0 +1,49 @@
+<h2>The same dev environment for the whole team</h2>
+<p>No more "it works on my machine". Docker guarantees that every developer works in an identical environment, eliminating compatibility issues.</p>
+<h3>A complete development stack</h3>
+<pre><code>version: '3.8'
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/var/www/html
+      - composer-cache:/root/.composer
+    environment:
+      - APP_ENV=dev
+      - XDEBUG_MODE=debug
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+
+volumes:
+  composer-cache:
+  mysql-data:</code></pre>
+<h3>Xdebug configuration</h3>
+<p>Debugging is essential during development. Here is the optimal Xdebug configuration:</p>
+<pre><code>[xdebug]
+xdebug.mode=debug
+xdebug.start_with_request=yes
+xdebug.client_host=host.docker.internal
+xdebug.client_port=9003</code></pre>
+<h3>Hot reload and performance</h3>
+<p>On macOS and Windows, mounted volumes can be slow. Use synchronization strategies:</p>
+<ul>
+<li>Mutagen for fast file synchronization</li>
+<li>Exclude <code>vendor/</code> and <code>node_modules/</code> from the mount</li>
+<li>Use named volumes for dependencies</li>
+</ul>
+<p>With this approach, any new developer joining the team has a working development environment in under 5 minutes.</p>

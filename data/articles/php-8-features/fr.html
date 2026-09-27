@@ -1,0 +1,50 @@
+<h2>PHP 8 : une révolution pour le langage</h2>
+<p>PHP 8 apporte des améliorations majeures qui modernisent le langage et améliorent les performances grâce au compilateur JIT.</p>
+<h3>Named Arguments</h3>
+<pre><code>// Avant
+htmlspecialchars($string, ENT_COMPAT | ENT_HTML401, 'UTF-8', false);
+
+// PHP 8
+htmlspecialchars($string, double_encode: false);</code></pre>
+<h3>Match Expression</h3>
+<pre><code>$status = match($code) {
+    200 => 'OK',
+    301 => 'Redirect',
+    404 => 'Not Found',
+    500 => 'Server Error',
+    default => 'Unknown',
+};</code></pre>
+<h3>Enums (PHP 8.1)</h3>
+<pre><code>enum Status: string {
+    case Active = 'active';
+    case Inactive = 'inactive';
+    case Pending = 'pending';
+
+    public function label(): string {
+        return match($this) {
+            self::Active => 'Actif',
+            self::Inactive => 'Inactif',
+            self::Pending => 'En attente',
+        };
+    }
+}</code></pre>
+<h3>Fibers (PHP 8.1)</h3>
+<pre><code>$fiber = new Fiber(function (): void {
+    $value = Fiber::suspend('première pause');
+    echo "Reçu : $value\n";
+});
+
+$result = $fiber->start(); // 'première pause'
+$fiber->resume('données');</code></pre>
+<h3>Readonly Properties (PHP 8.2)</h3>
+<pre><code>class User {
+    public function __construct(
+        public readonly string $name,
+        public readonly string $email,
+        public readonly DateTimeImmutable $createdAt = new DateTimeImmutable(),
+    ) {}
+}</code></pre>
+<h3>Performances JIT</h3>
+<p>Le compilateur JIT améliore les performances de 2 à 3x pour les opérations intensives en CPU. Activez-le dans php.ini :</p>
+<pre><code>opcache.jit=1255
+opcache.jit_buffer_size=100M</code></pre>

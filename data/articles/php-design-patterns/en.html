@@ -1,0 +1,88 @@
+<h2>Essential patterns for modern PHP</h2>
+<p>Design patterns are proven solutions to recurring software design problems. Here are the most useful ones in PHP.</p>
+<h3>Repository Pattern</h3>
+<pre><code>interface ProductRepositoryInterface
+{
+    public function findById(int $id): ?Product;
+    public function findByCategory(string $category): array;
+    public function save(Product $product): void;
+}
+
+class DoctrineProductRepository implements ProductRepositoryInterface
+{
+    public function __construct(
+        private EntityManagerInterface $em,
+    ) {}
+
+    public function findById(int $id): ?Product
+    {
+        return $this->em->find(Product::class, $id);
+    }
+
+    public function save(Product $product): void
+    {
+        $this->em->persist($product);
+        $this->em->flush();
+    }
+}</code></pre>
+<h3>Strategy Pattern</h3>
+<pre><code>interface PricingStrategy
+{
+    public function calculate(float $basePrice): float;
+}
+
+class RegularPricing implements PricingStrategy
+{
+    public function calculate(float $basePrice): float
+    {
+        return $basePrice;
+    }
+}
+
+class PremiumPricing implements PricingStrategy
+{
+    public function calculate(float $basePrice): float
+    {
+        return $basePrice * 0.8; // 20% discount
+    }
+}</code></pre>
+<h3>Observer Pattern with Symfony Events</h3>
+<pre><code>#[AsEventListener(event: OrderCreatedEvent::class)]
+class SendOrderConfirmation
+{
+    public function __invoke(OrderCreatedEvent $event): void
+    {
+        $this->mailer->send(
+            new OrderConfirmationEmail($event->getOrder())
+        );
+    }
+}</code></pre>
+<h3>Builder Pattern</h3>
+<pre><code>class QueryBuilder
+{
+    private array $conditions = [];
+    private ?int $limit = null;
+
+    public function where(string $field, mixed $value): self
+    {
+        $this->conditions[$field] = $value;
+        return $this;
+    }
+
+    public function limit(int $limit): self
+    {
+        $this->limit = $limit;
+        return $this;
+    }
+
+    public function build(): Query
+    {
+        return new Query($this->conditions, $this->limit);
+    }
+}</code></pre>
+<ul>
+<li><strong>Repository</strong>: abstracts the persistence layer</li>
+<li><strong>Strategy</strong>: interchangeable algorithms</li>
+<li><strong>Observer</strong>: decoupling through events</li>
+<li><strong>Builder</strong>: constructing complex objects</li>
+</ul>

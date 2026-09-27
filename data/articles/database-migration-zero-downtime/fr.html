@@ -1,0 +1,36 @@
+<h2>Zero-downtime database migrations</h2>
+<p>Les migrations de base de données sont souvent la partie la plus risquée d'un déploiement. Voici comment les réaliser sans interruption.</p>
+<h3>Règles fondamentales</h3>
+<ul>
+<li>Ne jamais supprimer une colonne utilisée par le code en production</li>
+<li>Toujours ajouter les nouvelles colonnes comme nullable</li>
+<li>Séparer les migrations de schéma des migrations de données</li>
+<li>Tester les migrations sur une copie de la base de production</li>
+</ul>
+<h3>Pattern Expand-Contract</h3>
+<p><strong>Phase 1 - Expand :</strong> Ajouter la nouvelle structure</p>
+<pre><code>-- Migration 1 : Ajouter la nouvelle colonne
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
+
+-- Migration 2 : Remplir les données
+UPDATE users SET email_verified = TRUE WHERE verified_at IS NOT NULL;</code></pre>
+<p><strong>Phase 2 - Déployer le code</strong> utilisant les deux colonnes</p>
+<p><strong>Phase 3 - Contract :</strong> Supprimer l'ancienne structure</p>
+<pre><code>-- Migration 3 : Supprimer l'ancienne colonne
+ALTER TABLE users DROP COLUMN verified_at;</code></pre>
+<h3>Migrations Doctrine optimisées</h3>
+<pre><code>public function up(Schema $schema): void
+{
+    // Utiliser des opérations non-bloquantes
+    $this->addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
+
+    // Pour les grandes tables, utiliser pt-online-schema-change
+    // ou gh-ost pour éviter les locks
+}</code></pre>
+<h3>Outils recommandés</h3>
+<ul>
+<li><strong>pt-online-schema-change</strong> : migrations sans lock pour MySQL</li>
+<li><strong>gh-ost</strong> : alternative GitHub pour les migrations en ligne</li>
+<li><strong>Doctrine Migrations</strong> : gestion versionnée des migrations</li>
+<li><strong>Flyway</strong> : outil de migration multi-base</li>
+</ul>

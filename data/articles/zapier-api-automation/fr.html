@@ -1,0 +1,50 @@
+<h2>Zapier pour l'automatisation métier</h2>
+<p>Dans un contexte d'entreprise comme chez ORPI, l'automatisation des processus métier via les APIs est essentielle pour gagner en efficacité.</p>
+<h3>Cas d'usage courants</h3>
+<ul>
+<li>Synchronisation CRM vers base de données interne</li>
+<li>Notification Slack sur événements métier</li>
+<li>Génération automatique de rapports</li>
+<li>Intégration de formulaires web avec le SI</li>
+</ul>
+<h3>Créer un webhook personnalisé</h3>
+<pre><code>// Endpoint Symfony pour recevoir les webhooks Zapier
+#[Route('/api/webhook/zapier', methods: ['POST'])]
+class ZapierWebhookController extends AbstractController
+{
+    public function __invoke(
+        Request $request,
+        MessageBusInterface $bus,
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        // Valider le token
+        if ($request->headers->get('X-Zapier-Token') !== $this->zapierToken) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Dispatcher le traitement
+        $bus->dispatch(new ProcessZapierDataMessage($data));
+
+        return $this->json(['status' => 'received']);
+    }
+}</code></pre>
+<h3>API pour Zapier Triggers</h3>
+<pre><code>#[Route('/api/zapier/new-leads', methods: ['GET'])]
+public function newLeads(LeadRepository $repo): JsonResponse
+{
+    $leads = $repo->findRecent(limit: 50);
+    return $this->json(array_map(fn(Lead $l) => [
+        'id' => $l->getId(),
+        'name' => $l->getName(),
+        'email' => $l->getEmail(),
+        'created_at' => $l->getCreatedAt()->format('c'),
+    ], $leads));
+}</code></pre>
+<h3>Bonnes pratiques</h3>
+<ul>
+<li>Sécuriser les webhooks avec des tokens</li>
+<li>Logger toutes les interactions pour le débogage</li>
+<li>Utiliser des files d'attente pour le traitement asynchrone</li>
+<li>Documenter les APIs avec OpenAPI pour l'intégration Zapier</li>
+</ul>

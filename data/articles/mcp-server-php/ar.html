@@ -1,0 +1,192 @@
+<h2>MCP: أيدٍ لمساعد الذكاء الاصطناعي</h2>
+<p><strong>Model Context Protocol</strong> (MCP) بروتوكول مفتوح يوحّد طريقة اتصال تطبيقات الذكاء الاصطناعي (Claude، محرر الشيفرة، الوكلاء) بمصادر البيانات والإجراءات الخارجية. بدلاً من كتابة تكامل خاص لكل مساعد، تكتب <strong>خادم MCP واحداً</strong> ويستطيع كل عميل متوافق استخدامه.</p>
+<p>يعرض خادم MCP ثلاثة أنواع من القدرات:</p>
+<ul>
+<li><strong>الأدوات (Tools)</strong>: إجراءات يستطيع النموذج استدعاءها (فحص خدمة، إنشاء تذكرة، تنفيذ استعلام SQL للقراءة فقط…)</li>
+<li><strong>الموارد (Resources)</strong>: بيانات يستطيع العميل قراءتها (الإعدادات، التوثيق، حالة الخادم)</li>
+<li><strong>القوالب (Prompts)</strong>: نماذج رسائل قابلة لإعادة الاستخدام يحدد المستخدم معاملاتها</li>
+</ul>
+<p>يتبادل العميل والخادم رسائل <strong>JSON-RPC 2.0</strong>، إما عبر الإدخال والإخراج القياسيين (<code>stdio</code>، وهو مثالي محلياً) أو عبر HTTP (Streamable HTTP، لخادم بعيد).</p>
+
+<h3>حزمة SDK الرسمية لـ PHP</h3>
+<p>منذ عام 2025 أصبح لـ PHP حزمة SDK رسمية: <code>mcp/sdk</code>، طوّرتها <strong>PHP Foundation</strong> و<strong>مشروع Symfony</strong> معاً انطلاقاً من عمل PHP-MCP وSymfony AI. الحزمة مستقلة عن أي إطار عمل وتلتزم بوعد التوافق العكسي الخاص بـ Symfony، لكنها ما زالت تجريبية قبل الإصدار 1.0: ثبّت رقم الإصدار في ملف <code>composer.json</code>.</p>
+<p>المتطلبات: PHP 8.1 على الأقل. التثبيت:</p>
+<pre><code>composer require mcp/sdk symfony/finder</code></pre>
+<p><strong>الفخ الأول</strong>: الحزمة <code>symfony/finder</code> مجرد اعتمادية <em>مقترحة</em>، لكنها ضرورية لاكتشاف الأدوات تلقائياً عبر السمات (attributes). بدونها يفشل الخادم عند الإقلاع، وبما أن الخطأ يُكتب في مخرج الأخطاء القياسي، يرى العميل ببساطة خادماً بلا أي أداة.</p>
+
+<h3>خادم أول: مساعد DevOps</h3>
+<p>لنبنِ خادماً مفيداً في العمل اليومي: يتحقق من أن رابطاً ما يستجيب، ويفحص المساحة المتبقية على القرص، ويعرض معلومات النظام، ويقترح قالباً لتقرير حادث. ابدأ بتعريف التحميل التلقائي لأصنافك:</p>
+<pre><code>{
+    "require": {
+        "mcp/sdk": "^0.8",
+        "symfony/finder": "^8.1"
+    },
+    "autoload": {
+        "psr-4": { "App\\": "src/" }
+    }
+}</code></pre>
+<p>القدرات مجرد دوال PHP عادية مزوّدة بسمات. تولّد الحزمة مخطط JSON للمعاملات من أنواع PHP، والوصف من تعليق docblock:</p>
+<pre><code>&lt;?php
+
+namespace App;
+
+use Mcp\Capability\Attribute\McpPrompt;
+use Mcp\Capability\Attribute\McpResource;
+use Mcp\Capability\Attribute\McpTool;
+use Mcp\Capability\Attribute\Schema;
+use Mcp\Exception\ToolCallException;
+
+final class DevOpsTools
+{
+    /**
+     * Checks that a URL responds and returns its HTTP status and response time.
+     */
+    #[McpTool(name: 'check_url')]
+    public function checkUrl(
+        #[Schema(format: 'uri', description: 'Full URL, e.g. https://benmacha.tn')]
+        string $url,
+    ): array {
+        if (!preg_match('#^https?://#', $url)) {
+            throw new ToolCallException('Only http(s) URLs are accepted.');
+        }
+
+        $start = microtime(true);
+        $context = stream_context_create(['http' =&gt; ['method' =&gt; 'HEAD', 'timeout' =&gt; 5, 'ignore_errors' =&gt; true]]);
+        $headers = @get_headers($url, true, $context);
+
+        if ($headers === false) {
+            return ['url' =&gt; $url, 'up' =&gt; false, 'error' =&gt; 'Host unreachable'];
+        }
+
+        preg_match('#\s(\d{3})\s#', $headers[0], $m);
+        $status = (int) ($m[1] ?? 0);
+
+        return [
+            'url' =&gt; $url,
+            'up' =&gt; $status &gt; 0 &amp;&amp; $status &lt; 400,
+            'status' =&gt; $status,
+            'time_ms' =&gt; (int) round((microtime(true) - $start) * 1000),
+        ];
+    }
+
+    /**
+     * Returns the used and available disk space for a path.
+     */
+    #[McpTool(name: 'disk_usage')]
+    public function diskUsage(
+        #[Schema(description: 'Path to inspect')]
+        string $path = '/',
+    ): array {
+        $total = @disk_total_space($path);
+        $free = @disk_free_space($path);
+
+        if ($total === false || $free === false) {
+            throw new ToolCallException(sprintf('Unreadable path: %s', $path));
+        }
+
+        return [
+            'path' =&gt; $path,
+            'total_gb' =&gt; round($total / 1e9, 1),
+            'free_gb' =&gt; round($free / 1e9, 1),
+            'used_percent' =&gt; round(100 * ($total - $free) / $total, 1),
+        ];
+    }
+
+    #[McpResource(uri: 'server://info', name: 'server_info', mimeType: 'application/json')]
+    public function serverInfo(): array
+    {
+        return ['hostname' =&gt; gethostname(), 'os' =&gt; PHP_OS_FAMILY, 'php' =&gt; PHP_VERSION];
+    }
+
+    /**
+     * Prepares an incident report from a service and a symptom.
+     */
+    #[McpPrompt(name: 'incident_report')]
+    public function incidentReport(string $service, string $symptom): array
+    {
+        return [[
+            'role' =&gt; 'user',
+            'content' =&gt; "The \"$service\" service shows this symptom: $symptom. "
+                . "Use check_url and disk_usage to diagnose it, then write a short "
+                . "incident report: impact, probable cause, immediate actions.",
+        ]];
+    }
+}</code></pre>
+<p>نقطة الدخول لا تتجاوز بضعة أسطر: نعرّف الخادم، ونطلب منه فحص المجلد <code>src</code>، ثم نشغّله على ناقل stdio.</p>
+<pre><code>#!/usr/bin/env php
+&lt;?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Mcp\Server;
+use Mcp\Server\Transport\StdioTransport;
+
+exit(Server::builder()
+    -&gt;setServerInfo('DevOps Assistant', '1.0.0')
+    -&gt;setDiscovery(__DIR__, ['src'])
+    -&gt;build()
+    -&gt;run(new StdioTransport()));</code></pre>
+
+<h3>ما يراه العميل</h3>
+<p>انطلاقاً من توقيع الدالة <code>checkUrl(string $url)</code> وتعليق docblock والسمة <code>#[Schema]</code>، تنشر الحزمة تعريف الأداة التالي:</p>
+<pre><code>{
+  "name": "check_url",
+  "description": "Checks that a URL responds and returns its HTTP status and response time.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "format": "uri", "description": "Full URL, e.g. https://benmacha.tn" }
+    },
+    "required": ["url"]
+  }
+}</code></pre>
+<p>بالنسبة إلى <code>disk_usage</code>، تصبح القيمة الافتراضية <code>'/'</code> حقلاً <code>"default"</code> ويصبح المعامل اختيارياً. وعندما تُرجع الأداة مصفوفة، ترسلها الحزمة نصاً بصيغة JSON وأيضاً في الحقل <code>structuredContent</code> الجاهز للاستخدام من طرف العميل.</p>
+
+<h3>معالجة الأخطاء بشكل صحيح</h3>
+<p><strong>الفخ الثاني</strong>: ليس كل استثناء مناسباً. أي استثناء عام (<code>InvalidArgumentException</code> أو <code>RuntimeException</code>…) يتحول إلى خطأ JSON-RPC عام بعنوان "Error while executing tool"، ولا يعرف النموذج ما الذي حدث. استخدم بدلاً منه <code>Mcp\Exception\ToolCallException</code>: تُعاد رسالته ضمن نتيجة معلَّمة بـ <code>isError: true</code>، فيستطيع النموذج قراءتها وتصحيح استدعائه (مثلاً إعادة المحاولة برابط https).</p>
+
+<h3>الاختبار دون مساعد: عميل PHP وأداة Inspector</h3>
+<p>تحتوي الحزمة أيضاً على عميل، وهو مثالي للاختبارات الآلية:</p>
+<pre><code>use Mcp\Client;
+use Mcp\Client\Transport\StdioTransport;
+
+$client = Client::builder()-&gt;setClientInfo('Tests', '1.0.0')-&gt;build();
+$client-&gt;connect(new StdioTransport(command: 'php', args: [__DIR__.'/server.php']));
+
+foreach ($client-&gt;listTools()-&gt;tools as $tool) {
+    echo $tool-&gt;name, ': ', $tool-&gt;description, PHP_EOL;
+}
+
+$result = $client-&gt;callTool('check_url', ['url' =&gt; 'https://benmacha.tn']);
+var_dump($result-&gt;structuredContent); // ['url' =&gt; ..., 'up' =&gt; true, 'status' =&gt; 200, 'time_ms' =&gt; ...]
+
+$client-&gt;disconnect();</code></pre>
+<p>ولاستكشاف الخادم بصرياً، تشغّل أداة <strong>MCP Inspector</strong> الرسمية الخادمَ وتعرض أدواته وموارده وقوالبه:</p>
+<pre><code>npx @modelcontextprotocol/inspector php server.php</code></pre>
+
+<h3>ربط الخادم بـ Claude</h3>
+<p>مع <strong>Claude Code</strong> يكفي أمر واحد:</p>
+<pre><code>claude mcp add devops -- php /absolute/path/to/server.php</code></pre>
+<p>ومع <strong>Claude Desktop</strong> أضف الخادم إلى الملف <code>claude_desktop_config.json</code>:</p>
+<pre><code>{
+  "mcpServers": {
+    "devops": {
+      "command": "php",
+      "args": ["/absolute/path/to/server.php"]
+    }
+  }
+}</code></pre>
+<p>ثم اسأل: "هل يستجيب الموقع benmacha.tn بشكل صحيح، وهل بقيت مساحة على القرص؟". سيستدعي المساعد <code>check_url</code> ثم <code>disk_usage</code> ويلخّص النتائج.</p>
+
+<h3>القواعد الذهبية في بيئة الإنتاج</h3>
+<ul>
+<li><strong>لا تكتب أبداً في stdout</strong> في وضع stdio: المخرج القياسي محجوز للبروتوكول، وأي <code>echo</code> أو <code>var_dump</code> منسيّ يفسد التبادل. سجّل في stderr أو في ملف (يقبل الـ builder مسجِّلاً متوافقاً مع PSR-3).</li>
+<li><strong>أدوات محددة بدلاً من أداة "نفّذ أمراً"</strong>: كشف سطر الأوامر أو SQL حرّ يعني تسليم مفاتيح الخادم للنموذج.</li>
+<li><strong>تحقّق من كل مُدخل</strong>: مخطط JSON يوجّه النموذج لكنه لا يغني عن التحقق في الخادم (قوائم مسموح بها للمسارات والمضيفين والجداول).</li>
+<li><strong>أقل الصلاحيات</strong>: شغّل الخادم بمستخدم نظام مخصص، وبحساب قاعدة بيانات للقراءة فقط كلما أمكن.</li>
+<li><strong>أوصاف مكتوبة بعناية</strong>: فهي التوثيق الوحيد الذي يقرؤه النموذج لاختيار الأداة والمعامل المناسبين.</li>
+</ul>
+
+<h3>للتعمق أكثر</h3>
+<p>توفّر الحزمة أيضاً ناقل HTTP (Streamable HTTP) لاستضافة خادم بعيد يتشاركه فريق كامل، مع إدارة الجلسات والتفويض، وتدعم جيلَي البروتوكول بما فيهما المراجعة عديمة الحالة <code>2026-07-28</code>. أما على مستوى أطر العمل، فتدمج <code>symfony/mcp-bundle</code> الحزمة في Symfony (تصبح خدماتك أدوات MCP مع حقن الاعتماديات)، وتعرض <code>api-platform/mcp</code> موارد API Platform مباشرة.</p>
+<p>هذا هو النهج الذي أعتمده لربط مساعدي الذكاء الاصطناعي ببيانات العمل: بضع أدوات محددة النطاق وللقراءة فقط بأوصاف دقيقة، فيصبح الذكاء الاصطناعي قادراً على الإجابة عن أسئلة كانت تتطلب سابقاً استعلام SQL أو تصديراً يدوياً.</p>

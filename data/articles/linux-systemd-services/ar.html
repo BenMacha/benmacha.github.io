@@ -1,0 +1,46 @@
+<h2>إدارة تطبيقاتك باستخدام systemd</h2>
+<p>systemd هو مدير الخدمات القياسي في Linux. يتيح لك إنشاء خدمة مخصصة إدارة دورة حياة تطبيقاتك.</p>
+<h3>إنشاء خدمة</h3>
+<pre><code># /etc/systemd/system/myapp.service
+[Unit]
+Description=My PHP Application
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/myapp
+ExecStart=/usr/bin/php bin/console messenger:consume async --limit=100
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<h3>الأوامر الأساسية</h3>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable myapp
+sudo systemctl start myapp
+sudo systemctl status myapp
+journalctl -u myapp -f</code></pre>
+<h3>إدارة workers الخاصة بـ Symfony Messenger</h3>
+<p>بالنسبة لتطبيقات Symfony التي تستخدم Messenger، أنشئ خدمة متعددة النُّسخ (instances):</p>
+<pre><code># /etc/systemd/system/messenger-worker@.service
+[Service]
+ExecStart=/usr/bin/php /var/www/app/bin/console messenger:consume async --time-limit=3600
+Restart=always
+
+# Start 3 workers
+sudo systemctl enable messenger-worker@{1..3}
+sudo systemctl start messenger-worker@{1..3}</code></pre>
+<h3>أفضل الممارسات</h3>
+<ul>
+<li>حدّد الاعتماديات باستخدام <code>After</code> و<code>Requires</code></li>
+<li>اضبط <code>Restart=always</code> لضمان المرونة وقدرة الخدمة على التعافي</li>
+<li>استخدم سجلات systemd (journal) بدلاً من ملفات السجل</li>
+<li>قيّد الموارد باستخدام cgroups</li>
+</ul>

@@ -1,0 +1,50 @@
+<h2>PHP 8: ثورة في اللغة</h2>
+<p>يأتي PHP 8 بتحسينات كبرى تُحدّث اللغة وترفع الأداء بفضل مُصرّف JIT.</p>
+<h3>الوسائط المسمّاة (Named Arguments)</h3>
+<pre><code>// Before
+htmlspecialchars($string, ENT_COMPAT | ENT_HTML401, 'UTF-8', false);
+
+// PHP 8
+htmlspecialchars($string, double_encode: false);</code></pre>
+<h3>تعبير match (Match Expression)</h3>
+<pre><code>$status = match($code) {
+    200 => 'OK',
+    301 => 'Redirect',
+    404 => 'Not Found',
+    500 => 'Server Error',
+    default => 'Unknown',
+};</code></pre>
+<h3>التعدادات Enums (PHP 8.1)</h3>
+<pre><code>enum Status: string {
+    case Active = 'active';
+    case Inactive = 'inactive';
+    case Pending = 'pending';
+
+    public function label(): string {
+        return match($this) {
+            self::Active => 'Active',
+            self::Inactive => 'Inactive',
+            self::Pending => 'Pending',
+        };
+    }
+}</code></pre>
+<h3>Fibers (PHP 8.1)</h3>
+<pre><code>$fiber = new Fiber(function (): void {
+    $value = Fiber::suspend('first pause');
+    echo "Received: $value\n";
+});
+
+$result = $fiber->start(); // 'first pause'
+$fiber->resume('data');</code></pre>
+<h3>الخصائص للقراءة فقط (Readonly Properties) (PHP 8.2)</h3>
+<pre><code>class User {
+    public function __construct(
+        public readonly string $name,
+        public readonly string $email,
+        public readonly DateTimeImmutable $createdAt = new DateTimeImmutable(),
+    ) {}
+}</code></pre>
+<h3>أداء JIT</h3>
+<p>يحسّن مُصرّف JIT الأداء بمعدل 2 إلى 3 أضعاف في العمليات كثيفة الاستخدام للمعالج (CPU). فعّله في ملف php.ini:</p>
+<pre><code>opcache.jit=1255
+opcache.jit_buffer_size=100M</code></pre>

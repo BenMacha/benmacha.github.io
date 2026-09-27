@@ -1,0 +1,45 @@
+<h2>Docker والتكامل المستمر</h2>
+<p>أصبح Docker عنصراً لا غنى عنه في خطوط CI/CD الحديثة، إذ يضمن الاتساق بين بيئات الاختبار والإنتاج.</p>
+<h3>خط GitHub Actions باستخدام Docker</h3>
+<pre><code>name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build test image
+        run: docker build --target test -t app:test .
+      - name: Run tests
+        run: docker run app:test php bin/phpunit
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build --target production -t app:latest .
+      - name: Push to registry
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login -u user --password-stdin
+          docker push app:latest</code></pre>
+<h3>تحسين الـ cache</h3>
+<p>يُعدّ cache طبقات Docker عاملاً حاسماً في سرعة خط الـ pipeline:</p>
+<pre><code>- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3
+- name: Build with cache
+  uses: docker/build-push-action@v5
+  with:
+    cache-from: type=gha
+    cache-to: type=gha,mode=max</code></pre>
+<h3>تشغيل الاختبارات بالتوازي</h3>
+<ul>
+<li>استخدم Docker Compose لتشغيل خدمات الاختبار (قاعدة البيانات، Redis)</li>
+<li>وزّع مجموعات الاختبارات على حاويات (containers) منفصلة لتعمل بالتوازي</li>
+<li>نظّف الموارد بعد كل تنفيذ</li>
+</ul>
+<p>تتيح هذه الاستراتيجية تقليص زمن النشر من 30 دقيقة إلى أقل من 5 دقائق.</p>

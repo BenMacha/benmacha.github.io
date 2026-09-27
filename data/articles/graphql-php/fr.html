@@ -1,0 +1,61 @@
+<h2>GraphQL : une alternative puissante au REST</h2>
+<p>GraphQL permet aux clients de demander exactement les données dont ils ont besoin. Dans des projets comme ceux de Matalto et Manymore, cette flexibilité a permis de réduire considérablement le nombre de requêtes API.</p>
+<h3>Installation avec Symfony</h3>
+<pre><code>composer require overblog/graphql-bundle
+composer require overblog/graphiql-bundle --dev</code></pre>
+<h3>Définir un schéma</h3>
+<pre><code># config/graphql/types/Product.types.yaml
+Product:
+    type: object
+    config:
+        fields:
+            id:
+                type: "ID!"
+            name:
+                type: "String!"
+            price:
+                type: "Float!"
+            category:
+                type: "Category"
+                resolve: "@=resolver('product_category', [value])"</code></pre>
+<h3>Resolver</h3>
+<pre><code>class ProductResolver implements ResolverInterface
+{
+    public function __construct(
+        private ProductRepository $repository,
+    ) {}
+
+    public function resolve(Argument $args): array
+    {
+        if (isset($args['id'])) {
+            return $this->repository->find($args['id']);
+        }
+        return $this->repository->findAll();
+    }
+}
+
+class ProductCategoryResolver implements ResolverInterface
+{
+    public function resolve(Product $product): Category
+    {
+        return $product->getCategory();
+    }
+}</code></pre>
+<h3>Requête GraphQL</h3>
+<pre><code>query {
+  products(first: 10) {
+    id
+    name
+    price
+    category {
+      name
+    }
+  }
+}</code></pre>
+<h3>Avantages vs REST</h3>
+<ul>
+<li><strong>Pas de sur-fetching</strong> : le client choisit les champs</li>
+<li><strong>Pas de sous-fetching</strong> : une seule requête pour des données liées</li>
+<li><strong>Typage fort</strong> : schéma auto-documenté</li>
+<li><strong>Évolution facile</strong> : ajout de champs sans casser les clients existants</li>
+</ul>

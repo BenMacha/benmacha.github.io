@@ -1,0 +1,72 @@
+<h2>Symfony Messenger: المعالجة غير المتزامنة بكل بساطة</h2>
+<p>يتيح مكوّن Messenger في Symfony فصل المعالجات الطويلة عن طلبات HTTP لتقديم تجربة مستخدم أفضل.</p>
+<h3>معمارية Message/Handler</h3>
+<pre><code>// Message
+class SendNotificationMessage
+{
+    public function __construct(
+        public readonly int $userId,
+        public readonly string $content,
+    ) {}
+}
+
+// Handler
+#[AsMessageHandler]
+class SendNotificationHandler
+{
+    public function __construct(
+        private NotificationService $notificationService,
+    ) {}
+
+    public function __invoke(SendNotificationMessage $message): void
+    {
+        $this->notificationService->send(
+            $message->userId,
+            $message->content,
+        );
+    }
+}</code></pre>
+<h3>إعداد وسائل النقل (transports)</h3>
+<pre><code># config/packages/messenger.yaml
+framework:
+    messenger:
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+            failed:
+                dsn: 'doctrine://default?queue_name=failed'
+
+        routing:
+            App\Message\SendNotificationMessage: async
+            App\Message\ProcessOrderMessage: async</code></pre>
+<h3>إرسال الرسائل (dispatch)</h3>
+<pre><code>class OrderController extends AbstractController
+{
+    #[Route('/order', methods: ['POST'])]
+    public function create(
+        MessageBusInterface $bus,
+        Request $request,
+    ): JsonResponse {
+        // Fast synchronous processing
+        $order = $this->orderService->create($request);
+
+        // Asynchronous processing
+        $bus->dispatch(new SendNotificationMessage(
+            $order->getUserId(),
+            "Order #{$order->getId()} confirmed"
+        ));
+
+        return $this->json($order, 201);
+    }
+}</code></pre>
+<h3>الإشراف على الـ workers</h3>
+<ul>
+<li>استخدم systemd لإدارة الـ workers في بيئة الإنتاج</li>
+<li>اضبط <code>--time-limit</code> لتفادي تسرّب الذاكرة</li>
+<li>راقب قائمة الانتظار <code>failed</code> لتتبّع الرسائل التي فشلت معالجتها</li>
+<li>استخدم الـ middleware الخاص بالتسجيل (logging) لتصحيح الأخطاء</li>
+</ul>

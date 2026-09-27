@@ -1,0 +1,39 @@
+<h2>Docker network modes</h2>
+<p>Docker offers several network drivers, each suited to specific use cases.</p>
+<h3>Bridge (default)</h3>
+<p>Bridge mode creates an isolated network for containers on the same host:</p>
+<pre><code>docker network create --driver bridge my-network
+docker run --network my-network --name app myapp
+docker run --network my-network --name db mysql</code></pre>
+<p>Containers on the same bridge network can reach each other using their container name as the hostname.</p>
+<h3>Host</h3>
+<p>Host mode removes network isolation. The container uses the host's network directly:</p>
+<pre><code>docker run --network host nginx</code></pre>
+<p>Useful for maximum performance, but with no isolation.</p>
+<h3>Overlay</h3>
+<p>For Docker Swarm clusters, the overlay network lets containers communicate across different nodes:</p>
+<pre><code>docker network create --driver overlay --attachable my-overlay</code></pre>
+<h3>Internal DNS</h3>
+<p>Docker ships with a built-in DNS server that resolves services by name:</p>
+<pre><code>services:
+  app:
+    networks:
+      - frontend
+      - backend
+  nginx:
+    networks:
+      - frontend
+  db:
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:</code></pre>
+<h3>Networking best practices</h3>
+<ul>
+<li>Isolate services by network (frontend, backend, monitoring)</li>
+<li>Use internal networks for services that are not exposed</li>
+<li>Document your network topologies</li>
+<li>Keep exposed ports to the bare minimum</li>
+</ul>

@@ -1,0 +1,192 @@
+<h2>MCP: giving an AI assistant a pair of hands</h2>
+<p>The <strong>Model Context Protocol</strong> (MCP) is an open protocol that standardizes how an AI application (Claude, an IDE, an agent) connects to external data sources and actions. Instead of writing a dedicated integration for every assistant, you write <strong>one MCP server</strong>, and every compatible client can use it.</p>
+<p>An MCP server exposes three kinds of capabilities:</p>
+<ul>
+<li><strong>Tools</strong>: actions the model can call (check a service, create a ticket, run a read-only SQL query…)</li>
+<li><strong>Resources</strong>: data the client can read (configuration, documentation, server state)</li>
+<li><strong>Prompts</strong>: reusable message templates, parameterized by the user</li>
+</ul>
+<p>Client and server exchange <strong>JSON-RPC 2.0</strong> messages, either over standard input/output (<code>stdio</code>, ideal locally) or over HTTP (Streamable HTTP, for a remote server).</p>
+
+<h3>The official PHP SDK</h3>
+<p>Since 2025, PHP has an official SDK: <code>mcp/sdk</code>, built jointly by the <strong>PHP Foundation</strong> and the <strong>Symfony project</strong>, on top of the work done in PHP-MCP and Symfony AI. It is framework-agnostic and follows Symfony's backward compatibility promise. It is still flagged experimental until 1.0: pin the version in your <code>composer.json</code>.</p>
+<p>Requirements: PHP 8.1 or later. Installation:</p>
+<pre><code>composer require mcp/sdk symfony/finder</code></pre>
+<p><strong>Pitfall #1</strong>: <code>symfony/finder</code> is only a <em>suggested</em> dependency, yet it is required for attribute-based discovery. Without it, the server fails at startup… and since the error goes to standard error, the client simply sees a server with no tools at all.</p>
+
+<h3>A first server: a DevOps assistant</h3>
+<p>Let's build a server that is useful day to day: it checks that a URL responds, checks disk space, exposes system information and offers an incident report prompt. Start by declaring the autoloading of your classes:</p>
+<pre><code>{
+    "require": {
+        "mcp/sdk": "^0.8",
+        "symfony/finder": "^8.1"
+    },
+    "autoload": {
+        "psr-4": { "App\\": "src/" }
+    }
+}</code></pre>
+<p>Capabilities are plain annotated PHP methods. The SDK generates the JSON schema of the parameters from the PHP types, and the description from the docblock:</p>
+<pre><code>&lt;?php
+
+namespace App;
+
+use Mcp\Capability\Attribute\McpPrompt;
+use Mcp\Capability\Attribute\McpResource;
+use Mcp\Capability\Attribute\McpTool;
+use Mcp\Capability\Attribute\Schema;
+use Mcp\Exception\ToolCallException;
+
+final class DevOpsTools
+{
+    /**
+     * Checks that a URL responds and returns its HTTP status and response time.
+     */
+    #[McpTool(name: 'check_url')]
+    public function checkUrl(
+        #[Schema(format: 'uri', description: 'Full URL, e.g. https://benmacha.tn')]
+        string $url,
+    ): array {
+        if (!preg_match('#^https?://#', $url)) {
+            throw new ToolCallException('Only http(s) URLs are accepted.');
+        }
+
+        $start = microtime(true);
+        $context = stream_context_create(['http' =&gt; ['method' =&gt; 'HEAD', 'timeout' =&gt; 5, 'ignore_errors' =&gt; true]]);
+        $headers = @get_headers($url, true, $context);
+
+        if ($headers === false) {
+            return ['url' =&gt; $url, 'up' =&gt; false, 'error' =&gt; 'Host unreachable'];
+        }
+
+        preg_match('#\s(\d{3})\s#', $headers[0], $m);
+        $status = (int) ($m[1] ?? 0);
+
+        return [
+            'url' =&gt; $url,
+            'up' =&gt; $status &gt; 0 &amp;&amp; $status &lt; 400,
+            'status' =&gt; $status,
+            'time_ms' =&gt; (int) round((microtime(true) - $start) * 1000),
+        ];
+    }
+
+    /**
+     * Returns the used and available disk space for a path.
+     */
+    #[McpTool(name: 'disk_usage')]
+    public function diskUsage(
+        #[Schema(description: 'Path to inspect')]
+        string $path = '/',
+    ): array {
+        $total = @disk_total_space($path);
+        $free = @disk_free_space($path);
+
+        if ($total === false || $free === false) {
+            throw new ToolCallException(sprintf('Unreadable path: %s', $path));
+        }
+
+        return [
+            'path' =&gt; $path,
+            'total_gb' =&gt; round($total / 1e9, 1),
+            'free_gb' =&gt; round($free / 1e9, 1),
+            'used_percent' =&gt; round(100 * ($total - $free) / $total, 1),
+        ];
+    }
+
+    #[McpResource(uri: 'server://info', name: 'server_info', mimeType: 'application/json')]
+    public function serverInfo(): array
+    {
+        return ['hostname' =&gt; gethostname(), 'os' =&gt; PHP_OS_FAMILY, 'php' =&gt; PHP_VERSION];
+    }
+
+    /**
+     * Prepares an incident report from a service and a symptom.
+     */
+    #[McpPrompt(name: 'incident_report')]
+    public function incidentReport(string $service, string $symptom): array
+    {
+        return [[
+            'role' =&gt; 'user',
+            'content' =&gt; "The \"$service\" service shows this symptom: $symptom. "
+                . "Use check_url and disk_usage to diagnose it, then write a short "
+                . "incident report: impact, probable cause, immediate actions.",
+        ]];
+    }
+}</code></pre>
+<p>The entry point is only a few lines long: declare the server, tell it to scan the <code>src</code> directory, and run it on the stdio transport.</p>
+<pre><code>#!/usr/bin/env php
+&lt;?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Mcp\Server;
+use Mcp\Server\Transport\StdioTransport;
+
+exit(Server::builder()
+    -&gt;setServerInfo('DevOps Assistant', '1.0.0')
+    -&gt;setDiscovery(__DIR__, ['src'])
+    -&gt;build()
+    -&gt;run(new StdioTransport()));</code></pre>
+
+<h3>What the client sees</h3>
+<p>From the <code>checkUrl(string $url)</code> signature, the docblock and the <code>#[Schema]</code> attribute, the SDK publishes this tool definition:</p>
+<pre><code>{
+  "name": "check_url",
+  "description": "Checks that a URL responds and returns its HTTP status and response time.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "format": "uri", "description": "Full URL, e.g. https://benmacha.tn" }
+    },
+    "required": ["url"]
+  }
+}</code></pre>
+<p>For <code>disk_usage</code>, the <code>'/'</code> default value becomes a <code>"default"</code> and the parameter is optional. When a tool returns an array, the SDK sends it both as JSON text and as <code>structuredContent</code>, ready for the client to use.</p>
+
+<h3>Handling errors properly</h3>
+<p><strong>Pitfall #2</strong>: not every exception will do. A generic exception (<code>InvalidArgumentException</code>, <code>RuntimeException</code>…) is turned into a generic JSON-RPC error, "Error while executing tool": the model has no idea what went wrong. Throw a <code>Mcp\Exception\ToolCallException</code> instead: its message is returned in a result flagged <code>isError: true</code>, which the model can read to fix its call (for instance, retry with an https URL).</p>
+
+<h3>Testing without an assistant: the PHP client and the Inspector</h3>
+<p>The SDK also ships a client, perfect for automated tests:</p>
+<pre><code>use Mcp\Client;
+use Mcp\Client\Transport\StdioTransport;
+
+$client = Client::builder()-&gt;setClientInfo('Tests', '1.0.0')-&gt;build();
+$client-&gt;connect(new StdioTransport(command: 'php', args: [__DIR__.'/server.php']));
+
+foreach ($client-&gt;listTools()-&gt;tools as $tool) {
+    echo $tool-&gt;name, ': ', $tool-&gt;description, PHP_EOL;
+}
+
+$result = $client-&gt;callTool('check_url', ['url' =&gt; 'https://benmacha.tn']);
+var_dump($result-&gt;structuredContent); // ['url' =&gt; ..., 'up' =&gt; true, 'status' =&gt; 200, 'time_ms' =&gt; ...]
+
+$client-&gt;disconnect();</code></pre>
+<p>To explore the server visually, the official <strong>MCP Inspector</strong> starts the server and lists its tools, resources and prompts:</p>
+<pre><code>npx @modelcontextprotocol/inspector php server.php</code></pre>
+
+<h3>Plugging the server into Claude</h3>
+<p>With <strong>Claude Code</strong>, a single command is enough:</p>
+<pre><code>claude mcp add devops -- php /absolute/path/to/server.php</code></pre>
+<p>With <strong>Claude Desktop</strong>, add the server to <code>claude_desktop_config.json</code>:</p>
+<pre><code>{
+  "mcpServers": {
+    "devops": {
+      "command": "php",
+      "args": ["/absolute/path/to/server.php"]
+    }
+  }
+}</code></pre>
+<p>Then ask: "Is benmacha.tn responding correctly, and is there any disk space left?". The assistant calls <code>check_url</code>, then <code>disk_usage</code>, and summarizes the results.</p>
+
+<h3>Golden rules for production</h3>
+<ul>
+<li><strong>Never write to stdout</strong> in stdio mode: standard output is reserved for the protocol. A forgotten <code>echo</code> or <code>var_dump</code> corrupts the exchange. Log to stderr or to a file (the builder accepts a PSR-3 logger).</li>
+<li><strong>Narrow tools rather than a "run a command" tool</strong>: exposing a shell or free-form SQL means handing the keys of the server to the model.</li>
+<li><strong>Validate every input</strong>: the JSON schema guides the model, but it does not replace server-side validation (allow-lists of paths, hosts, tables).</li>
+<li><strong>Least privilege</strong>: run the server under a dedicated system user, with a read-only database account whenever possible.</li>
+<li><strong>Carefully written descriptions</strong>: they are the only documentation the model reads to choose the right tool and the right parameter.</li>
+</ul>
+
+<h3>Going further</h3>
+<p>The SDK also provides an HTTP transport (Streamable HTTP) to host a remote server shared by a team, with session and authorization handling, and it supports both generations of the protocol, including the stateless <code>2026-07-28</code> revision. On the framework side, <code>symfony/mcp-bundle</code> integrates the SDK into Symfony (your services become MCP tools, with dependency injection), and <code>api-platform/mcp</code> exposes your API Platform resources directly.</p>
+<p>This is the approach I use to connect AI assistants to business data: a few well-scoped, read-only tools with precise descriptions, and the AI can answer questions that used to require an SQL query or a manual export.</p>

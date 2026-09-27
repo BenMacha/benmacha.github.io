@@ -1,0 +1,31 @@
+<h2>Why use multi-stage builds?</h2>
+<p>Multi-stage builds let you separate the build environment from the runtime environment. The result: lighter, more secure images.</p>
+<h3>The problem with monolithic images</h3>
+<p>A classic PHP image with all its development dependencies can easily exceed 1 GB. In production, you need neither Composer, nor test tools, nor uncompiled source files.</p>
+<h3>A multi-stage Dockerfile example</h3>
+<pre><code># Stage 1: Build
+FROM composer:2 AS builder
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader
+COPY . .
+
+# Stage 2: Production
+FROM php:8.3-fpm-alpine
+COPY --from=builder /app /var/www/html
+RUN docker-php-ext-install pdo pdo_mysql opcache
+EXPOSE 9000
+CMD ["php-fpm"]</code></pre>
+<h3>Concrete benefits</h3>
+<ul>
+<li><strong>Smaller size</strong>: from 800 MB down to under 150 MB</li>
+<li><strong>Security</strong>: no development tools in production</li>
+<li><strong>Docker cache</strong>: each stage is cached independently</li>
+<li><strong>Reproducibility</strong>: the same result in every environment</li>
+</ul>
+<h3>Best practices</h3>
+<p>Use Alpine as the base image to minimize the attack surface. Install only the PHP extensions you need. Configure OPcache for production with optimal settings.</p>
+<pre><code>RUN echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini</code></pre>
+<p>This approach has been used successfully on platforms such as Keytchens to deploy Symfony applications with build times reduced by 60%.</p>

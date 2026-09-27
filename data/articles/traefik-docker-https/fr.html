@@ -1,0 +1,133 @@
+<h2>Pourquoi Traefik ?</h2>
+<p>Dès qu'un serveur héberge plusieurs applications conteneurisées, il faut un <strong>reverse proxy</strong> devant elles : un seul point d'entrée sur les ports 80 et 443, qui route chaque domaine vers le bon conteneur et gère le HTTPS. Nginx sait très bien le faire, mais chaque nouvelle application demande d'écrire un virtual host, de recharger la configuration et de générer un certificat.</p>
+<p><strong>Traefik</strong> inverse la logique : il lit l'API Docker, découvre les conteneurs, et les configure à partir de leurs <strong>labels</strong>. Démarrer un conteneur suffit pour le publier en HTTPS, avec un certificat Let's Encrypt obtenu et renouvelé automatiquement.</p>
+
+<h3>Le réseau partagé</h3>
+<p>Traefik et les applications qu'il expose doivent partager un réseau Docker. Créez-le une fois pour toutes :</p>
+<pre><code>docker network create proxy</code></pre>
+
+<h3>Traefik lui-même</h3>
+<p>Un fichier <code>/opt/traefik/compose.yaml</code> :</p>
+<pre><code>services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=contact@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`traefik.example.com`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=le
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=dashboard-auth
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$Hq3vN2kS$$exempleDeHashAremplacer
+
+networks:
+  proxy:
+    external: true</code></pre>
+<p>Quelques points importants :</p>
+<ul>
+<li><strong><code>exposedbydefault=false</code></strong> : aucun conteneur n'est publié sans <code>traefik.enable=true</code>. Sans cette option, une base de données démarrée par erreur pourrait se retrouver exposée.</li>
+<li>La <strong>redirection HTTP → HTTPS</strong> est déclarée une fois, au niveau de l'entrypoint <code>web</code>.</li>
+<li>Le <strong>socket Docker</strong> est monté en lecture seule. Il donne tout de même beaucoup de pouvoir sur l'hôte : pour un durcissement supplémentaire, placez un proxy de socket (comme <code>tecnativa/docker-socket-proxy</code>) entre Traefik et Docker.</li>
+<li>Dans un fichier Compose, les <code>$</code> du hash doivent être doublés (<code>$$</code>). Générez le hash avec <code>htpasswd -nb admin motdepasse</code> (paquet <code>apache2-utils</code>).</li>
+</ul>
+<pre><code>cd /opt/traefik &amp;&amp; docker compose up -d
+docker compose logs -f traefik</code></pre>
+
+<h3>Publier une application</h3>
+<p>Côté application, il suffit de rejoindre le réseau <code>proxy</code> et de décrire le routage en labels. Exemple avec un conteneur Symfony (PHP-FPM + Nginx dans l'image, sur le port 8080) :</p>
+<pre><code>services:
+  app:
+    image: ghcr.io/moi/app:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    networks:
+      - proxy
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`app.example.com`) || Host(`www.app.example.com`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=le
+      - traefik.http.routers.app.middlewares=secure-headers,rate-limit
+      - traefik.http.services.app.loadbalancer.server.port=8080
+      - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.secure-headers.headers.frameDeny=true
+      - traefik.http.middlewares.rate-limit.ratelimit.average=50
+      - traefik.http.middlewares.rate-limit.ratelimit.burst=100
+
+  database:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external: true
+  internal:
+
+volumes:
+  db-data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt</code></pre>
+<p>La base de données n'est reliée qu'au réseau <code>internal</code> : Traefik ne peut pas l'atteindre, et elle n'a aucun port publié. Au premier <code>docker compose up -d</code>, Traefik détecte le conteneur, obtient le certificat pour les deux domaines et commence à router le trafic, en quelques secondes et sans aucun redémarrage.</p>
+
+<h3>Lire un label de routage</h3>
+<p>Les labels suivent tous la même grammaire : <code>traefik.http.&lt;type&gt;.&lt;nom&gt;.&lt;option&gt;</code>.</p>
+<ul>
+<li><strong>routers</strong> : quelle requête (règle <code>Host</code>, <code>PathPrefix</code>…) arrive sur quel entrypoint, avec quel TLS et quels middlewares</li>
+<li><strong>services</strong> : vers quel port du conteneur envoyer le trafic (indispensable si l'image expose plusieurs ports)</li>
+<li><strong>middlewares</strong> : les transformations appliquées en chemin (en-têtes, authentification, limitation de débit, redirections, compression)</li>
+</ul>
+<p>Un middleware déclaré sur un conteneur peut être réutilisé par les autres : définissez vos en-têtes de sécurité une fois, sur le conteneur Traefik, puis référencez-les avec le suffixe <code>@docker</code>, par exemple <code>secure-headers@docker</code>.</p>
+
+<h3>Certificats wildcard avec le challenge DNS</h3>
+<p>Le challenge HTTP nécessite que le serveur soit joignable sur le port 80. Pour un certificat <code>*.example.com</code>, ou un serveur non exposé, utilisez le challenge DNS. Avec Cloudflare par exemple :</p>
+<pre><code>      - --certificatesresolvers.le.acme.dnschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_token</code></pre>
+<p>Le jeton Cloudflare n'a besoin que de la permission <em>Zone → DNS → Edit</em> sur la zone concernée.</p>
+
+<h3>Dépannage</h3>
+<ul>
+<li><strong>Erreur 404 « page not found »</strong> : le routeur n'existe pas. Vérifiez <code>traefik.enable=true</code> et la règle <code>Host</code> (les backticks sont obligatoires).</li>
+<li><strong>Erreur 502 Bad Gateway</strong> : Traefik trouve le conteneur mais ne le joint pas. Le conteneur est-il sur le réseau <code>proxy</code> ? Le port du <code>loadbalancer</code> est-il le bon ?</li>
+<li><strong>Certificat auto-signé « TRAEFIK DEFAULT CERT »</strong> : le challenge ACME a échoué. Consultez les logs de Traefik ; le DNS pointe-t-il vers le serveur, et le port 80 est-il ouvert ?</li>
+<li><strong>Limite de Let's Encrypt</strong> : pendant vos essais, utilisez le serveur de test (<code>--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory</code>) pour ne pas atteindre les quotas.</li>
+</ul>
+<p>Une fois en place, ajouter une application revient à écrire trois ou quatre labels. C'est ce qui rend Traefik si agréable pour un serveur personnel ou une petite infrastructure qui héberge beaucoup de services.</p>

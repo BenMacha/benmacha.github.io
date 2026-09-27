@@ -1,0 +1,49 @@
+<h2>Sentry: لا تفوّت أي خطأ بعد اليوم</h2>
+<p>Sentry أداة لمراقبة الأخطاء تلتقط الاستثناءات (exceptions) في تطبيقك وتجمّعها وتنبّهك إليها في الوقت الفعلي.</p>
+<h3>التثبيت في Symfony</h3>
+<pre><code>composer require sentry/sentry-symfony</code></pre>
+<h3>الإعداد</h3>
+<pre><code># config/packages/sentry.yaml
+sentry:
+    dsn: '%env(SENTRY_DSN)%'
+    options:
+        environment: '%kernel.environment%'
+        release: '%env(APP_VERSION)%'
+        traces_sample_rate: 0.2
+        profiles_sample_rate: 0.1</code></pre>
+<h3>سياق المستخدم</h3>
+<pre><code>use Sentry\State\Scope;
+
+class SentryUserListener
+{
+    #[AsEventListener(event: KernelEvents::REQUEST)]
+    public function onRequest(RequestEvent $event): void
+    {
+        $user = $this->security->getUser();
+        if ($user) {
+            \Sentry\configureScope(function (Scope $scope) use ($user): void {
+                $scope->setUser([
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                ]);
+            });
+        }
+    }
+}</code></pre>
+<h3>التنبيهات والإشعارات</h3>
+<ul>
+<li>اضبط تنبيهات Slack للأخطاء الجديدة</li>
+<li>حدّد عتبات لحجم الأخطاء</li>
+<li>استخدم تتبّعات الأداء (traces) لتحديد مواضع الاختناق</li>
+<li>اربط Sentry بسير عمل GitHub لمتابعة الإصلاحات</li>
+</ul>
+<h3>مراقبة الأداء (Performance Monitoring)</h3>
+<pre><code>// Measure a specific operation
+$transaction = \Sentry\startTransaction(['name' => 'process-order']);
+\Sentry\configureScope(fn(Scope $scope) => $scope->setSpan($transaction));
+
+$span = $transaction->startChild(['op' => 'db.query']);
+// ... database query
+$span->finish();
+
+$transaction->finish();</code></pre>

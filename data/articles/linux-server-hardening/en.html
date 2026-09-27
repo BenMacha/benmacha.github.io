@@ -1,0 +1,34 @@
+<h2>Securing your Linux server</h2>
+<p>Securing a Linux server is the very first step before any production deployment. Here are the essential measures.</p>
+<h3>SSH configuration</h3>
+<pre><code># /etc/ssh/sshd_config
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+Port 2222
+MaxAuthTries 3
+AllowUsers deploy</code></pre>
+<h3>Firewall with UFW</h3>
+<pre><code>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 2222/tcp    # SSH
+sudo ufw allow 80/tcp      # HTTP
+sudo ufw allow 443/tcp     # HTTPS
+sudo ufw enable</code></pre>
+<h3>Automatic updates</h3>
+<pre><code>sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+<h3>Fail2Ban</h3>
+<p>Protect yourself against brute-force attacks:</p>
+<pre><code>sudo apt install fail2ban
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
+<h3>Security checklist</h3>
+<ul>
+<li>Disable root login over SSH</li>
+<li>Use key-based authentication only</li>
+<li>Configure a restrictive firewall</li>
+<li>Install and configure Fail2Ban</li>
+<li>Enable automatic security updates</li>
+<li>Set up centralized logging</li>
+<li>Put system monitoring in place</li>
+</ul>

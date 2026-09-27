@@ -1,0 +1,49 @@
+<h2>Sentry : ne ratez plus aucune erreur</h2>
+<p>Sentry est un outil de monitoring d'erreurs qui capture, agrège et alerte sur les exceptions de votre application en temps réel.</p>
+<h3>Installation Symfony</h3>
+<pre><code>composer require sentry/sentry-symfony</code></pre>
+<h3>Configuration</h3>
+<pre><code># config/packages/sentry.yaml
+sentry:
+    dsn: '%env(SENTRY_DSN)%'
+    options:
+        environment: '%kernel.environment%'
+        release: '%env(APP_VERSION)%'
+        traces_sample_rate: 0.2
+        profiles_sample_rate: 0.1</code></pre>
+<h3>Contexte utilisateur</h3>
+<pre><code>use Sentry\State\Scope;
+
+class SentryUserListener
+{
+    #[AsEventListener(event: KernelEvents::REQUEST)]
+    public function onRequest(RequestEvent $event): void
+    {
+        $user = $this->security->getUser();
+        if ($user) {
+            \Sentry\configureScope(function (Scope $scope) use ($user): void {
+                $scope->setUser([
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                ]);
+            });
+        }
+    }
+}</code></pre>
+<h3>Alertes et notifications</h3>
+<ul>
+<li>Configurez des alertes Slack pour les nouvelles erreurs</li>
+<li>Définissez des seuils de volume d'erreurs</li>
+<li>Utilisez les traces de performance pour identifier les goulots</li>
+<li>Intégrez avec votre workflow GitHub pour le suivi des correctifs</li>
+</ul>
+<h3>Performance Monitoring</h3>
+<pre><code>// Mesurer une opération spécifique
+$transaction = \Sentry\startTransaction(['name' => 'process-order']);
+\Sentry\configureScope(fn(Scope $scope) => $scope->setSpan($transaction));
+
+$span = $transaction->startChild(['op' => 'db.query']);
+// ... requête base de données
+$span->finish();
+
+$transaction->finish();</code></pre>

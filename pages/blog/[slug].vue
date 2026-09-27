@@ -17,8 +17,8 @@
         </div>
       </header>
 
-      <!-- Article bodies are trusted, first-party HTML from data/blog.ts -->
-      <article class="content card" :lang="article.lang" :dir="articleDir(article)" v-html="article.content" />
+      <!-- Article bodies are trusted, first-party HTML from data/articles/ -->
+      <article v-if="body" class="content card" :lang="body.lang" :dir="articleDir(body)" v-html="body.html" />
 
       <nav class="pager">
         <NuxtLink v-if="prev" :to="`/blog/${prev.slug}`" v-lift class="pager__link card">
@@ -53,6 +53,15 @@ const category = computed(() => blogCategories[article.value?.category as BlogCa
 if (!article.value) {
   throw createError({ statusCode: 404, statusMessage: 'Article not found', fatal: false })
 }
+
+// Body loaded on demand in the current locale (French in the prerendered HTML);
+// the previous body stays visible while another language loads.
+const { locale } = useI18n()
+const { data: body } = await useAsyncData(
+  () => `article:${slug.value}`,
+  () => loadArticleBody(slug.value, locale.value),
+  { watch: [locale] },
+)
 
 useHead(() => ({
   title: article.value ? `${article.value.title} - Ben Macha Ali` : 'Blog - Ben Macha Ali',

@@ -1,0 +1,69 @@
+<h2>Symfony et Docker : le duo parfait</h2>
+<p>Docker et Symfony forment une combinaison puissante pour le développement. Chez Keytchens, plateforme food-tech de gestion de commandes en temps réel, cette stack a permis d'unifier les environnements de développement pour toute l'équipe.</p>
+<h3>Docker Compose pour Symfony</h3>
+<pre><code>version: '3.8'
+services:
+  php:
+    build: .docker/php
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - .docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: symfony
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "15672:15672"
+
+volumes:
+  mysql-data:</code></pre>
+<h3>Dockerfile PHP optimisé</h3>
+<pre><code>FROM php:8.3-fpm
+RUN apt-get update && apt-get install -y \
+    libicu-dev libzip-dev \
+    && docker-php-ext-install intl pdo_mysql zip opcache \
+    && pecl install redis xdebug \
+    && docker-php-ext-enable redis xdebug
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+WORKDIR /var/www/html</code></pre>
+<h3>Makefile pour simplifier les commandes</h3>
+<pre><code>up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+console:
+	docker compose exec php php bin/console $(cmd)
+
+test:
+	docker compose exec php php bin/phpunit
+
+migrate:
+	docker compose exec php php bin/console doctrine:migrations:migrate -n</code></pre>
+<ul>
+<li>Environnement identique pour tous les développeurs</li>
+<li>Isolation complète des services</li>
+<li>Facilité d'onboarding pour les nouveaux développeurs</li>
+</ul>

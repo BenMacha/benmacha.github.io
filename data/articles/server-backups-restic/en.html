@@ -1,0 +1,126 @@
+<h2>A backup that has never been restored does not exist</h2>
+<p>Everyone "has backups", until the day they need to restore: the dump has been empty for three months, the archive sits on the same disk as the server, or nobody knows the encryption password. A good strategy fits in one rule, the <strong>3-2-1 rule</strong>: 3 copies of the data, on 2 different media, 1 of them off-site. And in one discipline: <strong>test the restore</strong>.</p>
+<p>This guide sets up the following on a Linux server hosting a web application:</p>
+<ul>
+<li>a consistent MySQL dump, without blocking the application;</li>
+<li>an <strong>encrypted, deduplicated and incremental</strong> backup with restic to S3 object storage;</li>
+<li>a retention policy, systemd scheduling and an alert on failure.</li>
+</ul>
+
+<h3>1. The MySQL dump</h3>
+<p>Copying the files in <code>/var/lib/mysql</code> while the server is running gives an inconsistent backup. Use <code>mysqldump</code> with <code>--single-transaction</code>: for InnoDB tables, the dump is taken inside a transaction, so it is consistent, without locking writes.</p>
+<p>First, a dedicated backup user with only what it needs:</p>
+<pre><code>CREATE USER 'backup'@'localhost' IDENTIFIED BY 'long-password';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, PROCESS ON *.* TO 'backup'@'localhost';</code></pre>
+<p>Its credentials go in a file readable by root only, so they never show up in the process list:</p>
+<pre><code># /root/.my-backup.cnf  (chmod 600)
+[client]
+user=backup
+password=long-password</code></pre>
+<pre><code>mysqldump --defaults-extra-file=/root/.my-backup.cnf \
+  --single-transaction --quick --routines --triggers --events \
+  --databases app | gzip &gt; /var/backups/mysql/app.sql.gz</code></pre>
+<p><code>--quick</code> reads rows one by one instead of loading each table into memory: essential for large tables. Beyond a few tens of GB, switch to a physical backup (Percona XtraBackup or MySQL Enterprise Backup).</p>
+
+<h3>2. Why restic</h3>
+<p>A daily <code>tar.gz</code> archive copies everything, every day. <strong>restic</strong> splits files into chunks, stores each chunk only once, and encrypts everything client-side (AES-256) before upload. The result: daily backups that only cost the size of the changes, remote storage that never sees your data in clear text, and the ability to restore any retained point in time.</p>
+<pre><code>sudo apt install -y restic</code></pre>
+<p>The repository settings go in a protected environment file, <code>/etc/restic/env</code> (<code>chmod 600</code>). Any S3-compatible storage works (AWS, Scaleway, OVH, Backblaze B2, Cloudflare R2…):</p>
+<pre><code>RESTIC_REPOSITORY=s3:https://s3.fr-par.scw.cloud/my-backup-bucket/web-server
+RESTIC_PASSWORD_FILE=/etc/restic/password
+AWS_ACCESS_KEY_ID=xxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxx</code></pre>
+<pre><code>sudo sh -c 'openssl rand -base64 48 &gt; /etc/restic/password &amp;&amp; chmod 600 /etc/restic/password'
+sudo sh -c 'set -a; . /etc/restic/env; restic init'</code></pre>
+<p><strong>Keep the restic password off the server</strong>, in a password manager. Without it, the repository cannot be recovered, and that is by design. If the server burns down with the only copy of the password, your backups burn with it.</p>
+
+<h3>3. The backup script</h3>
+<p><code>/usr/local/bin/backup.sh</code>:</p>
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+set -a; . /etc/restic/env; set +a
+
+DUMP_DIR=/var/backups/mysql
+mkdir -p "$DUMP_DIR"
+
+# 1. MySQL dump (temporary file, then rename: never a half-written dump)
+mysqldump --defaults-extra-file=/root/.my-backup.cnf \
+  --single-transaction --quick --routines --triggers --events \
+  --databases app | gzip &gt; "$DUMP_DIR/app.sql.gz.tmp"
+mv "$DUMP_DIR/app.sql.gz.tmp" "$DUMP_DIR/app.sql.gz"
+
+# 2. Back up the dumps, the uploaded files and the configuration
+restic backup \
+  "$DUMP_DIR" \
+  /var/www/app/shared \
+  /etc/nginx /etc/php \
+  --tag daily \
+  --exclude-caches
+
+# 3. Retention: 7 days, 4 weeks, 6 months
+restic forget --tag daily --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+
+# 4. Verify a sample of the data
+restic check --read-data-subset=5%</code></pre>
+<p><code>set -euo pipefail</code> is crucial: without <code>pipefail</code>, a failing <code>mysqldump</code> followed by a successful <code>gzip</code> goes unnoticed, and you back up an empty file for months.</p>
+<pre><code>sudo chmod 700 /usr/local/bin/backup.sh</code></pre>
+
+<h3>4. Scheduling with a systemd timer</h3>
+<p>A systemd timer has two advantages over cron: logs go to journald, and <code>Persistent=true</code> catches up on a missed run if the server was off.</p>
+<pre><code># /etc/systemd/system/backup.service
+[Unit]
+Description=MySQL + files backup to restic
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+Nice=10
+IOSchedulingClass=idle</code></pre>
+<pre><code># /etc/systemd/system/backup.timer
+[Unit]
+Description=Daily backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now backup.timer
+systemctl list-timers backup.timer      # next run
+sudo systemctl start backup.service     # first manual run
+journalctl -u backup.service -e         # logs</code></pre>
+
+<h3>5. Getting notified when it fails</h3>
+<p>A backup that fails silently is the worst-case scenario. The simplest solution is a "dead man's switch" service (Healthchecks.io, Uptime Kuma, Better Stack…): the script sends a ping on every success, and the service alerts you if nothing arrives within the expected window. Add this at the end of <code>backup.sh</code>:</p>
+<pre><code>curl -fsS -m 10 --retry 3 https://hc-ping.com/your-uuid &gt; /dev/null</code></pre>
+<p>Thanks to <code>set -e</code>, the ping is only sent if every previous step succeeded.</p>
+
+<h3>6. Testing the restore (for real)</h3>
+<p>Schedule a regular restore test, for example every month, on another machine:</p>
+<pre><code>set -a; . /etc/restic/env; set +a
+
+restic snapshots --tag daily                       # list the backups
+restic restore latest --target /tmp/restore        # latest version
+restic restore latest --target /tmp/restore --include /var/www/app/shared/uploads
+
+# Restore the database into a test database
+mysql -e 'CREATE DATABASE app_restore_test'
+zcat /tmp/restore/var/backups/mysql/app.sql.gz \
+  | sed 's/`app`/`app_restore_test`/g' | mysql
+mysql -e 'SELECT COUNT(*) FROM app_restore_test.user'</code></pre>
+<p>Time the whole operation: that is your real <strong>RTO</strong> (the time it takes to get back into service). The age of the last successful backup is your <strong>RPO</strong> (the amount of data you accept to lose). If these two values do not suit the business, now is the time to find out, not during an incident.</p>
+
+<h3>In short</h3>
+<ul>
+<li>A consistent dump with <code>--single-transaction</code>, credentials kept off the command line</li>
+<li>restic: encrypted, deduplicated, off-site, with a clear retention policy</li>
+<li>systemd scheduling with <code>Persistent=true</code>, and an alert if the ping does not arrive</li>
+<li>The repository password stored somewhere other than the server</li>
+<li>Restores tested regularly and timed</li>
+</ul>

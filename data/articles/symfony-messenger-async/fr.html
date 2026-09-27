@@ -1,0 +1,72 @@
+<h2>Symfony Messenger : le traitement asynchrone simplifié</h2>
+<p>Le composant Messenger de Symfony permet de décorréler les traitements longs de vos requêtes HTTP pour une meilleure expérience utilisateur.</p>
+<h3>Architecture Message/Handler</h3>
+<pre><code>// Message
+class SendNotificationMessage
+{
+    public function __construct(
+        public readonly int $userId,
+        public readonly string $content,
+    ) {}
+}
+
+// Handler
+#[AsMessageHandler]
+class SendNotificationHandler
+{
+    public function __construct(
+        private NotificationService $notificationService,
+    ) {}
+
+    public function __invoke(SendNotificationMessage $message): void
+    {
+        $this->notificationService->send(
+            $message->userId,
+            $message->content,
+        );
+    }
+}</code></pre>
+<h3>Configuration des transports</h3>
+<pre><code># config/packages/messenger.yaml
+framework:
+    messenger:
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+            failed:
+                dsn: 'doctrine://default?queue_name=failed'
+
+        routing:
+            App\Message\SendNotificationMessage: async
+            App\Message\ProcessOrderMessage: async</code></pre>
+<h3>Dispatch des messages</h3>
+<pre><code>class OrderController extends AbstractController
+{
+    #[Route('/order', methods: ['POST'])]
+    public function create(
+        MessageBusInterface $bus,
+        Request $request,
+    ): JsonResponse {
+        // Traitement synchrone rapide
+        $order = $this->orderService->create($request);
+
+        // Traitement asynchrone
+        $bus->dispatch(new SendNotificationMessage(
+            $order->getUserId(),
+            "Commande #{$order->getId()} confirmée"
+        ));
+
+        return $this->json($order, 201);
+    }
+}</code></pre>
+<h3>Supervision des workers</h3>
+<ul>
+<li>Utilisez systemd pour gérer les workers en production</li>
+<li>Configurez <code>--time-limit</code> pour éviter les fuites mémoire</li>
+<li>Surveillez la file <code>failed</code> pour les messages en erreur</li>
+<li>Utilisez le middleware de logging pour le débogage</li>
+</ul>

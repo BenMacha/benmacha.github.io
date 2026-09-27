@@ -1,0 +1,39 @@
+<h2>Monitoring system performance</h2>
+<p>Good monitoring is essential to detect problems before they affect users.</p>
+<h3>Essential tools</h3>
+<pre><code># Real-time CPU and memory
+htop
+
+# Disk statistics
+iostat -x 1
+
+# Network traffic
+iftop -i eth0
+
+# Resource-hungry processes
+ps aux --sort=-%mem | head -20</code></pre>
+<h3>Monitoring with Prometheus and Node Exporter</h3>
+<pre><code># Install Node Exporter
+wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+tar xvfz node_exporter-*.tar.gz
+sudo mv node_exporter-*/node_exporter /usr/local/bin/</code></pre>
+<h3>System alerts</h3>
+<p>Set up alerts for critical metrics:</p>
+<ul>
+<li><strong>CPU</strong>: alert above 80% for 5 minutes</li>
+<li><strong>Memory</strong>: alert above 90%</li>
+<li><strong>Disk</strong>: alert above 85%</li>
+<li><strong>Load average</strong>: alert above the number of CPUs</li>
+</ul>
+<h3>Custom monitoring scripts</h3>
+<pre><code>#!/bin/bash
+# check_resources.sh
+CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}')
+MEM=$(free -m | awk 'NR==2{printf "%.1f", $3*100/$2}')
+DISK=$(df -h / | awk 'NR==2{print $5}' | tr -d '%')
+
+echo "CPU: ${CPU}% | MEM: ${MEM}% | DISK: ${DISK}%"
+
+if (( $(echo "$CPU > 80" | bc -l) )); then
+  echo "ALERT: high CPU!" | mail -s "Server alert" admin@example.com
+fi</code></pre>

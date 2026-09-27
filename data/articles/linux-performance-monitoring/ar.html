@@ -1,0 +1,39 @@
+<h2>مراقبة أداء النظام</h2>
+<p>المراقبة (monitoring) الجيدة ضرورية لاكتشاف المشكلات قبل أن تؤثر في المستخدمين.</p>
+<h3>أدوات أساسية</h3>
+<pre><code># Real-time CPU and memory
+htop
+
+# Disk statistics
+iostat -x 1
+
+# Network traffic
+iftop -i eth0
+
+# Resource-hungry processes
+ps aux --sort=-%mem | head -20</code></pre>
+<h3>المراقبة باستخدام Prometheus وNode Exporter</h3>
+<pre><code># Install Node Exporter
+wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+tar xvfz node_exporter-*.tar.gz
+sudo mv node_exporter-*/node_exporter /usr/local/bin/</code></pre>
+<h3>تنبيهات النظام</h3>
+<p>اضبط تنبيهات للمقاييس الحرجة:</p>
+<ul>
+<li><strong>CPU</strong>: تنبيه عند تجاوز 80% لمدة 5 دقائق</li>
+<li><strong>الذاكرة</strong>: تنبيه عند تجاوز 90%</li>
+<li><strong>القرص</strong>: تنبيه عند تجاوز 85%</li>
+<li><strong>Load average</strong>: تنبيه عند تجاوز عدد وحدات المعالجة (CPUs)</li>
+</ul>
+<h3>سكربتات مراقبة مخصّصة</h3>
+<pre><code>#!/bin/bash
+# check_resources.sh
+CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}')
+MEM=$(free -m | awk 'NR==2{printf "%.1f", $3*100/$2}')
+DISK=$(df -h / | awk 'NR==2{print $5}' | tr -d '%')
+
+echo "CPU: ${CPU}% | MEM: ${MEM}% | DISK: ${DISK}%"
+
+if (( $(echo "$CPU > 80" | bc -l) )); then
+  echo "ALERT: high CPU!" | mail -s "Server alert" admin@example.com
+fi</code></pre>

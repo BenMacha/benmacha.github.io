@@ -1,0 +1,46 @@
+<h2>Managing your applications with systemd</h2>
+<p>systemd is the standard service manager on Linux. Creating a custom service lets you manage the lifecycle of your applications.</p>
+<h3>Creating a service</h3>
+<pre><code># /etc/systemd/system/myapp.service
+[Unit]
+Description=My PHP Application
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/myapp
+ExecStart=/usr/bin/php bin/console messenger:consume async --limit=100
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<h3>Essential commands</h3>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable myapp
+sudo systemctl start myapp
+sudo systemctl status myapp
+journalctl -u myapp -f</code></pre>
+<h3>Managing Symfony Messenger workers</h3>
+<p>For Symfony applications that use Messenger, create a service with multiple instances:</p>
+<pre><code># /etc/systemd/system/messenger-worker@.service
+[Service]
+ExecStart=/usr/bin/php /var/www/app/bin/console messenger:consume async --time-limit=3600
+Restart=always
+
+# Start 3 workers
+sudo systemctl enable messenger-worker@{1..3}
+sudo systemctl start messenger-worker@{1..3}</code></pre>
+<h3>Best practices</h3>
+<ul>
+<li>Declare dependencies with <code>After</code> and <code>Requires</code></li>
+<li>Set <code>Restart=always</code> for resilience</li>
+<li>Use the systemd journal rather than log files</li>
+<li>Limit resources with cgroups</li>
+</ul>

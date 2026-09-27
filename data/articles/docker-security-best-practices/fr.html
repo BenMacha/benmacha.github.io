@@ -1,0 +1,38 @@
+<h2>Sécuriser vos conteneurs Docker</h2>
+<p>La sécurité des conteneurs est un sujet critique. Voici les pratiques essentielles pour protéger vos applications conteneurisées.</p>
+<h3>Principe du moindre privilège</h3>
+<pre><code># Ne JAMAIS exécuter en root
+FROM php:8.3-fpm-alpine
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+WORKDIR /app
+COPY --chown=appuser:appgroup . .</code></pre>
+<h3>Scanner les vulnérabilités</h3>
+<p>Intégrez un scanner de vulnérabilités dans votre pipeline :</p>
+<pre><code># Avec Trivy
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy image myapp:latest
+
+# Avec Docker Scout
+docker scout cves myapp:latest</code></pre>
+<h3>Réseau et isolation</h3>
+<ul>
+<li>Créez des réseaux dédiés pour isoler les services</li>
+<li>N'exposez jamais les ports des bases de données</li>
+<li>Utilisez des secrets Docker plutôt que des variables d'environnement pour les données sensibles</li>
+<li>Activez le mode read-only pour les conteneurs stateless</li>
+</ul>
+<h3>Gestion des secrets</h3>
+<pre><code>services:
+  app:
+    secrets:
+      - db_password
+      - api_key
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  api_key:
+    external: true</code></pre>
+<h3>Images de confiance</h3>
+<p>Utilisez uniquement des images officielles ou vérifiées. Épinglez les versions exactes plutôt que d'utiliser <code>latest</code>. Signez vos images avec Docker Content Trust.</p>

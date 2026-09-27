@@ -1,0 +1,60 @@
+<h2>فن كتابة سكربتات Shell</h2>
+<p>تظل كتابة سكربتات shell أداة أساسية لكل مهندس DevOps. إليك الأنماط وأفضل الممارسات الأساسية.</p>
+<h3>بنية سكربت متين</h3>
+<pre><code>#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# Variables
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly LOG_FILE="/var/log/deploy.log"
+
+# Functions
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+cleanup() {
+    log "Cleaning up..."
+    rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
+# Main script
+main() {
+    log "Starting deployment"
+    # ...
+    log "Deployment complete"
+}
+
+main "$@"</code></pre>
+<h3>أنماط مفيدة</h3>
+<pre><code># Check whether a service is active
+check_service() {
+    if systemctl is-active --quiet "$1"; then
+        echo "$1 is active"
+    else
+        echo "$1 is inactive" && return 1
+    fi
+}
+
+# Retry with backoff
+retry() {
+    local max_attempts=$1; shift
+    local attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if "$@"; then return 0; fi
+        echo "Attempt $attempt/$max_attempts failed"
+        sleep $((attempt * 2))
+        ((attempt++))
+    done
+    return 1
+}</code></pre>
+<h3>أفضل الممارسات</h3>
+<ul>
+<li>استخدم دائماً <code>set -euo pipefail</code></li>
+<li>وثّق المتغيرات والدوال</li>
+<li>استخدم الدوال لتحسين قابلية القراءة</li>
+<li>عالج الأخطاء باستخدام <code>trap</code></li>
+<li>اختبر باستخدام shellcheck</li>
+</ul>
