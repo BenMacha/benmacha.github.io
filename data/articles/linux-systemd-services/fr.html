@@ -1,5 +1,15 @@
 <h2>Gérer vos applications avec systemd</h2>
-<p>systemd est le gestionnaire de services standard sous Linux. Créer un service personnalisé permet de gérer le cycle de vie de vos applications.</p>
+<p>systemd est le gestionnaire de services standard sous Linux. Créer un service personnalisé permet de gérer le cycle de vie de vos applications : démarrage automatique au boot, redémarrage en cas de plantage, ordre de démarrage par rapport à la base de données, centralisation des logs et limitation des ressources. Tout cela sans superviseur supplémentaire à installer : systemd est déjà présent sur Debian, Ubuntu, RHEL et la quasi-totalité des distributions actuelles.</p>
+<p>Pour une application PHP, les cas d'usage typiques sont les workers de file de messages, les consommateurs de longue durée, les petits serveurs HTTP intégrés et les tâches planifiées. Voyons comment écrire des unités fiables, puis comment les exploiter au quotidien.</p>
+
+<h3>Anatomie d'un fichier unit</h3>
+<p>Un service est décrit par un fichier texte au format INI, placé dans <code>/etc/systemd/system/</code> pour les unités propres à la machine. Il comporte trois sections :</p>
+<ul>
+<li><strong><code>[Unit]</code></strong> : description et dépendances vis-à-vis des autres unités.</li>
+<li><strong><code>[Service]</code></strong> : comment lancer, arrêter et relancer le processus, et sous quelle identité.</li>
+<li><strong><code>[Install]</code></strong> : à quelle cible rattacher le service lorsqu'on l'active avec <code>systemctl enable</code>.</li>
+</ul>
+
 <h3>Créer un service</h3>
 <pre><code># /etc/systemd/system/myapp.service
 [Unit]
@@ -21,26 +31,114 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target</code></pre>
+<p>Les directives importantes :</p>
+<ul>
+<li><strong><code>After</code> et <code>Requires</code></strong> : deux notions distinctes. <code>After</code> définit l'<em>ordre</em> de démarrage ; <code>Requires</code> définit une <em>dépendance</em> : si MySQL est arrêté, le service l'est aussi. <code>Wants</code> est une variante plus souple, qui démarre la dépendance sans échouer si elle est absente. Sur certaines distributions, le service s'appelle <code>mariadb.service</code> : vérifiez le nom exact.</li>
+<li><strong><code>Type=simple</code></strong> : le processus lancé par <code>ExecStart</code> est le processus principal et reste au premier plan. C'est le cas de <code>messenger:consume</code>. Utilisez <code>Type=oneshot</code> pour une commande qui s'exécute puis se termine.</li>
+<li><strong><code>User</code> et <code>Group</code></strong> : ne faites jamais tourner une application en root. Ici, le worker a les mêmes droits que PHP-FPM.</li>
+<li><strong><code>WorkingDirectory</code></strong> : le chemin de l'exécutable doit être absolu, mais les arguments comme <code>bin/console</code> sont résolus depuis ce répertoire.</li>
+<li><strong><code>Restart=always</code> et <code>RestartSec=5</code></strong> : avec <code>--limit=100</code>, le worker s'arrête volontairement après 100 messages ; systemd le relance cinq secondes plus tard avec une mémoire propre. <code>Restart=on-failure</code> ne relancerait que les arrêts en erreur.</li>
+<li><strong><code>StandardOutput=journal</code></strong> : la sortie du processus est capturée par journald, horodatée et associée au service.</li>
+</ul>
+
 <h3>Commandes essentielles</h3>
 <pre><code>sudo systemctl daemon-reload
 sudo systemctl enable myapp
 sudo systemctl start myapp
 sudo systemctl status myapp
 journalctl -u myapp -f</code></pre>
+<p><code>daemon-reload</code> est obligatoire après chaque création ou modification d'un fichier unit : sans lui, systemd continue d'utiliser l'ancienne version. <code>enable</code> crée le lien qui démarre le service au boot, <code>start</code> le lance immédiatement ; <code>enable --now</code> fait les deux. Avant de charger un fichier, <code>systemd-analyze verify /etc/systemd/system/myapp.service</code> signale les directives inconnues et les fautes de frappe.</p>
+<p>Pour les logs, <code>journalctl</code> offre des filtres précieux lors d'un incident :</p>
+<pre><code># Logs depuis une heure, erreurs uniquement
+journalctl -u myapp --since "1 hour ago" -p err
+
+# Logs du démarrage courant, sans pagination
+journalctl -u myapp -b --no-pager</code></pre>
+
+<h3>Éviter les boucles de redémarrage</h3>
+<p>Un service qui plante immédiatement au démarrage (fichier de configuration manquant, base de données injoignable) sera relancé en boucle. Par défaut, systemd abandonne après 5 démarrages en 10 secondes et marque le service en échec. Avec un <code>RestartSec=5</code>, ce seuil n'est jamais atteint : ajustez donc la fenêtre dans la section <code>[Unit]</code> :</p>
+<pre><code>[Unit]
+StartLimitIntervalSec=300
+StartLimitBurst=10</code></pre>
+<p>Ici, plus de 10 démarrages en 5 minutes font passer le service en état <code>failed</code>, ce qui est visible dans <code>systemctl --failed</code> et facile à surveiller. Une fois la cause corrigée, <code>systemctl reset-failed myapp</code> remet le compteur à zéro.</p>
+
 <h3>Gestion des workers Symfony Messenger</h3>
 <p>Pour les applications Symfony utilisant Messenger, créez un service avec plusieurs instances :</p>
 <pre><code># /etc/systemd/system/messenger-worker@.service
+[Unit]
+Description=Symfony Messenger worker %i
+
 [Service]
+User=www-data
+Group=www-data
 ExecStart=/usr/bin/php /var/www/app/bin/console messenger:consume async --time-limit=3600
 Restart=always
+
+[Install]
+WantedBy=multi-user.target
 
 # Lancer 3 workers
 sudo systemctl enable messenger-worker@{1..3}
 sudo systemctl start messenger-worker@{1..3}</code></pre>
+<p>Le <code>@</code> dans le nom du fichier en fait un <strong>template</strong> : <code>messenger-worker@1</code>, <code>messenger-worker@2</code>, etc. sont des instances distinctes du même fichier, et <code>%i</code> est remplacé par l'identifiant de l'instance. La notation <code>{1..3}</code> est une expansion du shell Bash, pas une fonctionnalité de systemd.</p>
+<p>L'option <code>--time-limit=3600</code> fait redémarrer chaque worker toutes les heures, ce qui limite l'effet des fuites mémoire. Vous pouvez aussi utiliser <code>--memory-limit=128M</code>. Lors d'un déploiement, les workers gardent l'ancien code en mémoire : exécutez <code>php bin/console messenger:stop-workers</code> à la fin du déploiement. Chaque worker termine son message en cours puis s'arrête, et systemd le relance sur le nouveau code.</p>
+
+<h3>Variables d'environnement et surcharges</h3>
+<p>Ne mettez pas de secrets dans le fichier unit, qui est lisible par tous. Utilisez un fichier d'environnement protégé :</p>
+<pre><code>[Service]
+EnvironmentFile=/etc/myapp/env
+Environment=APP_ENV=prod</code></pre>
+<p>Le fichier <code>/etc/myapp/env</code> contient des lignes <code>CLE=valeur</code> et doit appartenir à root avec des droits <code>600</code> : systemd le lit avant de changer d'utilisateur. Pour modifier un service fourni par un paquet sans toucher au fichier d'origine, utilisez <code>sudo systemctl edit nginx</code> : la commande crée un fichier de surcharge dans <code>/etc/systemd/system/nginx.service.d/</code>, qui survit aux mises à jour.</p>
+
+<h3>Limiter les ressources et isoler le service</h3>
+<p>systemd place chaque service dans son propre cgroup, ce qui permet de plafonner ses ressources et de restreindre ce qu'il peut voir du système :</p>
+<pre><code>[Service]
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=100
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true</code></pre>
+<p><code>MemoryMax</code> tue le processus s'il dépasse la limite, au lieu de laisser le noyau choisir une victime au hasard. <code>CPUQuota=50%</code> limite le service à la moitié d'un cœur. <code>PrivateTmp</code> lui donne un <code>/tmp</code> isolé, <code>ProtectSystem=full</code> rend <code>/usr</code>, <code>/boot</code> et <code>/etc</code> en lecture seule, et <code>ProtectHome</code> masque les répertoires personnels. La commande <code>systemd-analyze security myapp</code> attribue une note d'exposition au service et liste les options de durcissement disponibles.</p>
+
+<h3>Remplacer cron par un timer</h3>
+<p>Les timers systemd sont une alternative moderne à cron : les exécutions apparaissent dans le journal, un échec est visible dans <code>systemctl --failed</code>, et une exécution manquée pendant un arrêt de la machine peut être rattrapée. Un timer active un service du même nom :</p>
+<pre><code># /etc/systemd/system/app-cleanup.service
+[Unit]
+Description=Nettoyage quotidien de l'application
+
+[Service]
+Type=oneshot
+User=www-data
+WorkingDirectory=/var/www/myapp
+ExecStart=/usr/bin/php bin/console app:cleanup
+
+# /etc/systemd/system/app-cleanup.timer
+[Unit]
+Description=Lance app-cleanup tous les jours à 3h
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now app-cleanup.timer
+systemctl list-timers
+systemd-analyze calendar "*-*-* 03:00:00"</code></pre>
+<p><code>Persistent=true</code> déclenche le service au démarrage si l'exécution prévue a été manquée. <code>systemd-analyze calendar</code> vérifie une expression et affiche la prochaine échéance.</p>
+
 <h3>Bonnes pratiques</h3>
 <ul>
 <li>Définir les dépendances avec <code>After</code> et <code>Requires</code></li>
 <li>Configurer <code>Restart=always</code> pour la résilience</li>
 <li>Utiliser les journaux systemd plutôt que des fichiers de log</li>
 <li>Limiter les ressources avec les cgroups</li>
+<li>Ne jamais exécuter une application en root : toujours <code>User</code> et <code>Group</code></li>
+<li>Stocker les secrets dans un <code>EnvironmentFile</code> protégé</li>
+<li>Utiliser <code>systemctl edit</code> pour surcharger un service fourni par un paquet</li>
+<li>Relancer les workers à chaque déploiement avec <code>messenger:stop-workers</code></li>
 </ul>
+<p>systemd n'est pas la bonne réponse partout : dans un environnement conteneurisé, c'est l'orchestrateur (Docker, Kubernetes) qui gère le cycle de vie des processus. Mais sur un serveur classique ou un VPS, quelques fichiers unit bien écrits remplacent avantageusement Supervisor, les scripts d'init maison et une bonne partie de la crontab.</p>

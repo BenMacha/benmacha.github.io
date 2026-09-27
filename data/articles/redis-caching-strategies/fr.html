@@ -1,35 +1,47 @@
 <h2>Redis : stratégies de cache avancées</h2>
 <p>Redis est bien plus qu'un simple cache clé-valeur. Voici les stratégies pour en tirer le maximum.</p>
+<p>Stocké en mémoire, Redis répond en général en moins d'une milliseconde, là où une requête SQL complexe peut prendre des dizaines de millisecondes. Mettre en cache le résultat des opérations coûteuses (requêtes lourdes, appels à une API externe, calculs d'agrégats) soulage la base de données et réduit fortement le temps de réponse. Mais un cache mal pensé crée aussi ses propres bugs : données périmées affichées aux utilisateurs, pics de charge à l'expiration d'une clé, mémoire saturée. Le choix de la stratégie compte autant que l'outil.</p>
+
+<h3>Que mettre en cache ?</h3>
+<p>Un bon candidat est une donnée <strong>lue beaucoup plus souvent qu'elle n'est modifiée</strong>, <strong>coûteuse à produire</strong>, et qui <strong>tolère un léger retard</strong> : catalogue produits, pages de contenu, configuration, résultats d'API tierces. À l'inverse, un solde de compte, un stock en temps réel ou des données propres à un utilisateur et rarement relues sont de mauvais candidats : la complexité de l'invalidation dépasse souvent le gain.</p>
+
 <h3>Patterns de cache</h3>
 <h3>Cache-Aside (Lazy Loading)</h3>
+<p>C'est le pattern le plus courant : l'application consulte d'abord le cache ; en cas d'absence (<em>cache miss</em>), elle lit la base de données puis stocke le résultat avec une durée de vie. Seules les données réellement demandées finissent en cache.</p>
 <pre><code>class ProductService
 {
     public function getProduct(int $id): Product
     {
         $cacheKey = "product:{$id}";
-        $cached = $this->redis->get($cacheKey);
+        $cached = $this-&gt;redis-&gt;get($cacheKey);
 
         if ($cached !== null) {
             return unserialize($cached);
         }
 
-        $product = $this->repository->find($id);
-        $this->redis->setex($cacheKey, 3600, serialize($product));
+        $product = $this-&gt;repository-&gt;find($id);
+        $this-&gt;redis-&gt;setex($cacheKey, 3600, serialize($product));
 
         return $product;
     }
 }</code></pre>
+<p>Deux remarques sur ce code. D'abord, la valeur renvoyée pour une clé absente dépend du client : <strong>Predis</strong> renvoie <code>null</code>, alors que l'extension <strong>phpredis</strong> renvoie <code>false</code>. Avec phpredis, le test <code>!== null</code> serait toujours vrai et <code>unserialize(false)</code> échouerait : adaptez la condition à votre client. Ensuite, sérialiser une entité Doctrine complète est fragile (proxies, collections chargées à la demande, changement de structure de la classe entre deux déploiements). Je recommande de mettre en cache un tableau ou un DTO simple plutôt que l'entité elle-même.</p>
+
 <h3>Write-Through</h3>
+<p>Ici, chaque écriture met à jour la base <strong>et</strong> le cache dans la même opération. Le cache reste chaud, et la lecture suivante n'a pas besoin de toucher la base.</p>
 <pre><code>public function updateProduct(Product $product): void
 {
-    $this->repository->save($product);
-    $this->redis->setex(
-        "product:{$product->getId()}",
+    $this-&gt;repository-&gt;save($product);
+    $this-&gt;redis-&gt;setex(
+        "product:{$product-&gt;getId()}",
         3600,
         serialize($product)
     );
 }</code></pre>
+<p>L'ordre est important : la base de données est la source de vérité, elle est donc écrite en premier. Si l'écriture dans Redis échoue ensuite, le cache contient une version périmée jusqu'à l'expiration du TTL. Pour cette raison, beaucoup d'équipes préfèrent une variante plus simple : <strong>supprimer</strong> la clé après l'écriture (<code>DEL</code>) et laisser le cache-aside la reconstruire à la prochaine lecture. On évite ainsi d'écrire en cache des données que personne ne relira.</p>
+
 <h3>Cache avec Symfony</h3>
+<p>Dans une application Symfony, il est rarement utile de manipuler Redis directement : le composant Cache fournit des <em>pools</em> configurables, la gestion des tags et une protection contre les pics de charge.</p>
 <pre><code># config/packages/cache.yaml
 framework:
     cache:
@@ -42,15 +54,54 @@ framework:
 {
     public function list(CacheInterface $productsCache): Response
     {
-        $products = $productsCache->get('products_list', function (ItemInterface $item) {
-            $item->expiresAfter(3600);
-            $item->tag(['products']);
-            return $this->repository->findAll();
+        $products = $productsCache-&gt;get('products_list', function (ItemInterface $item) {
+            $item-&gt;expiresAfter(3600);
+            $item-&gt;tag(['products']);
+            return $this-&gt;repository-&gt;findAll();
         });
 
-        return $this->json($products);
+        return $this-&gt;json($products);
     }
 }</code></pre>
+<p>La méthode <code>get()</code> implémente le cache-aside à votre place : la fonction de rappel n'est exécutée qu'en cas d'absence de la clé. Elle protège aussi contre le <strong>cache stampede</strong> (des dizaines de requêtes qui recalculent la même valeur au même instant, juste après son expiration) grâce à un verrou et à une expiration anticipée probabiliste, réglable avec le troisième argument <code>$beta</code>.</p>
+<p>Attention toutefois : pour utiliser <code>$item-&gt;tag()</code>, le pool doit être compatible avec les tags, sinon Symfony lève une exception. Il faut ajouter <code>tags: true</code> au pool et injecter un <code>TagAwareCacheInterface</code>. L'attribut <code>#[Target]</code> permet de choisir explicitement le pool :</p>
+<pre><code># config/packages/cache.yaml
+framework:
+    cache:
+        pools:
+            app.cache.products:
+                adapter: cache.adapter.redis
+                default_lifetime: 3600
+                provider: 'redis://redis:6379'
+                tags: true</code></pre>
+<pre><code>use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
+
+final class ProductCatalog
+{
+    public function __construct(
+        #[Target('app.cache.products')]
+        private readonly TagAwareCacheInterface $cache,
+        private readonly ProductRepository $repository,
+    ) {
+    }
+
+    /** @return list&lt;array{id: int, name: string}&gt; */
+    public function all(): array
+    {
+        return $this-&gt;cache-&gt;get('products_list', function (ItemInterface $item): array {
+            $item-&gt;tag(['products']);
+
+            return array_map(
+                static fn (Product $p): array =&gt; ['id' =&gt; $p-&gt;getId(), 'name' =&gt; $p-&gt;getName()],
+                $this-&gt;repository-&gt;findAll(),
+            );
+        });
+    }
+}</code></pre>
+<p>Remarquez que le résultat mis en cache est un simple tableau, et non une liste d'entités : il se sérialise sans surprise et reste valide même si l'entité évolue.</p>
+
 <h3>Invalidation du cache</h3>
 <ul>
 <li><strong>TTL</strong> : expiration automatique après un délai</li>
@@ -58,3 +109,50 @@ framework:
 <li><strong>Events</strong> : invalidation sur événement Doctrine</li>
 <li><strong>Versioning</strong> : clés de cache versionnées</li>
 </ul>
+<p>Le <strong>TTL</strong> est le filet de sécurité : même si une invalidation est oubliée, la donnée finira par se rafraîchir. Choisissez-le selon le retard acceptable pour le métier, pas au hasard. Les <strong>tags</strong> et les <strong>événements Doctrine</strong> se combinent très bien : un écouteur d'entité invalide les tags concernés dès qu'un produit est créé, modifié ou supprimé.</p>
+<pre><code>use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
+use Doctrine\ORM\Events;
+use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
+
+#[AsEntityListener(event: Events::postPersist, method: 'invalidate', entity: Product::class)]
+#[AsEntityListener(event: Events::postUpdate, method: 'invalidate', entity: Product::class)]
+#[AsEntityListener(event: Events::preRemove, method: 'invalidate', entity: Product::class)]
+final class ProductCacheInvalidator
+{
+    public function __construct(
+        #[Target('app.cache.products')]
+        private readonly TagAwareCacheInterface $cache,
+    ) {
+    }
+
+    public function invalidate(Product $product): void
+    {
+        $this-&gt;cache-&gt;invalidateTags(['products', 'product_'.$product-&gt;getId()]);
+    }
+}</code></pre>
+<p>On écoute <code>preRemove</code> plutôt que <code>postRemove</code>, car après la suppression Doctrine peut remettre l'identifiant de l'entité à <code>null</code>. Le <strong>versioning</strong>, enfin, consiste à inclure une version dans la clé (<code>product:v2:42</code>). Changer de version rend toutes les anciennes clés inaccessibles d'un coup, ce qui est pratique quand le format des données en cache évolue lors d'un déploiement ; les anciennes clés disparaissent ensuite d'elles-mêmes grâce à leur TTL.</p>
+
+<h3>Configurer Redis pour un usage cache</h3>
+<p>Sans limite de mémoire, Redis grossit jusqu'à épuiser la RAM du serveur. Pour une instance dédiée au cache, fixez une limite et une politique d'éviction dans <code>redis.conf</code> :</p>
+<pre><code>maxmemory 512mb
+maxmemory-policy allkeys-lru</code></pre>
+<p>Avec <code>allkeys-lru</code>, Redis supprime les clés les moins récemment utilisées quand la limite est atteinte. Si la même instance contient aussi des sessions ou des files de messages, cette politique pourrait les effacer : utilisez alors <code>volatile-lru</code> (qui n'évince que les clés ayant un TTL) ou, mieux, des instances séparées.</p>
+
+<h3>Mesurer l'efficacité du cache</h3>
+<p>Un cache se juge à son taux de succès. La commande <code>INFO stats</code> fournit les compteurs <code>keyspace_hits</code> et <code>keyspace_misses</code> :</p>
+<pre><code>redis-cli INFO stats | grep -E 'keyspace_(hits|misses)'
+redis-cli INFO memory | grep used_memory_human
+redis-cli --bigkeys</code></pre>
+<p>Un taux de succès faible signale des TTL trop courts, des clés trop spécifiques ou des données peu relues. <code>--bigkeys</code> parcourt la base avec <code>SCAN</code> et repère les clés les plus volumineuses.</p>
+
+<h3>Pièges fréquents</h3>
+<ul>
+<li><strong><code>KEYS *</code> en production</strong> : cette commande bloque Redis le temps de parcourir toutes les clés. Utilisez <code>SCAN</code>, ou mieux, les tags.</li>
+<li><strong>Clés sans TTL</strong> : elles s'accumulent indéfiniment. Tout ce qui est en cache devrait avoir une durée de vie.</li>
+<li><strong>Cache comme source de vérité</strong> : l'application doit continuer à fonctionner, plus lentement, si Redis est vidé ou indisponible.</li>
+<li><strong>Clés sans espace de noms</strong> : préfixez vos clés (<code>app:product:42</code>) pour éviter les collisions entre applications partageant la même instance.</li>
+</ul>
+
+<h3>En résumé</h3>
+<p>Commencez par le cache-aside avec un TTL raisonnable, appuyez-vous sur le composant Cache de Symfony plutôt que sur des appels Redis bruts, invalidez par tags à partir des événements Doctrine, et surveillez le taux de succès. Un cache simple et bien invalidé vaut mieux qu'une architecture sophistiquée qui sert des données périmées.</p>

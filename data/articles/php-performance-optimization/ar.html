@@ -1,6 +1,9 @@
 <h2>تحسين أداء PHP لبيئة الإنتاج</h2>
-<p>أداء PHP عامل حاسم في التطبيقات ذات الحركة العالية. في CCM Benchmark، حيث تستقبل المواقع ملايين الزوار يومياً، كل جزء من الألف من الثانية له أهميته.</p>
+<p>أداء PHP حاسم للتطبيقات ذات الحركة العالية. في CCM Benchmark، حيث تستقبل المواقع ملايين الزوار يومياً، كل جزء من الثانية له أهميته.</p>
+<p>التحسين لا يعني إعادة كتابة كل شيء. في الغالبية العظمى من التطبيقات، تأتي المكاسب من بضعة إعدادات مختارة بعناية: OPcache مضبوط جيداً، ومُحمِّل تلقائي (autoloader) محسَّن، واستعلامات SQL تحت السيطرة، ومجموعة PHP-FPM محسوبة وفق الذاكرة المتاحة. القاعدة الذهبية واحدة في كل خطوة: <strong>قِس قبل أن تُحسِّن</strong>، ثم قِس مجدداً للتحقق من المكسب. يتبع هذا المقال هذا الترتيب، من الإعداد الأكثر مردوداً إلى الأكثر تخصصاً.</p>
+
 <h3>OPcache: الأساس</h3>
+<p>في كل طلب، على PHP عادةً قراءة الملفات المصدرية وتحليلها وتصريفها إلى bytecode. يحتفظ OPcache بهذا الـ bytecode في ذاكرة مشتركة، فتنفّذه الطلبات التالية مباشرة. إنه الإعداد الذي يقدّم أفضل نسبة بين الجهد والمكسب، ويجب أن يكون مفعَّلاً على كل خادم إنتاج.</p>
 <pre><code>; php.ini - Optimal OPcache configuration
 opcache.enable=1
 opcache.memory_consumption=256
@@ -9,7 +12,21 @@ opcache.validate_timestamps=0
 opcache.save_comments=1
 opcache.preload=/var/www/app/config/preload.php
 opcache.preload_user=www-data</code></pre>
+<p>تفاصيل هذه الإعدادات:</p>
+<ul>
+<li>يجب أن تتسع <code>memory_consumption</code> (بالميغابايت) لكل الـ bytecode الخاص بالتطبيق واعتمادياته. إن امتلأت، يتوقف OPcache عن تخزين ملفات جديدة أو يعيد التشغيل، وينخفض الأداء دون أي خطأ ظاهر.</li>
+<li>يجب أن تتجاوز <code>max_accelerated_files</code> عدد ملفات PHP في المشروع، بما فيها <code>vendor/</code>. يعطي الأمر <code>find . -name '*.php' | wc -l</code> فكرة عن الرقم.</li>
+<li><code>validate_timestamps=0</code> يلغي التحقق من تواريخ التعديل في كل طلب. المقابل: يجب <strong>إعادة تحميل PHP-FPM عند كل نشر</strong>، وإلا استمرت الشيفرة القديمة في العمل.</li>
+<li><code>save_comments=1</code> ضروري إن كنت تستخدم تعليقات توضيحية (annotations) تُقرأ عبر الانعكاس (إصدارات قديمة من Doctrine أو من مكتبات التحقق).</li>
+</ul>
+<p>للتحقق من الحالة الفعلية للـ cache، تُرجع <code>opcache_get_status()</code> نسبة الإصابة (<code>opcache_hit_rate</code>) والذاكرة المستخدمة وعدد مرات إعادة التشغيل. في تطبيق مستقر، يجب أن تبقى نسبة الإصابة قريبة جداً من 100%.</p>
+<p>أكمِل ذلك بـ cache المسارات الحقيقية (realpath)، الذي يتجنب استدعاءات النظام المتكررة لحلّ مسارات الملفات:</p>
+<pre><code>; php.ini - realpath cache
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+
 <h3>التحميل المسبق (Preloading) في PHP 8</h3>
+<p>منذ PHP 7.4، يحمّل الـ preloading مجموعة من الأصناف في الذاكرة عند بدء تشغيل الخادم. وتبقى متاحة لكل الطلبات دون المرور حتى بالمُحمِّل التلقائي.</p>
 <pre><code>// config/preload.php
 require dirname(__DIR__).'/vendor/autoload.php';
 
@@ -18,26 +35,82 @@ $files = glob(dirname(__DIR__).'/src/Entity/*.php');
 foreach ($files as $file) {
     opcache_compile_file($file);
 }</code></pre>
-<h3>التحليل (Profiling) باستخدام Blackfire</h3>
-<pre><code># Install the Blackfire agent
-curl -s https://packagecloud.io/install/repositories/blackfire/agent/script.deb.sh | sudo bash
-sudo apt install blackfire-agent
+<p>مع Symfony، لا داعي لكتابة هذه القائمة يدوياً: الملف <code>config/preload.php</code> الذي توفره الوصفة (recipe) يتضمن <code>var/cache/prod/App_KernelProdContainer.preload.php</code>، المولَّد أثناء <code>cache:warmup</code> بالأصناف التي تستخدمها الحاوية فعلاً. احتياطان: أي تعديل على صنف محمَّل مسبقاً يستلزم إعادة تشغيل كاملة لـ PHP-FPM، والمكسب يتوقف على التطبيق. وهو غالباً متواضع بعد ضبط OPcache جيداً، لذا قِسه قبل الإبقاء عليه.</p>
+
+<h3>مُحمِّل تلقائي محسَّن</h3>
+<p>في الإنتاج، يستطيع Composer توليد خريطة أصناف (classmap) كاملة، ما يتجنب التحقق من وجود الملفات على القرص لكل صنف:</p>
+<pre><code>composer install --no-dev --optimize-autoloader --classmap-authoritative
+composer dump-env prod
+APP_ENV=prod php bin/console cache:warmup</code></pre>
+<p>يطلب الخيار <code>--classmap-authoritative</code> من المُحمِّل ألا يبحث عن الأصناف إلا في الـ classmap. إنه سريع، لكن الصنف المولَّد وقت التنفيذ والغائب عن الـ classmap لن يُعثَر عليه. ويُصرِّف <code>composer dump-env prod</code> ملفات <code>.env</code> في ملف PHP، ما يتجنب تحليلها في كل طلب.</p>
+
+<h3>التحليل باستخدام Blackfire</h3>
+<p>التحسين دون تحليل (profiling) مجرد تخمين. يُظهر المحلِّل بدقة أين يُستهلك الوقت والذاكرة: دالة بدالة، واستعلام SQL باستعلام، واستدعاء HTTP باستدعاء. صُمِّم Blackfire ليكون قابلاً للاستخدام في الإنتاج دون أي كلفة إضافية خارج أوقات التحليل. يتم التثبيت عبر مستودع APT الرسمي:</p>
+<pre><code># Add the Blackfire repository (Debian/Ubuntu)
+wget -q -O - https://packages.blackfire.io/gpg.key | sudo dd of=/usr/share/keyrings/blackfire-archive-keyring.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/blackfire-archive-keyring.asc] http://packages.blackfire.io/debian any main" | sudo tee /etc/apt/sources.list.d/blackfire.list
+sudo apt update
+
+# Install the Blackfire agent and the PHP probe
+sudo apt install blackfire blackfire-php
+sudo blackfire agent:config
 
 # Profile a request
 blackfire curl http://localhost/api/products</code></pre>
-<h3>تحسينات Doctrine</h3>
-<ul>
-<li>تفعيل التخزين المؤقت (cache) للاستعلامات والنتائج</li>
-<li>استخدام استعلامات DQL مع اختيار جزئي للحقول</li>
-<li>تجنّب التحميل الكسول (lazy loading) باستخدام عمليات ربط (joins) صريحة</li>
-<li>إعداد التخزين المؤقت من المستوى الثاني (second-level cache)</li>
-</ul>
-<pre><code>// Doctrine query cache
-$query = $em->createQuery('SELECT p FROM App\Entity\Product p')
-    ->enableResultCache(3600, 'products_list');
+<p>اقرأ نتيجة التحليل بدءاً من العُقد ذات الوقت «الحصري» الأعلى: فهي التي تستهلك فعلاً. الاستدعاء المتكرر مئات المرات، وغالباً ما يكون استعلام SQL داخل حلقة، هو الإشارة الأكثر شيوعاً. إن لم يكن Blackfire خياراً متاحاً، فإن محلِّل Xdebug أو الإضافة مفتوحة المصدر SPX يقدمان معلومات مماثلة، ويُستحسن حصرهما في بيئات التطوير.</p>
 
-$results = $query->getResult();</code></pre>
+<h3>تحسينات Doctrine</h3>
+<p>في تطبيق Symfony، تكون قاعدة البيانات دائماً تقريباً أكبر مصدر للكلفة. الروافع الأساسية:</p>
+<ul>
+<li>تفعيل cache الاستعلامات وcache النتائج</li>
+<li>استخدام استعلامات DQL مع اختيارات جزئية</li>
+<li>تجنّب التحميل الكسول (lazy loading) عبر روابط (joins) صريحة</li>
+<li>ضبط cache المستوى الثاني</li>
+</ul>
+<p>يُضبط cache الاستعلامات (ترجمة DQL إلى SQL) وcache النتائج في <code>config/packages/doctrine.yaml</code>. وتفعّل وصفة Symfony أصلاً إعداداً من هذا النوع لبيئة الإنتاج:</p>
+<pre><code>when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system</code></pre>
+<p>ثم يُفعَّل cache النتائج استعلاماً بعد استعلام:</p>
+<pre><code>// Doctrine query cache
+$query = $em-&gt;createQuery('SELECT p FROM App\Entity\Product p')
+    -&gt;enableResultCache(3600, 'products_list');
+
+$results = $query-&gt;getResult();</code></pre>
+<p>فكّر في الإبطال: حين يتغير منتج، احذف المُدخل المعني، مثلاً عبر <code>$em-&gt;getConfiguration()-&gt;getResultCache()?-&gt;deleteItem('products_list')</code>. الـ cache دون استراتيجية إبطال ينتهي دائماً بتقديم بيانات قديمة.</p>
+<p>تبقى المشكلة الأكثر شيوعاً هي «N+1»: استعلام لتحميل قائمة، ثم استعلام إضافي لكل عنصر بمجرد الوصول إلى علاقة. الربط الصريح مع <code>addSelect</code> يحمّل كل شيء دفعة واحدة، والاختيار نحو DTO يتجنب ملء كيانات كاملة حين لا نحتاج إلا إلى بضعة حقول:</p>
+<pre><code>// Explicit join: categories are loaded in the same query
+$products = $em-&gt;createQueryBuilder()
+    -&gt;select('p', 'c')
+    -&gt;from(Product::class, 'p')
+    -&gt;leftJoin('p.category', 'c')
+    -&gt;where('p.active = :active')
+    -&gt;setParameter('active', true)
+    -&gt;getQuery()
+    -&gt;getResult();
+
+// Partial selection into a DTO, without entity hydration
+$items = $em-&gt;createQuery(
+    'SELECT NEW App\Dto\ProductListItem(p.id, p.name, p.price) FROM App\Entity\Product p'
+)-&gt;getResult();</code></pre>
+<p>للمعالجة على دفعات (استيراد، تصدير)، استخدم <code>toIterable()</code> واستدعِ <code>$em-&gt;clear()</code> بانتظام كي لا يحتفظ الـ EntityManager بآلاف الكائنات في الذاكرة. ولا تنسَ الفهارس: يعرض شريط تصحيح Symfony كل استعلام، والأمر <code>EXPLAIN</code> على أبطئها يكشف بسرعة فهرساً مفقوداً.</p>
+
 <h3>ضبط PHP-FPM</h3>
+<p>يدير PHP-FPM مجموعة من العمليات التي تعالج الطلبات. إن قلّت العمليات اصطفّت الطلبات في طابور؛ وإن كثرت نفدت ذاكرة الخادم وبدأ يلجأ إلى الـ swap، وهذا أسوأ بكثير.</p>
 <pre><code>; PHP-FPM configuration for high performance
 pm = dynamic
 pm.max_children = 50
@@ -45,3 +118,23 @@ pm.start_servers = 10
 pm.min_spare_servers = 5
 pm.max_spare_servers = 20
 pm.max_requests = 500</code></pre>
+<p>هذه القيم لا تُنسَخ بل تُحسَب. تساوي <code>pm.max_children</code> تقريباً الذاكرة المتاحة لـ PHP مقسومة على متوسط ذاكرة العملية الواحدة. مع 4 جيغابايت مخصصة لـ PHP وعمليات بحجم 80 ميغابايت، نصل إلى 50. وتُقاس الذاكرة الفعلية للعمليات على الخادم:</p>
+<pre><code># Average memory (in MB) of PHP-FPM processes
+ps -o rss= -C php-fpm8.3 | awk '{ sum += $1; n++ } END { if (n) printf "%.0f\n", sum / n / 1024 }'</code></pre>
+<p>يعيد <code>pm.max_requests</code> تدوير كل عملية بعد 500 طلب، ما يحدّ من أثر أي تسرّب محتمل للذاكرة. ولمعرفة ما إذا كانت المجموعة محسوبة بشكل صحيح، فعِّل صفحة الحالة وسجلّ الطلبات البطيئة:</p>
+<pre><code>; Pool monitoring
+pm.status_path = /fpm-status
+request_slowlog_timeout = 5s
+slowlog = /var/log/php-fpm/slow.log</code></pre>
+<p>إن أظهرت صفحة الحالة كثيراً <code>max children reached</code> أو طابوراً غير فارغ (<code>listen queue</code>)، فالمجموعة أصغر من اللازم، أو الطلبات بطيئة جداً. عندها يبيّن الـ slowlog بدقة أي دالة كانت تعيق التنفيذ. احمِ رابط صفحة الحالة كي لا يكون متاحاً إلا داخلياً.</p>
+
+<h3>قائمة تحقق للإنتاج</h3>
+<ol>
+<li>OPcache مفعَّل، بنسبة إصابة قريبة من 100% ودون إعادات تشغيل غير متوقعة.</li>
+<li><code>APP_ENV=prod</code> و<code>APP_DEBUG=0</code>، وcache Symfony مُسخَّن مسبقاً عند النشر.</li>
+<li>مُحمِّل تلقائي محسَّن واعتماديات التطوير مستبعدة.</li>
+<li>لا N+1 في الصفحات الرئيسية، وفهارس على الأعمدة المستخدمة في التصفية أو الترتيب.</li>
+<li>مجموعة PHP-FPM محسوبة وفق الذاكرة المقيسة، مع تفعيل صفحة الحالة والـ slowlog.</li>
+<li>تحليل Blackfire (أو ما يعادله) للصفحات الحرجة قبل كل تحسين وبعده.</li>
+</ol>
+<p>أبعد من PHP نفسها، تبقى الرافعة الأقوى غالباً ألا نشغّل PHP أصلاً: cache HTTP (ترويسات <code>Cache-Control</code>، أو وكيل عكسي، أو CDN) للصفحات العامة، ونقل المعالجات الثقيلة إلى عمّال (workers) غير متزامنين. الطلب الذي يُقدَّم من الـ cache لا يكلّف شيئاً تقريباً، مهما كانت جودة الشيفرة التي خلفه.</p>

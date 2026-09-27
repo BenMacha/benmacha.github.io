@@ -1,6 +1,48 @@
 <h2>Docker والتكامل المستمر</h2>
-<p>أصبح Docker عنصراً لا غنى عنه في خطوط CI/CD الحديثة، إذ يضمن الاتساق بين بيئات الاختبار والإنتاج.</p>
-<h3>خط GitHub Actions باستخدام Docker</h3>
+<p>أصبح Docker عنصراً لا غنى عنه في خطوط أنابيب CI/CD الحديثة. فهو يضمن الاتساق بين بيئتي الاختبار والإنتاج.</p>
+<p>المبدأ بسيط: بدلاً من إعادة بناء البيئة على كل جهاز CI (إصدار PHP، الامتدادات، اعتماديات النظام)، نبني <strong>صورة</strong> (image) مرة واحدة، ونختبرها، ثم ننشر هذه الصورة نفسها تماماً. وتختفي عبارة «إنها تعمل على جهازي» الشهيرة، لأن الجهاز أصبح جزءاً من المُخرَج المُسلَّم. كما يصبح خط الأنابيب مستقلاً عن مزوّد CI: فالأوامر نفسها <code>docker build</code> و<code>docker run</code> تعمل على GitHub Actions وGitLab CI وJenkins.</p>
+
+<h3>ملف Dockerfile متعدد المراحل</h3>
+<p>يقوم كل شيء على ملف Dockerfile <strong>متعدد المراحل</strong> (<em>multi-stage</em>): مرحلة أساسية مشتركة، وهدف <code>test</code> يحتوي على اعتماديات التطوير، وهدف <code>production</code> مخفف. ويختار خط الأنابيب الهدف عبر الخيار <code>--target</code>.</p>
+<pre><code># syntax=docker/dockerfile:1
+FROM php:8.3-fpm-alpine AS base
+RUN apk add --no-cache icu-libs libzip \
+    &amp;&amp; apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev \
+    &amp;&amp; docker-php-ext-install intl zip pdo_mysql opcache \
+    &amp;&amp; apk del .build-deps
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+WORKDIR /var/www/app
+
+FROM base AS vendor
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-progress
+
+FROM base AS test
+ENV APP_ENV=test
+COPY composer.json composer.lock ./
+RUN composer install --no-scripts --no-autoloader --prefer-dist --no-progress
+COPY . .
+RUN composer dump-autoload
+
+FROM base AS production
+ENV APP_ENV=prod
+COPY --from=vendor /var/www/app/vendor ./vendor
+COPY . .
+RUN composer dump-autoload --classmap-authoritative --no-dev \
+    &amp;&amp; php bin/console cache:warmup \
+    &amp;&amp; chown -R www-data:www-data var
+USER www-data</code></pre>
+<p>ترتيب التعليمات ليس اعتباطياً: يُنسخ <code>composer.json</code> و<code>composer.lock</code> <strong>قبل</strong> بقية الشيفرة. وما دامت الاعتماديات لم تتغير، يعيد Docker استخدام الطبقة التي تحتوي على <code>vendor/</code>، ولا يُعاد إلا نسخ الشيفرة المصدرية. وهذا ما يجعل عمليات البناء اللاحقة سريعة.</p>
+<p>لا تنسَ أيضاً ملف <code>.dockerignore</code>، الذي يتجنب إرسال ملفات غير مفيدة أو حساسة إلى عملية البناء، وإبطال التخزين المؤقت مع كل تعديل محلي:</p>
+<pre><code>.git
+vendor
+var
+node_modules
+.env.local
+.env.*.local</code></pre>
+
+<h3>خط أنابيب GitHub Actions مع Docker</h3>
+<p>إليك نسخة أولى من خط الأنابيب: مهمة تبني صورة الاختبار وتشغّل PHPUnit داخلها، ثم، إذا نجحت الاختبارات، تبني مهمة ثانية صورة الإنتاج وتدفعها إلى السجل (registry).</p>
 <pre><code>name: CI/CD Pipeline
 on:
   push:
@@ -27,8 +69,10 @@ jobs:
         run: |
           echo "$REGISTRY_TOKEN" | docker login -u user --password-stdin
           docker push app:latest</code></pre>
-<h3>تحسين الـ cache</h3>
-<p>يُعدّ cache طبقات Docker عاملاً حاسماً في سرعة خط الـ pipeline:</p>
+<p>توضح هذه النسخة المبدأ، لكن لها ثلاثة قيود. الوسم <code>app:latest</code> لا يشير إلى أي سجل: تحتاج إلى اسم كامل مثل <code>ghcr.io/organization/app</code>. والوسم <code>latest</code> وحده لا يتيح معرفة أي commit يعمل في الإنتاج، ولا يسهّل التراجع. وأخيراً، تعيد كل مهمة بناء كل شيء من الصفر، لأن الـ runners لا تحتفظ بذاكرة Docker المؤقتة بين تنفيذين.</p>
+
+<h3>تحسين التخزين المؤقت</h3>
+<p>التخزين المؤقت لطبقات Docker أمر حاسم لسرعة خط الأنابيب:</p>
 <pre><code>- name: Set up Docker Buildx
   uses: docker/setup-buildx-action@v3
 - name: Build with cache
@@ -36,10 +80,115 @@ jobs:
   with:
     cache-from: type=gha
     cache-to: type=gha,mode=max</code></pre>
-<h3>تشغيل الاختبارات بالتوازي</h3>
+<p>يخزن <code>type=gha</code> الطبقات في ذاكرة GitHub Actions المؤقتة. ومع <code>mode=max</code>، تُصدَّر أيضاً طبقات المراحل الوسيطة (مثل <code>vendor</code>)، لا طبقات الصورة النهائية فقط. وعندما تتشارك عدة عمليات بناء الذاكرة المؤقتة نفسها، امنح كل واحدة منها <code>scope</code> خاصاً بها حتى لا تكتب إحداها فوق الأخرى.</p>
+
+<h3>خط أنابيب كامل وقابل للتتبع</h3>
+<p>تعالج النسخة التالية هذه القيود: صورة منشورة على GitHub Container Registry، ووسوم مبنية على الـ commit، وذاكرة مؤقتة منفصلة لكل هدف، واختبارات تُنفَّذ مع خدماتها بفضل Docker Compose.</p>
+<pre><code>name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: test
+          tags: app:test
+          load: true
+          cache-from: type=gha,scope=test
+          cache-to: type=gha,scope=test,mode=max
+      - name: Run tests
+        run: docker compose -f compose.ci.yaml run --rm app php bin/phpunit
+      - name: Clean up
+        if: always()
+        run: docker compose -f compose.ci.yaml down -v
+
+  build-and-push:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=production
+          cache-to: type=gha,scope=production,mode=max</code></pre>
+<p>النقاط الأساسية:</p>
+<ul>
+<li><strong><code>load: true</code></strong> يحمّل صورة الاختبار في خادم Docker الخاص بالـ runner لتشغيلها بعد ذلك؛ ومن دون هذا الخيار، يحتفظ Buildx بالنتيجة في ذاكرته المؤقتة الخاصة.</li>
+<li><strong><code>docker/login-action</code></strong> يسجّل الدخول إلى GHCR باستخدام <code>GITHUB_TOKEN</code> الخاص بالـ workflow: لا حاجة إلى إنشاء رمز شخصي، يكفي منح المهمة صلاحية <code>packages: write</code>.</li>
+<li><strong><code>docker/metadata-action</code></strong> يولّد الوسوم: ينتج <code>type=sha</code> وسماً من نوع <code>sha-1a2b3c4</code>، ولا يُضاف <code>latest</code> إلا على الفرع الافتراضي. وهكذا ترتبط كل صورة في الإنتاج بـ commit محدد، ويكون التراجع بإعادة نشر الوسم السابق.</li>
+<li><strong>مهمة النشر</strong> لا تُنفَّذ إلا على <code>main</code>: تُختبر الـ pull requests لكنها لا تنشر شيئاً.</li>
+</ul>
+
+<h3>الاختبارات بالتوازي</h3>
 <ul>
 <li>استخدم Docker Compose لتشغيل خدمات الاختبار (قاعدة البيانات، Redis)</li>
-<li>وزّع مجموعات الاختبارات على حاويات (containers) منفصلة لتعمل بالتوازي</li>
+<li>شغّل مجموعات الاختبارات بالتوازي في حاويات منفصلة</li>
 <li>نظّف الموارد بعد كل تنفيذ</li>
 </ul>
+<p>يشغّل الملف <code>compose.ci.yaml</code> المستخدم أعلاه قاعدة البيانات بجانب صورة الاختبار، ولا ينفّذ الاختبارات إلا بعد أن يصبح MySQL جاهزاً فعلاً:</p>
+<pre><code>services:
+  app:
+    image: app:test
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:root@mysql:3306/test
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10</code></pre>
+<p>الشرط <code>service_healthy</code> أساسي: فمجرد <code>depends_on</code> ينتظر بدء الحاوية فقط، لا أن يقبل MySQL الاتصالات. وللتوازي، يمكن لمصفوفة GitHub Actions تشغيل عدة مهام بالصورة نفسها، تنفّذ كل منها مجموعة PHPUnit مختلفة (<code>--testsuite unit</code>، <code>--testsuite integration</code>). أما الأمر الختامي <code>down -v</code>، المنفَّذ حتى عند الفشل بفضل <code>if: always()</code>، فيحذف الحاويات والمجلدات الدائمة (volumes).</p>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong>أسرار داخل الصورة</strong>: لا تنسخ أبداً ملف <code>.env.local</code> أو مفتاحاً إلى الصورة، ولا تمرّر الأسرار عبر <code>ARG</code>، الذي يبقى مرئياً في سجل الصورة. تُحقن أسرار الإنتاج عند تشغيل الحاوية.</li>
+<li><strong>نشر صورة الاختبار</strong>: من دون <code>--target production</code>، يبني Docker المرحلة الأخيرة من ملف Dockerfile. تأكد من أنها المرحلة التي تتوقعها.</li>
+<li><strong>اسم صورة بأحرف كبيرة</strong>: تفرض السجلات أسماء بأحرف صغيرة، وهذا يسبب مشكلة إذا احتوى اسم مؤسسة GitHub على أحرف كبيرة.</li>
+<li><strong>ذاكرة مؤقتة تُبطَل باستمرار</strong>: تعليمة <code>COPY . .</code> موضوعة في وقت مبكر جداً، أو غياب <code>.dockerignore</code>، يؤدي إلى إعادة بناء الاعتماديات مع كل commit.</li>
+</ul>
+
+<h3>خلاصة</h3>
+<p>ملف Dockerfile متعدد المراحل، وذاكرة Buildx مؤقتة مضبوطة جيداً، وصور موسومة حسب الـ commit، وخدمات اختبار ينسّقها Compose: بهذه العناصر الأربعة، يبني خط الأنابيب مرة واحدة ما يختبره وينشره.</p>
 <p>تتيح هذه الاستراتيجية تقليص زمن النشر من 30 دقيقة إلى أقل من 5 دقائق.</p>

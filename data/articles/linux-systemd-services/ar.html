@@ -1,5 +1,15 @@
 <h2>إدارة تطبيقاتك باستخدام systemd</h2>
-<p>systemd هو مدير الخدمات القياسي في Linux. يتيح لك إنشاء خدمة مخصصة إدارة دورة حياة تطبيقاتك.</p>
+<p>يُعدّ systemd مدير الخدمات القياسي في Linux. يتيح لك إنشاء خدمة مخصصة إدارة دورة حياة تطبيقاتك: التشغيل التلقائي عند الإقلاع، وإعادة التشغيل بعد الانهيار، وترتيب التشغيل بالنسبة لقاعدة البيانات، وتجميع السجلات مركزياً، وتقييد الموارد. كل ذلك دون تثبيت مشرف إضافي: فـ systemd موجود أصلاً في Debian وUbuntu وRHEL وفي كل التوزيعات الحالية تقريباً.</p>
+<p>بالنسبة لتطبيق PHP، حالات الاستخدام النموذجية هي workers طوابير الرسائل، والمستهلكون طويلو التشغيل، وخوادم HTTP المدمجة الصغيرة، والمهام المجدولة. لنرَ كيف نكتب وحدات (units) موثوقة، ثم كيف نشغّلها يومياً.</p>
+
+<h3>تشريح ملف unit</h3>
+<p>تُوصف الخدمة بملف نصي بصيغة INI، يوضع في <code>/etc/systemd/system/</code> للوحدات الخاصة بالجهاز. ويتضمن ثلاثة أقسام:</p>
+<ul>
+<li><strong><code>[Unit]</code></strong>: الوصف والاعتماديات على الوحدات الأخرى.</li>
+<li><strong><code>[Service]</code></strong>: كيفية تشغيل العملية وإيقافها وإعادة تشغيلها، وتحت أي هوية.</li>
+<li><strong><code>[Install]</code></strong>: الهدف (target) الذي تُربط به الخدمة عند تفعيلها باستخدام <code>systemctl enable</code>.</li>
+</ul>
+
 <h3>إنشاء خدمة</h3>
 <pre><code># /etc/systemd/system/myapp.service
 [Unit]
@@ -21,26 +31,114 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target</code></pre>
+<p>التوجيهات المهمة:</p>
+<ul>
+<li><strong><code>After</code> و<code>Requires</code></strong>: مفهومان مختلفان. يحدد <code>After</code> <em>ترتيب</em> التشغيل؛ بينما يحدد <code>Requires</code> <em>اعتمادية</em>: إذا أُوقف MySQL تتوقف الخدمة أيضاً. أما <code>Wants</code> فهو صيغة أكثر مرونة تشغّل الاعتمادية دون أن تفشل إذا كانت غائبة. في بعض التوزيعات تُسمى الخدمة <code>mariadb.service</code>: تحقق من الاسم الدقيق.</li>
+<li><strong><code>Type=simple</code></strong>: العملية التي يطلقها <code>ExecStart</code> هي العملية الرئيسية وتبقى في المقدمة. وهذه حال <code>messenger:consume</code>. استخدم <code>Type=oneshot</code> لأمر يُنفَّذ ثم ينتهي.</li>
+<li><strong><code>User</code> و<code>Group</code></strong>: لا تشغّل أي تطبيق أبداً بصلاحيات root. هنا يملك الـ worker الصلاحيات نفسها التي يملكها PHP-FPM.</li>
+<li><strong><code>WorkingDirectory</code></strong>: يجب أن يكون مسار الملف التنفيذي مطلقاً، لكن الوسائط مثل <code>bin/console</code> تُحلّ انطلاقاً من هذا المجلد.</li>
+<li><strong><code>Restart=always</code> و<code>RestartSec=5</code></strong>: مع <code>--limit=100</code>، يتوقف الـ worker عمداً بعد 100 رسالة؛ ثم يعيد systemd تشغيله بعد خمس ثوانٍ بذاكرة نظيفة. أما <code>Restart=on-failure</code> فلا يعيد التشغيل إلا عند التوقف بخطأ.</li>
+<li><strong><code>StandardOutput=journal</code></strong>: يلتقط journald مخرجات العملية، ويختمها بالوقت، ويربطها بالخدمة.</li>
+</ul>
+
 <h3>الأوامر الأساسية</h3>
 <pre><code>sudo systemctl daemon-reload
 sudo systemctl enable myapp
 sudo systemctl start myapp
 sudo systemctl status myapp
 journalctl -u myapp -f</code></pre>
+<p>الأمر <code>daemon-reload</code> إلزامي بعد كل إنشاء أو تعديل لملف unit: من دونه يستمر systemd في استخدام النسخة القديمة. ينشئ <code>enable</code> الرابط الذي يشغّل الخدمة عند الإقلاع، ويشغّلها <code>start</code> فوراً؛ أما <code>enable --now</code> فيقوم بالأمرين معاً. قبل تحميل ملف، يبلّغ <code>systemd-analyze verify /etc/systemd/system/myapp.service</code> عن التوجيهات غير المعروفة والأخطاء الإملائية.</p>
+<p>بالنسبة للسجلات، يوفر <code>journalctl</code> مرشحات قيّمة أثناء الحوادث:</p>
+<pre><code># Logs from the last hour, errors only
+journalctl -u myapp --since "1 hour ago" -p err
+
+# Logs from the current boot, without paging
+journalctl -u myapp -b --no-pager</code></pre>
+
+<h3>تجنّب حلقات إعادة التشغيل</h3>
+<p>الخدمة التي تنهار فور تشغيلها (ملف إعدادات مفقود، قاعدة بيانات غير قابلة للوصول) ستُعاد تشغيلها في حلقة. افتراضياً، يتخلى systemd بعد 5 عمليات تشغيل خلال 10 ثوانٍ ويضع الخدمة في حالة فشل. ومع <code>RestartSec=5</code> لا تُبلغ هذه العتبة أبداً، لذا عدّل النافذة في القسم <code>[Unit]</code>:</p>
+<pre><code>[Unit]
+StartLimitIntervalSec=300
+StartLimitBurst=10</code></pre>
+<p>هنا، أكثر من 10 عمليات تشغيل خلال 5 دقائق تنقل الخدمة إلى الحالة <code>failed</code>، التي تظهر في <code>systemctl --failed</code> ويسهل مراقبتها. بعد إصلاح السبب، يعيد <code>systemctl reset-failed myapp</code> العدّاد إلى الصفر.</p>
+
 <h3>إدارة workers الخاصة بـ Symfony Messenger</h3>
-<p>بالنسبة لتطبيقات Symfony التي تستخدم Messenger، أنشئ خدمة متعددة النُّسخ (instances):</p>
+<p>بالنسبة لتطبيقات Symfony التي تستخدم Messenger، أنشئ خدمة بعدة نسخ (instances):</p>
 <pre><code># /etc/systemd/system/messenger-worker@.service
+[Unit]
+Description=Symfony Messenger worker %i
+
 [Service]
+User=www-data
+Group=www-data
 ExecStart=/usr/bin/php /var/www/app/bin/console messenger:consume async --time-limit=3600
 Restart=always
+
+[Install]
+WantedBy=multi-user.target
 
 # Start 3 workers
 sudo systemctl enable messenger-worker@{1..3}
 sudo systemctl start messenger-worker@{1..3}</code></pre>
+<p>الرمز <code>@</code> في اسم الملف يجعله <strong>قالباً</strong> (template): فـ <code>messenger-worker@1</code> و<code>messenger-worker@2</code> وغيرهما نسخ منفصلة من الملف نفسه، ويُستبدل <code>%i</code> بمعرّف النسخة. أما الصيغة <code>{1..3}</code> فهي توسيع خاص بـ shell Bash، وليست ميزة من ميزات systemd.</p>
+<p>يجعل الخيار <code>--time-limit=3600</code> كل worker يعيد التشغيل كل ساعة، مما يحدّ من أثر تسرّبات الذاكرة. يمكنك أيضاً استخدام <code>--memory-limit=128M</code>. أثناء النشر، تحتفظ الـ workers بالكود القديم في الذاكرة: نفّذ <code>php bin/console messenger:stop-workers</code> في نهاية النشر. ينهي كل worker رسالته الحالية ثم يتوقف، فيعيد systemd تشغيله على الكود الجديد.</p>
+
+<h3>متغيرات البيئة والتجاوزات</h3>
+<p>لا تضع الأسرار في ملف الـ unit، فهو مقروء للجميع. استخدم ملف بيئة محمياً:</p>
+<pre><code>[Service]
+EnvironmentFile=/etc/myapp/env
+Environment=APP_ENV=prod</code></pre>
+<p>يحتوي الملف <code>/etc/myapp/env</code> على أسطر <code>KEY=value</code>، ويجب أن يملكه root بصلاحيات <code>600</code>: إذ يقرؤه systemd قبل تبديل المستخدم. لتعديل خدمة توفرها حزمة دون المساس بالملف الأصلي، استخدم <code>sudo systemctl edit nginx</code>: ينشئ هذا الأمر ملف تجاوز في <code>/etc/systemd/system/nginx.service.d/</code> يصمد أمام التحديثات.</p>
+
+<h3>تقييد الموارد وعزل الخدمة</h3>
+<p>يضع systemd كل خدمة في cgroup خاص بها، مما يتيح تحديد سقف لمواردها وتقييد ما يمكنها رؤيته من النظام:</p>
+<pre><code>[Service]
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=100
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true</code></pre>
+<p>يقتل <code>MemoryMax</code> العملية إذا تجاوزت الحد، بدلاً من ترك النواة تختار ضحية عشوائياً. ويحدّ <code>CPUQuota=50%</code> الخدمة بنصف نواة واحدة. يمنحها <code>PrivateTmp</code> مجلد <code>/tmp</code> معزولاً، ويجعل <code>ProtectSystem=full</code> المجلدات <code>/usr</code> و<code>/boot</code> و<code>/etc</code> للقراءة فقط، ويخفي <code>ProtectHome</code> المجلدات الشخصية. يمنح الأمر <code>systemd-analyze security myapp</code> الخدمة درجة تعرّض ويسرد خيارات التحصين المتاحة.</p>
+
+<h3>استبدال cron بمؤقّت (timer)</h3>
+<p>مؤقّتات systemd بديل حديث لـ cron: تظهر عمليات التنفيذ في السجل، ويكون الفشل مرئياً في <code>systemctl --failed</code>، ويمكن تدارك تنفيذ فائت أثناء توقف الجهاز. يفعّل المؤقّت الخدمة التي تحمل الاسم نفسه:</p>
+<pre><code># /etc/systemd/system/app-cleanup.service
+[Unit]
+Description=Daily application cleanup
+
+[Service]
+Type=oneshot
+User=www-data
+WorkingDirectory=/var/www/myapp
+ExecStart=/usr/bin/php bin/console app:cleanup
+
+# /etc/systemd/system/app-cleanup.timer
+[Unit]
+Description=Run app-cleanup every day at 3am
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now app-cleanup.timer
+systemctl list-timers
+systemd-analyze calendar "*-*-* 03:00:00"</code></pre>
+<p>يُطلق <code>Persistent=true</code> الخدمة عند الإقلاع إذا فات التنفيذ المجدول. ويتحقق <code>systemd-analyze calendar</code> من صحة التعبير ويعرض موعد التنفيذ التالي.</p>
+
 <h3>أفضل الممارسات</h3>
 <ul>
 <li>حدّد الاعتماديات باستخدام <code>After</code> و<code>Requires</code></li>
-<li>اضبط <code>Restart=always</code> لضمان المرونة وقدرة الخدمة على التعافي</li>
-<li>استخدم سجلات systemd (journal) بدلاً من ملفات السجل</li>
+<li>اضبط <code>Restart=always</code> لضمان المرونة</li>
+<li>استخدم سجلات systemd بدلاً من ملفات السجل</li>
 <li>قيّد الموارد باستخدام cgroups</li>
+<li>لا تشغّل أي تطبيق بصلاحيات root: اضبط دائماً <code>User</code> و<code>Group</code></li>
+<li>خزّن الأسرار في <code>EnvironmentFile</code> محمي</li>
+<li>استخدم <code>systemctl edit</code> لتجاوز خدمة توفرها حزمة</li>
+<li>أعد تشغيل الـ workers عند كل نشر باستخدام <code>messenger:stop-workers</code></li>
 </ul>
+<p>ليس systemd الحل المناسب في كل مكان: ففي بيئة تعتمد على الحاويات، يتولى المنسّق (Docker، Kubernetes) إدارة دورة حياة العمليات. لكن على خادم تقليدي أو VPS، تحلّ بضعة ملفات unit مكتوبة جيداً محلّ Supervisor وسكربتات init المصنوعة يدوياً وجزء كبير من crontab، وبشكل أفضل.</p>

@@ -1,5 +1,11 @@
 <h2>Migrer Symfony sans interruption de service</h2>
 <p>La migration d'une application Symfony de la version 2.8 à 6.4 est un défi majeur. Chez Keytchens, nous avons réalisé cette migration sur une plateforme en production gérant des commandes en temps réel, sans aucune interruption de service.</p>
+<p>Quatre versions majeures séparent Symfony 2.8 de Symfony 6.4. Entre les deux, la structure des dossiers a changé, l'injection de dépendances est devenue automatique, le système de sécurité a été réécrit et PHP est passé de la version 5 à la version 8. Cet article présente une méthode pour franchir ces étapes une par une, en gardant l'application en production à chaque instant.</p>
+
+<h3>Le principe : suivre le modèle de versions de Symfony</h3>
+<p>Symfony publie une version mineure tous les six mois, et la dernière mineure de chaque majeure (x.4) est une version LTS. La règle clé est la suivante : une fonctionnalité n'est jamais supprimée dans une version majeure sans avoir été dépréciée dans la version précédente. Une application qui tourne sur la dernière mineure d'une majeure <strong>sans aucune dépréciation</strong> peut donc passer à la majeure suivante sans casse.</p>
+<p>La migration se découpe ainsi en paliers, chacun validé et déployé en production avant de passer au suivant.</p>
+
 <h3>Stratégie de migration progressive</h3>
 <p>Plutôt qu'une réécriture complète, nous avons opté pour une migration incrémentale :</p>
 <ul>
@@ -8,15 +14,48 @@
 <li><strong>Phase 3</strong> : Symfony 4.4 → 5.4 (suppression des dépréciations)</li>
 <li><strong>Phase 4</strong> : Symfony 5.4 → 6.4 (adoption PHP 8.1+)</li>
 </ul>
+<p>Chaque palier impose aussi une version minimale de PHP : PHP 7.1.3 pour Symfony 4.4, PHP 7.2.5 pour Symfony 5.4 et PHP 8.1 pour Symfony 6.4. Il est souvent plus simple de monter d'abord la version de PHP sur la version de Symfony courante, puis de migrer Symfony : on ne change qu'une variable à la fois.</p>
+
+<h3>Avant de commencer</h3>
+<ol>
+<li><strong>Des tests</strong> : sans tests fonctionnels couvrant les parcours critiques, chaque palier est un pari. Commencez par là.</li>
+<li><strong>Un inventaire des dépendances</strong> : <code>composer outdated</code> et la liste des bundles tiers. Un bundle abandonné, non compatible avec la version cible, doit être remplacé avant la migration, pas pendant.</li>
+<li><strong>Un environnement de préproduction</strong> alimenté avec une copie anonymisée des données de production.</li>
+<li><strong>Un suivi des erreurs</strong> (logs centralisés, outil de type Sentry) pour détecter immédiatement une régression après déploiement.</li>
+</ol>
+
 <h3>Outils indispensables</h3>
+<p>Le PHPUnit Bridge de Symfony liste toutes les dépréciations déclenchées pendant les tests. Rector applique automatiquement une grande partie des corrections :</p>
 <pre><code># Détecter les dépréciations
-composer require symfony/phpunit-bridge
-PHPUnit_SYMFONY_DEPRECATIONS_HELPER=max[total]=0 php bin/phpunit
+composer require --dev symfony/phpunit-bridge
+SYMFONY_DEPRECATIONS_HELPER='max[total]=0' php bin/phpunit
 
 # Rectifier automatiquement
-composer require rector/rector
-vendor/bin/rector process src --set symfony54</code></pre>
+composer require --dev rector/rector
+vendor/bin/rector process --dry-run
+vendor/bin/rector process</code></pre>
+<p>Avec <code>max[total]=0</code>, la moindre dépréciation fait échouer la suite de tests : c'est le réglage à viser en intégration continue avant de changer de majeure. Rector se configure dans un fichier <code>rector.php</code> à la racine du projet, en choisissant l'ensemble de règles correspondant à la version cible :</p>
+<pre><code>&lt;?php
+
+use Rector\Config\RectorConfig;
+use Rector\Symfony\Set\SymfonySetList;
+
+return RectorConfig::configure()
+    -&gt;withPaths([__DIR__ . '/src', __DIR__ . '/tests'])
+    -&gt;withSets([SymfonySetList::SYMFONY_54]);</code></pre>
+<p>Lancez toujours Rector avec <code>--dry-run</code> d'abord et relisez le diff : c'est un outil puissant, pas infaillible. Côté conteneur de services, <code>php bin/console debug:container --deprecations</code> (disponible depuis Symfony 5.1) liste les dépréciations levées à la compilation.</p>
+<p>À partir de la structure Flex, la version de Symfony se pilote dans <code>composer.json</code>, puis se met à jour en une commande :</p>
+<pre><code>{
+    "extra": {
+        "symfony": {
+            "require": "6.4.*"
+        }
+    }
+}</code></pre>
+<pre><code>composer update "symfony/*" --with-all-dependencies</code></pre>
+
 <h3>Points critiques</h3>
+<p>Le changement le plus visible est la configuration des services. Symfony 2.8 imposait de déclarer chaque service à la main ; depuis Symfony 3.3, l'autowiring et l'autoconfiguration enregistrent automatiquement les classes de <code>src/</code> :</p>
 <pre><code># Migration des services (avant - services.yml)
 services:
     app.manager.order:
@@ -30,6 +69,15 @@ services:
         autoconfigure: true
     App\:
         resource: '../src/'</code></pre>
+<p>Si du code récupère encore le service par son ancien identifiant, par exemple <code>$container-&gt;get('app.manager.order')</code>, déclarez un alias temporaire vers la classe, puis remplacez progressivement ces appels par de l'injection dans le constructeur. Les services sont privés par défaut depuis Symfony 4.0 : l'accès direct au conteneur doit disparaître.</p>
+<p>Les autres points qui demandent de l'attention :</p>
+<ul>
+<li><strong>La structure des dossiers</strong> (passage à 4.x) : <code>app/config</code> devient <code>config/</code>, <code>web/</code> devient <code>public/</code>, les templates vont dans <code>templates/</code> et les bundles s'enregistrent dans <code>config/bundles.php</code>.</li>
+<li><strong>La sécurité</strong> : le système d'authentification Guard a été remplacé par le nouveau système d'authenticators, introduit en 5.1 et seul disponible en 6.0. Les authentificateurs personnalisés doivent être réécrits.</li>
+<li><strong>Les commandes et contrôleurs</strong> : <code>ContainerAwareCommand</code> a été supprimée en 5.0, et les contrôleurs doivent recevoir leurs dépendances par injection plutôt que via <code>$this-&gt;get()</code>.</li>
+<li><strong>Les types de retour</strong> : Symfony 6 ajoute des types de retour natifs à ses interfaces. Les classes qui les implémentent ou les étendent (voters, normalizers, commandes) doivent déclarer les mêmes types.</li>
+</ul>
+
 <h3>Gestion du zero-downtime</h3>
 <p>Pour maintenir le service pendant la migration :</p>
 <ul>
@@ -38,4 +86,24 @@ services:
 <li>Tests de régression automatisés couvrant 85% du code</li>
 <li>Rollback automatique en cas de détection d'erreurs</li>
 </ul>
+<p>Le déploiement blue-green consiste à faire tourner deux environnements côte à côte : la version actuelle reçoit le trafic pendant que la nouvelle démarre et passe ses vérifications de santé. Le reverse proxy bascule ensuite le trafic, et l'ancienne version reste disponible pour un retour arrière immédiat. Condition indispensable : les deux versions doivent fonctionner avec le même schéma de base de données. Les migrations Doctrine doivent donc rester rétrocompatibles, selon le principe détaillé dans l'article <a href="/blog/database-migration-zero-downtime">Migrations base de données sans interruption</a>.</p>
+<p>Les feature flags complètent ce dispositif : le nouveau code est déployé mais désactivé, puis activé pour une partie des utilisateurs, et coupé en un instant si un problème apparaît.</p>
+
+<h3>Pièges à éviter</h3>
+<ul>
+<li><strong>Sauter des paliers</strong> : passer directement de 2.8 à 4.4 cumule des centaines de changements et rend chaque erreur difficile à attribuer.</li>
+<li><strong>Mélanger migration et nouvelles fonctionnalités</strong> : une branche de migration qui vit des mois devient impossible à fusionner. Livrez chaque palier rapidement, en petites pull requests.</li>
+<li><strong>Ignorer les dépréciations des bundles tiers</strong> : elles bloqueront la majeure suivante tout autant que les vôtres.</li>
+<li><strong>Oublier le cache et OPcache</strong> au déploiement : un <code>cache:clear</code> et un rechargement de PHP-FPM sont indispensables après chaque palier.</li>
+</ul>
+
+<h3>Checklist par palier</h3>
+<ol>
+<li>Monter PHP à la version requise et vérifier les tests.</li>
+<li>Atteindre zéro dépréciation sur la version courante.</li>
+<li>Mettre à jour Symfony et les bundles vers la majeure suivante.</li>
+<li>Passer Rector, relire le diff, corriger les cas restants.</li>
+<li>Valider en préproduction, puis déployer en blue-green.</li>
+<li>Surveiller les erreurs et les performances avant d'attaquer le palier suivant.</li>
+</ol>
 <p>Cette migration a permis d'améliorer les performances de 40% et de réduire la dette technique de manière significative.</p>

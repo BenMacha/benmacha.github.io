@@ -1,6 +1,12 @@
 <h2>Jenkins Pipeline: advanced automation</h2>
-<p>Jenkins remains a popular CI/CD solution for organizations that need full control over their build infrastructure.</p>
+<p>Jenkins remains a popular CI/CD solution for organizations that need full control over their build infrastructure. Where GitHub Actions or GitLab CI tie you to their platform, Jenkins runs on your own servers, connects to any Git repository and can be extended through a very large plugin ecosystem. That freedom comes at a price: keeping the controller, agents and plugins up to date is your job.</p>
+<p>Since Jenkins 2, the right way to describe a build is no longer to click through the UI but to write a versioned <strong>Jenkinsfile</strong> at the root of the project. The pipeline then evolves with the code: a branch can change its own build chain, and every change goes through review like any other modification.</p>
+
+<h3>Declarative or scripted?</h3>
+<p>Jenkins offers two syntaxes. A <strong>scripted</strong> pipeline is free-form Groovy: powerful, but hard to read and validate. A <strong>declarative</strong> pipeline enforces a structure (<code>pipeline</code>, <code>agent</code>, <code>stages</code>, <code>post</code>) that is checked before execution. For a typical PHP application, declarative covers every need; when complex logic becomes necessary, a <code>script { }</code> block or a shared library lets you step outside it occasionally.</p>
+
 <h3>Declarative pipeline</h3>
+<p>Here is a complete pipeline for a Symfony project: dependency installation, static analysis and tests in parallel, then deployment from the main branch.</p>
 <pre><code>pipeline {
     agent {
         docker {
@@ -62,6 +68,116 @@
         }
     }
 }</code></pre>
+
+<h3>Reading the pipeline, block by block</h3>
+<ul>
+<li><strong><code>agent { docker { … } }</code></strong>: each build runs in a throwaway container created from the given image. The <em>Docker Pipeline</em> plugin is required, and the agent must have Docker available.</li>
+<li><strong><code>environment</code></strong>: defines variables visible to every step. <code>credentials('database-url')</code> fetches a secret stored in Jenkins; for a "Secret text" credential, the variable holds the value directly and Jenkins masks it in the logs.</li>
+<li><strong><code>parallel</code></strong>: PHPStan and PHP-CS-Fixer do not depend on each other, so they run at the same time. The parent stage fails if either one fails.</li>
+<li><strong><code>junit</code></strong>: placed in a <code>post { always { } }</code> block, it publishes the test report even when tests fail. Jenkins then shows the history and flaky tests.</li>
+<li><strong><code>when { branch 'main' }</code></strong>: this condition only works in a <em>Multibranch Pipeline</em> job, where Jenkins knows the branch name. In a plain Pipeline job, the stage would always be skipped.</li>
+<li><strong><code>post { failure { } }</code></strong>: the Slack notification is only sent on failure. <code>slackSend</code> is provided by the <em>Slack Notification</em> plugin.</li>
+</ul>
+
+<h3>A build image that actually contains Composer</h3>
+<p>A classic trap: the official <code>php:8.3-cli</code> image contains neither Composer, nor <code>git</code>, nor the <code>zip</code> extension. The <code>composer install</code> command in the pipeline above will therefore fail until the image is extended. The cleanest solution is a <code>Dockerfile.ci</code> versioned with the project:</p>
+<pre><code>FROM php:8.3-cli
+
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends git unzip libzip-dev libicu-dev openssh-client \
+    &amp;&amp; docker-php-ext-install zip intl pdo_mysql \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer</code></pre>
+<p>Then simply replace the <code>docker</code> block with <code>dockerfile { filename 'Dockerfile.ci' }</code>: Jenkins builds the image, caches it on the agent and runs the build inside it. The CI environment is now described in the repository instead of in a machine's configuration.</p>
+
+<h3>A more robust pipeline</h3>
+<p>The first example works, but it lacks several safeguards that are always added in production: a maximum duration, no concurrent builds on the same branch, history rotation, artifact archiving and a human approval before going to production.</p>
+<pre><code>pipeline {
+    agent {
+        dockerfile {
+            filename 'Dockerfile.ci'
+        }
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timestamps()
+    }
+
+    environment {
+        APP_ENV = 'test'
+        COMPOSER_HOME = "${env.WORKSPACE}/.composer"
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'composer install --prefer-dist --no-progress --no-interaction'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mkdir -p dist &amp;&amp; tar --exclude=./dist --exclude=./.git -czf dist/app.tar.gz .'
+                archiveArtifacts artifacts: 'dist/app.tar.gz', fingerprint: true
+            }
+        }
+
+        stage('Deploy production') {
+            when {
+                branch 'main'
+                beforeInput true
+            }
+            input {
+                message 'Deploy to production?'
+                ok 'Deploy'
+                submitter 'release-managers'
+            }
+            steps {
+                sshagent(credentials: ['deploy-ssh-key']) {
+                    sh './deploy.sh production'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}</code></pre>
+<p>A few explanations:</p>
+<ul>
+<li><strong><code>timeout</code></strong> aborts a stuck build (a test waiting for an unavailable service, for example) instead of tying up an executor for hours.</li>
+<li><strong><code>disableConcurrentBuilds()</code></strong> prevents two deployments of the same branch from overlapping.</li>
+<li><strong><code>COMPOSER_HOME</code></strong> points to the workspace: Jenkins starts the container with the agent's UID, whose home directory is often not writable inside the image.</li>
+<li><strong><code>input</code></strong> pauses the pipeline until a member of the <code>release-managers</code> group approves. With <code>beforeInput true</code>, the branch condition is evaluated before the prompt, so other branches are never blocked.</li>
+<li><strong><code>sshagent</code></strong> (<em>SSH Agent</em> plugin) loads the deployment key only for the duration of the step, without ever writing it to the workspace.</li>
+<li><strong><code>cleanWs()</code></strong> (<em>Workspace Cleanup</em> plugin) deletes the workspace at the end, so the next build starts from a clean state.</li>
+</ul>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong>Secret interpolation</strong>: writing <code>sh "mysql -p${DB_PASSWORD}"</code> with double quotes makes Groovy interpolate the secret before execution, and Jenkins prints a security warning. Use single quotes, <code>sh 'mysql -p"$DB_PASSWORD"'</code>, so the shell reads the environment variable itself.</li>
+<li><strong>Agent held during an <code>input</code></strong>: with a global agent, the executor stays reserved while waiting for approval, and the global <code>timeout</code> keeps running. For long waits, declare <code>agent none</code> at pipeline level and one agent per stage.</li>
+<li><strong>Unmaintained plugins</strong>: every plugin is a dependency. Stick to the ones you need and update them regularly, as they are a frequent source of vulnerabilities.</li>
+<li><strong>Builds on the controller</strong>: configure zero executors on the built-in node and run builds on dedicated agents, to protect the controller and its secrets.</li>
+</ul>
+
+<h3>Validate the Jenkinsfile before pushing</h3>
+<p>A syntax error in a Jenkinsfile is often only discovered after the push. Jenkins exposes a linter for declarative pipelines, usable with an API token:</p>
+<pre><code>curl -X POST --user "$JENKINS_USER:$JENKINS_TOKEN" \
+  -F "jenkinsfile=&lt;Jenkinsfile" \
+  "$JENKINS_URL/pipeline-model-converter/validate"</code></pre>
+<p>The response states whether the file is valid or points to the faulty line. This command fits easily into a Git hook or your editor.</p>
+
+<h3>Sharing code with Shared Libraries</h3>
+<p>When several projects share the same steps (notification, deployment, image publishing), duplicating the Jenkinsfile quickly becomes unmanageable. <strong>Shared Libraries</strong> let you put that common code in a separate Git repository, loaded with <code>@Library('library-name') _</code> at the top of the Jenkinsfile. Each project then keeps a short, readable pipeline.</p>
+
 <h3>Jenkins best practices</h3>
 <ul>
 <li>Use Docker agents for isolation</li>
@@ -69,4 +185,9 @@
 <li>Store credentials in Jenkins Credentials</li>
 <li>Set up notifications for failures</li>
 <li>Archive build artifacts</li>
+<li>Version the Jenkinsfile and the build image with the code</li>
+<li>Always define a <code>timeout</code> and history rotation</li>
 </ul>
+
+<h3>When not to choose Jenkins</h3>
+<p>If your code is hosted on GitHub or GitLab and you have no particular hosting constraint, the tools built into those platforms require far less maintenance. Jenkins really makes sense when builds must stay on your network, access internal resources, or when you already have a team able to run the platform over the long term.</p>

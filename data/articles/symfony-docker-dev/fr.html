@@ -1,6 +1,18 @@
 <h2>Symfony et Docker : le duo parfait</h2>
 <p>Docker et Symfony forment une combinaison puissante pour le développement. Chez Keytchens, plateforme food-tech de gestion de commandes en temps réel, cette stack a permis d'unifier les environnements de développement pour toute l'équipe.</p>
+<p>Ce guide décrit un environnement de développement complet : PHP-FPM, Nginx, MySQL, Redis et RabbitMQ, pilotés par Docker Compose et un Makefile. L'objectif est simple : un nouveau développeur clone le dépôt, lance une commande, et obtient une application fonctionnelle, identique à celle de ses collègues.</p>
+
+<h3>Pourquoi conteneuriser l'environnement de développement</h3>
+<p>Sans conteneurs, chaque poste accumule sa propre version de PHP, ses extensions, son serveur MySQL et ses réglages. Les écarts finissent toujours par produire le fameux « ça marche chez moi ». Docker règle ce problème en décrivant l'environnement sous forme de code versionné avec l'application :</p>
+<ul>
+<li>la version de PHP et la liste des extensions sont fixées dans un Dockerfile ;</li>
+<li>les versions de MySQL, Redis et RabbitMQ sont celles de la production, pas celles installées par hasard sur le poste ;</li>
+<li>plusieurs projets aux besoins incompatibles (PHP 7.4 et PHP 8.3, par exemple) cohabitent sans conflit ;</li>
+<li>une mise à jour de l'environnement passe par une pull request, relue comme n'importe quel code.</li>
+</ul>
+
 <h3>Docker Compose pour Symfony</h3>
+<p>Le fichier <code>compose.yaml</code> (ou <code>docker-compose.yml</code>) déclare l'ensemble des services :</p>
 <pre><code>version: '3.8'
 services:
   php:
@@ -37,17 +49,86 @@ services:
 
 volumes:
   mysql-data:</code></pre>
+<p>Quelques points à comprendre dans ce fichier :</p>
+<ul>
+<li><strong>Le bind mount</strong> <code>.:/var/www/html</code> monte le code source du poste dans les conteneurs <code>php</code> et <code>nginx</code> : toute modification est visible immédiatement, sans reconstruire l'image.</li>
+<li><strong>Le volume nommé</strong> <code>mysql-data</code> conserve les données de la base entre deux <code>docker compose down</code>. Seul <code>docker compose down -v</code> le supprime.</li>
+<li><strong>Le réseau</strong> est créé automatiquement : chaque service est joignable par son nom (<code>mysql</code>, <code>redis</code>, <code>rabbitmq</code>). Depuis Symfony, on n'utilise donc jamais <code>localhost</code> pour atteindre la base.</li>
+<li><strong>Le port 15672</strong> expose l'interface d'administration de RabbitMQ sur <code>http://localhost:15672</code> (identifiants par défaut <code>guest</code> / <code>guest</code>).</li>
+<li><strong>La clé <code>version</code></strong> est aujourd'hui ignorée par Docker Compose v2 : elle ne fait qu'afficher un avertissement et peut être retirée sans risque.</li>
+</ul>
+
+<h3>Attendre que la base soit réellement prête</h3>
+<p><code>depends_on</code> sous sa forme simple ne garantit que l'ordre de démarrage, pas la disponibilité : MySQL peut encore être en cours d'initialisation quand PHP essaie de s'y connecter. Un <code>healthcheck</code> combiné à la condition <code>service_healthy</code> règle ce problème :</p>
+<pre><code>services:
+  php:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  mysql:
+    image: mysql:8.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10</code></pre>
+
+<h3>Configuration Nginx</h3>
+<p>Le fichier <code>.docker/nginx/default.conf</code> reprend la configuration recommandée par la documentation Symfony. Nginx sert les fichiers statiques du dossier <code>public/</code> et transmet tout le reste à PHP-FPM, joignable sous le nom <code>php</code> sur le port 9000 :</p>
+<pre><code>server {
+    listen 80;
+    server_name localhost;
+    root /var/www/html/public;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass php:9000;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}</code></pre>
+<p>Le dernier bloc renvoie une erreur 404 pour tout autre fichier PHP : seul le contrôleur frontal <code>index.php</code> doit être exécutable.</p>
+
 <h3>Dockerfile PHP optimisé</h3>
 <pre><code>FROM php:8.3-fpm
-RUN apt-get update && apt-get install -y \
+RUN apt-get update &amp;&amp; apt-get install -y \
     libicu-dev libzip-dev \
-    && docker-php-ext-install intl pdo_mysql zip opcache \
-    && pecl install redis xdebug \
-    && docker-php-ext-enable redis xdebug
+    &amp;&amp; docker-php-ext-install intl pdo_mysql zip opcache \
+    &amp;&amp; pecl install redis xdebug \
+    &amp;&amp; docker-php-ext-enable redis xdebug
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html</code></pre>
+<p>L'image officielle <code>php:8.3-fpm</code> fournit les scripts <code>docker-php-ext-install</code> et <code>docker-php-ext-enable</code>. Les bibliothèques système (<code>libicu-dev</code> pour <code>intl</code>, <code>libzip-dev</code> pour <code>zip</code>) doivent être installées avant de compiler les extensions. Les extensions PECL comme <code>redis</code> et <code>xdebug</code> se compilent avec <code>pecl install</code>, puis s'activent. Enfin, <code>COPY --from=composer:2</code> récupère le binaire Composer depuis son image officielle, sans script d'installation.</p>
+<p>Si vous utilisez le transport AMQP de Messenger avec RabbitMQ, il faut aussi l'extension <code>amqp</code> : ajoutez <code>librabbitmq-dev</code> aux paquets et <code>amqp</code> à la ligne <code>pecl install</code>.</p>
+<p>Xdebug ralentit sensiblement chaque requête. Désactivez-le par défaut et activez-le seulement quand vous en avez besoin, via un fichier <code>.docker/php/xdebug.ini</code> copié dans l'image :</p>
+<pre><code>xdebug.mode=off
+xdebug.client_host=host.docker.internal
+xdebug.start_with_request=trigger</code></pre>
+<p>La variable d'environnement <code>XDEBUG_MODE=debug</code>, passée au conteneur, prend le pas sur <code>xdebug.mode</code> : vous activez le débogage sans reconstruire l'image. Sous Linux, <code>host.docker.internal</code> n'existe pas par défaut : ajoutez <code>extra_hosts: ["host.docker.internal:host-gateway"]</code> au service <code>php</code>.</p>
+
+<h3>Connecter Symfony aux services</h3>
+<p>Dans <code>.env.local</code> (non versionné), les DSN pointent vers les noms des services Compose :</p>
+<pre><code>DATABASE_URL="mysql://root:root@mysql:3306/symfony?serverVersion=8.0&amp;charset=utf8mb4"
+REDIS_URL="redis://redis:6379"
+MESSENGER_TRANSPORT_DSN="amqp://guest:guest@rabbitmq:5672/%2f/messages"</code></pre>
+<p>Pensez à renseigner <code>serverVersion</code> : Doctrine l'utilise pour choisir la bonne plateforme SQL sans interroger le serveur au démarrage.</p>
+
 <h3>Makefile pour simplifier les commandes</h3>
+<p>Les commandes Docker sont longues et faciles à oublier. Un Makefile à la racine du projet donne à toute l'équipe le même vocabulaire :</p>
 <pre><code>up:
 	docker compose up -d
 
@@ -62,8 +143,33 @@ test:
 
 migrate:
 	docker compose exec php php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>Usage : <code>make up</code>, puis <code>make console cmd="cache:clear"</code> ou <code>make migrate</code>. Attention, les recettes d'un Makefile doivent être indentées par une tabulation, pas par des espaces. Ajoutez aussi une ligne <code>.PHONY: up down console test migrate</code> pour que <code>make</code> ne confonde pas ces cibles avec des fichiers portant le même nom.</p>
+
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Permissions des fichiers</strong> : PHP-FPM tourne sous <code>www-data</code> dans le conteneur, alors que vos fichiers appartiennent à votre utilisateur. Si <code>var/cache</code> ou <code>var/log</code> ne sont pas inscriptibles, alignez l'UID de l'utilisateur du conteneur sur le vôtre (argument de build <code>UID</code> et <code>usermod</code>) plutôt que de faire un <code>chmod 777</code>.</li>
+<li><strong>Lenteur sur macOS</strong> : les bind mounts y sont plus lents que sous Linux. Activez VirtioFS dans Docker Desktop et évitez de monter des dossiers inutiles.</li>
+<li><strong>Composer hors du conteneur</strong> : lancez <code>composer install</code> dans le conteneur, sinon les dépendances seront résolues pour la version de PHP du poste, pas celle de l'image.</li>
+<li><strong>Mots de passe en clair</strong> : <code>root</code> / <code>root</code> est acceptable en local uniquement. Ne réutilisez jamais ce fichier Compose tel quel en production.</li>
+<li><strong>Image de production</strong> : cette image embarque Xdebug et monte le code en volume. Pour la production, construisez une image distincte (build multi-stage) avec le code copié, <code>composer install --no-dev</code> et OPcache configuré sans vérification des timestamps.</li>
+</ul>
+
+<h3>Les bénéfices au quotidien</h3>
 <ul>
 <li>Environnement identique pour tous les développeurs</li>
 <li>Isolation complète des services</li>
 <li>Facilité d'onboarding pour les nouveaux développeurs</li>
+<li>Versions des services alignées sur la production</li>
+<li>Changements d'environnement relus et versionnés comme le code</li>
 </ul>
+
+<h3>Checklist de démarrage</h3>
+<ol>
+<li>Écrire le <code>compose.yaml</code>, le Dockerfile PHP et la configuration Nginx.</li>
+<li>Ajouter un <code>healthcheck</code> sur MySQL et conditionner le démarrage de PHP.</li>
+<li>Désactiver Xdebug par défaut et l'activer à la demande.</li>
+<li>Renseigner les DSN dans <code>.env.local</code> avec les noms des services.</li>
+<li>Documenter les commandes dans un Makefile et dans le README.</li>
+<li>Vérifier qu'un <code>git clone</code> suivi de <code>make up</code> suffit à démarrer le projet sur un poste vierge.</li>
+</ol>
+<p>Avec cette base, l'environnement de développement devient un élément du projet à part entière : reproductible, documenté et facile à faire évoluer.</p>

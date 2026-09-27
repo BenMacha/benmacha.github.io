@@ -27,7 +27,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Optimisez vos images Docker PHP grâce aux builds multi-stage pour réduire la taille et améliorer la sécurité.',
     category: 'Docker',
     date: '15 Jan 2024',
-    readTime: '8 min',
+    readTime: '7 min',
     tags: ['Docker', 'PHP', 'Optimisation'],
     translations: {
       en: { title: 'Multi-stage Docker builds for PHP', description: 'Optimize your PHP Docker images with multi-stage builds to reduce their size and improve security.' },
@@ -40,7 +40,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Comment configurer Docker Compose pour un environnement de production robuste et performant.',
     category: 'Docker',
     date: '28 Feb 2024',
-    readTime: '10 min',
+    readTime: '9 min',
     tags: ['Docker', 'Production', 'DevOps'],
     translations: {
       en: { title: 'Docker Compose in production', description: 'How to configure Docker Compose for a robust, high-performance production environment.' },
@@ -105,7 +105,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Guide complet pour sécuriser un serveur Linux en production : SSH, firewall, mises à jour automatiques.',
     category: 'Linux',
     date: '22 Jan 2024',
-    readTime: '10 min',
+    readTime: '7 min',
     tags: ['Linux', 'Sécurité', 'Serveur'],
     translations: {
       en: { title: 'Hardening a Linux server', description: 'A complete guide to securing a production Linux server: SSH, firewall, automatic updates.' },
@@ -118,7 +118,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Les outils et techniques pour surveiller les performances de vos serveurs Linux.',
     category: 'Linux',
     date: '15 Mar 2024',
-    readTime: '8 min',
+    readTime: '9 min',
     tags: ['Linux', 'Monitoring', 'Performance'],
     translations: {
       en: { title: 'Linux performance monitoring', description: 'Tools and techniques for monitoring the performance of your Linux servers.' },
@@ -131,7 +131,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Automatisez vos tâches DevOps avec des scripts shell efficaces et maintenables.',
     category: 'Linux',
     date: '01 May 2024',
-    readTime: '9 min',
+    readTime: '8 min',
     tags: ['Linux', 'Bash', 'Automatisation'],
     translations: {
       en: { title: 'Shell scripting for DevOps', description: 'Automate your DevOps tasks with efficient, maintainable shell scripts.' },
@@ -157,7 +157,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Apprenez à créer et gérer des services systemd pour vos applications : fichiers unit, redémarrage automatique, logs et timers.',
     category: 'Linux',
     date: '25 Sep 2024',
-    readTime: '6 min',
+    readTime: '7 min',
     tags: ['Linux', 'Systemd', 'Services'],
     translations: {
       en: { title: 'Creating systemd services', description: 'Learn how to create and manage systemd services for your applications.' },
@@ -170,7 +170,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Découvrez les fonctionnalités majeures de PHP 8 : named arguments, match, fibers, enums et plus.',
     category: 'PHP',
     date: '10 Feb 2024',
-    readTime: '8 min',
+    readTime: '10 min',
     tags: ['PHP', 'PHP8', 'Nouveautés'],
     translations: {
       en: { title: 'What\'s new in PHP 8', description: 'Discover the major features of PHP 8: named arguments, match, fibers, enums and more.' },
@@ -183,7 +183,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Guide pour créer des APIs RESTful robustes avec Symfony et API Platform.',
     category: 'PHP',
     date: '25 Mar 2024',
-    readTime: '10 min',
+    readTime: '8 min',
     tags: ['Symfony', 'API Platform', 'REST'],
     translations: {
       en: { title: 'Building APIs with Symfony API Platform', description: 'A guide to building robust RESTful APIs with Symfony and API Platform.' },
@@ -196,7 +196,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Retour d\'expérience sur la migration progressive de Symfony 2.8 vers 6.4 sans interruption de service.',
     category: 'PHP',
     date: '14 Apr 2024',
-    readTime: '12 min',
+    readTime: '7 min',
     tags: ['Symfony', 'Migration', 'PHP'],
     translations: {
       en: { title: 'Migrating Symfony from 2.8 to 6.4', description: 'Lessons learned from a progressive migration from Symfony 2.8 to 6.4 with zero service interruption.' },
@@ -222,7 +222,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Implémentez le traitement asynchrone dans vos applications Symfony avec le composant Messenger.',
     category: 'PHP',
     date: '19 Jul 2024',
-    readTime: '8 min',
+    readTime: '7 min',
     tags: ['Symfony', 'Messenger', 'Async'],
     translations: {
       en: { title: 'Asynchronous processing with Symfony Messenger', description: 'Implement asynchronous processing in your Symfony applications with the Messenger component.' },
@@ -261,7 +261,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Implémentez une API GraphQL performante avec PHP et le bundle overblog/graphql pour Symfony.',
     category: 'PHP',
     date: '10 Nov 2024',
-    readTime: '9 min',
+    readTime: '8 min',
     tags: ['GraphQL', 'PHP', 'API'],
     translations: {
       en: { title: 'GraphQL with PHP and Symfony', description: 'Build a high-performance GraphQL API with PHP and the overblog/graphql bundle for Symfony.' },
@@ -300,7 +300,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Créez des pipelines Jenkins declaratifs pour automatiser vos builds et déploiements.',
     category: 'DevOps',
     date: '15 Jun 2024',
-    readTime: '9 min',
+    readTime: '8 min',
     tags: ['Jenkins', 'Pipeline', 'CI/CD'],
     translations: {
       en: { title: 'Configuring Jenkins pipelines', description: 'Build declarative Jenkins pipelines to automate your builds and deployments.' },
@@ -326,7 +326,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Techniques pour exécuter des migrations de base de données sans interrompre le service.',
     category: 'DevOps',
     date: '12 Oct 2024',
-    readTime: '10 min',
+    readTime: '8 min',
     tags: ['Database', 'Migration', 'DevOps'],
     translations: {
       en: { title: 'Zero-downtime database migrations', description: 'Techniques for running database migrations without interrupting service.' },
@@ -339,7 +339,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Automatisez vos workflows métier en connectant vos APIs avec Zapier : webhooks, déclencheurs, actions et intégration PHP.',
     category: 'DevOps',
     date: '28 Nov 2024',
-    readTime: '6 min',
+    readTime: '7 min',
     tags: ['Zapier', 'API', 'Automatisation'],
     translations: {
       en: { title: 'API automation with Zapier', description: 'Automate your business workflows by connecting your APIs with Zapier: webhooks, triggers, actions and PHP integration.' },
@@ -352,7 +352,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Retour sur mon parcours de développeur PHP junior à Tech Lead, en passant par la création de Keytchens et mes expériences chez CCM Benchmark et ORPI.',
     category: 'PHP',
     date: '15 Dec 2024',
-    readTime: '11 min',
+    readTime: '3 min',
     tags: ['Carrière', 'Tech Lead', 'Symfony', 'DevOps'],
     translations: {
       en: { title: 'My journey: from junior developer to Tech Lead', description: 'A look back at my path from junior PHP developer to Tech Lead, including founding Keytchens and my experience at CCM Benchmark and ORPI.' },
@@ -365,7 +365,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Exposez vos outils PHP à Claude et aux assistants IA avec le Model Context Protocol et le SDK PHP officiel : outils, ressources, prompts et tests.',
     category: 'PHP',
     date: '22 Sep 2026',
-    readTime: '14 min',
+    readTime: '9 min',
     tags: ['PHP', 'MCP', 'IA', 'Symfony'],
     translations: {
       en: { title: 'Building an MCP server in PHP', description: 'Expose your PHP tools to Claude and other AI assistants with the Model Context Protocol and the official PHP SDK: tools, resources, prompts and tests.' },
@@ -378,7 +378,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Retour d\'expérience : déployer un site Nuxt 3 sur Cloudflare Pages, avec la configuration du build, la branche de production, Node et le lockfile npm.',
     category: 'DevOps',
     date: '26 Sep 2026',
-    readTime: '8 min',
+    readTime: '5 min',
     tags: ['Nuxt', 'Cloudflare', 'DevOps', 'CI/CD'],
     translations: {
       en: { title: 'Deploying Nuxt to Cloudflare Pages: pitfalls to avoid', description: 'Lessons learned deploying this Nuxt 3 portfolio to Cloudflare Pages: build settings, production branch, Node version, npm lockfile and redirects.' },
@@ -391,7 +391,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Configurer un serveur Ubuntu pour Symfony en production : Nginx, pool PHP-FPM dédié, MySQL, HTTPS avec Let\'s Encrypt, workers Messenger et crons.',
     category: 'Linux',
     date: '08 Sep 2026',
-    readTime: '13 min',
+    readTime: '7 min',
     tags: ['Linux', 'Symfony', 'Nginx', 'PHP-FPM', 'MySQL'],
     translations: {
       en: { title: 'Deploying Symfony on a VPS: Nginx, PHP-FPM, MySQL, HTTPS', description: 'Set up an Ubuntu server for Symfony in production: Nginx, a dedicated PHP-FPM pool, MySQL, HTTPS with Let\'s Encrypt, Messenger workers and cron jobs.' },
@@ -404,7 +404,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Héberger plusieurs applications Docker sur un serveur avec Traefik : routage par domaine, certificats Let\'s Encrypt automatiques et middlewares de sécurité.',
     category: 'Docker',
     date: '25 Aug 2026',
-    readTime: '10 min',
+    readTime: '5 min',
     tags: ['Docker', 'Traefik', 'HTTPS', 'Reverse proxy'],
     translations: {
       en: { title: 'Traefik and Docker: reverse proxy and automatic HTTPS', description: 'Host several Docker applications on one server with Traefik: routing by domain name, automatic Let\'s Encrypt certificates and security middlewares.' },
@@ -417,7 +417,7 @@ export const blogArticles: BlogArticle[] = [
     description: 'Des sauvegardes fiables : dump MySQL cohérent, sauvegarde chiffrée avec restic vers S3, rotation, planification systemd, alertes et tests de restauration.',
     category: 'Linux',
     date: '11 Aug 2026',
-    readTime: '11 min',
+    readTime: '7 min',
     tags: ['Linux', 'Sauvegarde', 'MySQL', 'restic', 'systemd'],
     translations: {
       en: { title: 'Automated server backups: MySQL, files and restic', description: 'Reliable backups: a consistent MySQL dump, encrypted backups with restic to S3 storage, retention, systemd scheduling, alerts and restore tests.' },

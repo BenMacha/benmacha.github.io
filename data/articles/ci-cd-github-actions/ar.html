@@ -1,6 +1,17 @@
 <h2>GitHub Actions لمشاريع PHP الخاصة بك</h2>
-<p>يوفّر GitHub Actions حلّ CI/CD مدمجاً مباشرةً في مستودعك. إليك طريقة إعداد خط أنابيب (pipeline) متكامل.</p>
-<h3>سير عمل الاختبارات</h3>
+<p>يوفر GitHub Actions حلاً للتكامل والنشر المستمرين (CI/CD) مدمجاً مباشرة في مستودعك. إليك كيفية إعداد خط أنابيب (pipeline) كامل.</p>
+<p>الفائدة الرئيسية هي عدم وجود بنية تحتية يجب صيانتها: مسارات العمل (workflows) ملفات YAML توضع في <code>.github/workflows/</code>، وتُدار بالإصدارات مع الشيفرة، وتُنفَّذ على أجهزة افتراضية يوفرها GitHub (تسمى <em>runners</em>). كل عملية push أو pull request تطلق عمليات التحقق، وتظهر نتيجتها مباشرة في واجهة المراجعة. بالنسبة لمشروع PHP/Symfony، تحصل ببضع عشرات من الأسطر على التحليل الساكن، والاختبارات على قاعدة بيانات حقيقية، والنشر التلقائي.</p>
+
+<h3>المفاهيم الأساسية</h3>
+<ul>
+<li><strong>Workflow</strong>: ملف YAML يصف متى يُنفَّذ (<code>on</code>) وماذا يفعل (<code>jobs</code>).</li>
+<li><strong>Job</strong>: مجموعة من الخطوات تُنفَّذ على الـ runner نفسه. تعمل مهام الـ workflow بالتوازي افتراضياً، ما لم يفرض <code>needs</code> ترتيباً معيناً.</li>
+<li><strong>Step</strong>: أمر shell (<code>run</code>) أو إجراء قابل لإعادة الاستخدام (<code>uses</code>)، منشور على الـ Marketplace أو في مستودعك الخاص.</li>
+<li><strong>Service</strong>: حاوية مساندة (MySQL، Redis…) تُشغَّل بجانب المهمة طوال مدة تنفيذها.</li>
+</ul>
+
+<h3>مسار عمل الاختبارات</h3>
+<p>يُنفَّذ هذا المسار الأول عند كل push على <code>main</code> و<code>develop</code>، وكذلك عند كل pull request يستهدف <code>main</code>. يشغّل MySQL 8، ويثبّت PHP 8.3 مع الامتدادات اللازمة، ثم يشغّل PHPStan وPHPUnit.</p>
 <pre><code>name: CI
 on:
   push:
@@ -40,7 +51,15 @@ jobs:
         run: php bin/phpunit --coverage-clover coverage.xml
         env:
           DATABASE_URL: mysql://root:root@127.0.0.1:3306/test</code></pre>
+<p>بعض التفاصيل المهمة:</p>
+<ul>
+<li><strong><code>shivammathur/setup-php</code></strong> هو الإجراء المرجعي لـ PHP: يثبّت الإصدار المطلوب والامتدادات وComposer ومشغّل قياس تغطية الشيفرة.</li>
+<li>يعرض ربط المنفذ <code>3306:3306</code> خدمة MySQL على الـ runner، ومن هنا العنوان <code>127.0.0.1</code> في <code>DATABASE_URL</code>. أما إذا كانت المهمة نفسها تعمل داخل حاوية (<code>container:</code>)، فيجب استخدام اسم الخدمة، <code>mysql</code>، كمضيف.</li>
+<li>كلمة المرور <code>root</code> مقبولة هنا: فقاعدة البيانات مؤقتة ولا توجد إلا طوال مدة المهمة. أما الأسرار الحقيقية فيجب ألا تظهر أبداً في ملف YAML.</li>
+</ul>
+
 <h3>النشر التلقائي</h3>
+<p>تُضاف مهمة النشر تحت <code>jobs:</code>. تنتظر نجاح الاختبارات (<code>needs</code>) ولا تُنفَّذ إلا على الفرع <code>main</code>.</p>
 <pre><code>  deploy:
     needs: tests
     runs-on: ubuntu-latest
@@ -58,10 +77,133 @@ jobs:
             composer install --no-dev
             php bin/console cache:clear
             php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>هذا السكربت بسيط عن قصد. في بيئة الإنتاج، أنصح بإضافة <code>set -e</code> في السطر الأول لإيقاف النشر عند أول خطأ، وإضافة <code>--optimize-autoloader</code> إلى <code>composer install</code>. ولتجنب الثواني القليلة التي تكون فيها الشيفرة والاعتماديات غير متزامنة، تبقى استراتيجية مجلدات الإصدارات (مجلد لكل إصدار ورابط رمزي <code>current</code>) هي الأكثر أماناً.</p>
+
+<h3>مسار عمل جاهز للإنتاج</h3>
+<p>تحتفظ النسخة التالية بالخطوات نفسها مع تطبيق أفضل الممارسات: التدقيق (lint) والاختبارات في مهام منفصلة تعمل بالتوازي، ومصفوفة لإصدارات PHP، وتخزين مؤقت لـ Composer، وانتظار جاهزية MySQL، وصلاحيات في حدها الأدنى.</p>
+<pre><code>name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --prefer-dist --no-progress
+      - run: vendor/bin/php-cs-fixer fix --dry-run --diff
+      - run: vendor/bin/phpstan analyse src --error-format=github
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: &gt;-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_mysql, intl
+          coverage: pcov
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" &gt;&gt; "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - run: composer install --prefer-dist --no-progress
+      - run: php bin/phpunit --coverage-clover coverage.xml
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/test</code></pre>
+<p>ما الذي تغيّر مقارنة بالمسار الأول:</p>
+<ul>
+<li><strong><code>permissions: contents: read</code></strong> يقلّص صلاحيات <code>GITHUB_TOKEN</code> إلى الحد الأدنى الضروري. والمهمة التي تحتاج إلى التعليق على pull request أو نشر صورة ستطلب صراحةً صلاحيات إضافية.</li>
+<li><strong><code>concurrency</code></strong> يلغي التنفيذ السابق عند وصول commit جديد إلى الفرع نفسه: فلا فائدة من اختبار شيفرة استُبدلت بالفعل.</li>
+<li><strong>المصفوفة</strong> تطلق مهمة لكل إصدار من PHP. ومع <code>fail-fast: false</code>، لا يوقف الفشل على PHP 8.4 الإصدارات الأخرى، مما يمنحك صورة كاملة عن التوافق.</li>
+<li><strong>فحص صحة MySQL</strong>: من دون <code>options</code>، قد تبدأ المهمة بينما لا يزال MySQL يهيّئ قاعدته، فتفشل الاختبارات الأولى بشكل عشوائي. أما الآن فينتظر GitHub إلى أن تُعلَن الحاوية سليمة.</li>
+<li><strong>التخزين المؤقت لـ Composer</strong> مفهرس ببصمة (hash) الملف <code>composer.lock</code>: ما دامت الاعتماديات لم تتغير، تُستعاد الحزم بدلاً من تنزيلها.</li>
+<li><strong><code>pcov</code></strong> يجمع بيانات تغطية الشيفرة أسرع بكثير من Xdebug، الذي لا يفيد إلا إذا احتجت إلى ميزاته الأخرى.</li>
+<li><strong><code>--error-format=github</code></strong> يحوّل أخطاء PHPStan إلى تعليقات توضيحية تظهر مباشرة على الأسطر المعنية في الـ pull request.</li>
+</ul>
+
+<h3>حماية النشر عبر بيئة</h3>
+<p>يوفر GitHub <strong>البيئات</strong> (environments): أسرار خاصة بكل هدف، وبحسب خطة GitHub التي تستخدمها، قواعد حماية مثل الموافقة اليدوية من مراجعين محددين. تكتفي مهمة النشر بالتصريح بالبيئة التي تستخدمها:</p>
+<pre><code>  deploy:
+    needs: [lint, tests]
+    if: github.ref == 'refs/heads/main' &amp;&amp; github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/app
+            git pull origin main
+            composer install --no-dev --optimize-autoloader
+            php bin/console cache:clear
+            php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>هنا تضمن مجموعة التزامن <code>production</code> تنفيذ عملية نشر واحدة فقط في كل مرة، دون إلغاء أي عملية جارية أبداً: فمقاطعة نشرٍ في منتصف عمليات الترحيل (migrations) أسوأ بكثير من الانتظار.</p>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong>الأسرار والنسخ المتفرعة (forks)</strong>: مسارات العمل التي يطلقها pull request قادم من fork لا يمكنها الوصول إلى الأسرار. لذا يجب أن تعمل الاختبارات من دونها.</li>
+<li><strong>إجراءات الأطراف الثالثة</strong>: الإجراء المشار إليه بوسم (<code>@v1</code>) قد يتغير دون علمك. بالنسبة للإجراءات الحساسة، ثبّتها على SHA كامل لـ commit ودع Dependabot يقترح التحديثات.</li>
+<li><strong>أسماء الـ status checks</strong>: مع المصفوفة، تحمل عمليات التحقق أسماء مثل <code>tests (8.3)</code>. وإعادة تسمية مهمة أو تعديل المصفوفة يتطلب تحديث قواعد حماية الفروع.</li>
+<li><strong>النشر من pull request</strong>: يمنع الشرط <code>github.event_name == 'push'</code> أي حدث غير متوقع على <code>main</code> من إطلاق نشر في الإنتاج.</li>
+</ul>
+
 <h3>أفضل الممارسات</h3>
 <ul>
-<li>استخدام cache اعتماديات Composer</li>
-<li>تشغيل مهام الاختبار والتدقيق (lint) بالتوازي</li>
-<li>حماية الفروع بفحوصات حالة (status checks) إلزامية</li>
+<li>استخدام التخزين المؤقت لاعتماديات Composer</li>
+<li>تشغيل مهام الاختبار والتدقيق بالتوازي</li>
+<li>حماية الفروع بـ status checks إلزامية</li>
 <li>تخزين الأسرار في GitHub Secrets</li>
+<li>تقييد <code>GITHUB_TOKEN</code> عبر <code>permissions</code></li>
+<li>استخدام بيئة محمية للإنتاج</li>
 </ul>
+<p>بهذه القواعد القليلة، يُتحقق من كل pull request تلقائياً، وتظهر الأخطاء مباشرة في مراجعة الشيفرة، ويصبح النشر في الإنتاج عملية روتينية بدلاً من حدث مخيف.</p>

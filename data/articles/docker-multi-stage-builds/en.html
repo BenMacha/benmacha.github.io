@@ -1,8 +1,12 @@
 <h2>Why use multi-stage builds?</h2>
-<p>Multi-stage builds let you separate the build environment from the runtime environment. The result: lighter, more secure images.</p>
+<p>Multi-stage builds let you separate the build environment from the runtime environment. The result: lighter and more secure images.</p>
+<p>The principle is simple: a single Dockerfile contains several <code>FROM</code> instructions. Each one starts a new <strong>stage</strong>, with its own base image. Intermediate stages install build tools, download dependencies or compile assets; the final stage only picks up the result, with <code>COPY --from</code>. Everything that is not explicitly copied (compilers, package caches, unneeded sources) is gone from the shipped image.</p>
+
 <h3>The problem with monolithic images</h3>
 <p>A classic PHP image with all its development dependencies can easily exceed 1 GB. In production, you need neither Composer, nor test tools, nor uncompiled source files.</p>
-<h3>A multi-stage Dockerfile example</h3>
+<p>That weight has concrete consequences: slower deployments because every server has to download the image, a registry that fills up faster, and above all a larger <strong>attack surface</strong>. Every binary in the image (compiler, Git client, package manager) is one more tool available to an attacker, and one more source of alerts in vulnerability scanners.</p>
+
+<h3>Multi-stage Dockerfile example</h3>
 <pre><code># Stage 1: Build
 FROM composer:2 AS builder
 WORKDIR /app
@@ -16,16 +20,90 @@ COPY --from=builder /app /var/www/html
 RUN docker-php-ext-install pdo pdo_mysql opcache
 EXPOSE 9000
 CMD ["php-fpm"]</code></pre>
+<p>The first stage, named <code>builder</code>, starts from the official Composer image. It first copies only <code>composer.json</code> and <code>composer.lock</code>, then installs the dependencies: as long as those two files do not change, Docker reuses the cached layer and the installation is not re-run, even if the application code has changed. The code is copied afterwards. The second stage starts from a PHP-FPM Alpine image, picks up the whole <code>/app</code> directory and installs the required extensions.</p>
+
+<h3>A more complete version</h3>
+<p>The example above works, but it can be improved on four points. The optimized autoloader is generated before the code is copied, so it does not contain the application's classes. The PHP extensions are installed after the code is copied, so any code change also invalidates that expensive layer. The process runs as root. Finally, a Symfony application often has front-end assets to compile. Here is a version that addresses these points:</p>
+<pre><code># syntax=docker/dockerfile:1
+
+# Stage 1: PHP dependencies
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN --mount=type=cache,target=/tmp/cache \
+    composer install --no-dev --no-scripts --no-autoloader --prefer-dist --ignore-platform-reqs
+COPY . .
+RUN composer dump-autoload --no-dev --classmap-authoritative
+
+# Stage 2: front-end assets
+FROM node:22-alpine AS assets
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY assets/ assets/
+COPY webpack.config.js ./
+RUN npm run build
+
+# Stage 3: production
+FROM php:8.3-fpm-alpine AS production
+RUN apk add --no-cache icu-libs \
+    &amp;&amp; apk add --no-cache --virtual .build-deps icu-dev $PHPIZE_DEPS \
+    &amp;&amp; docker-php-ext-install intl pdo_mysql opcache \
+    &amp;&amp; apk del .build-deps
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+WORKDIR /var/www/html
+COPY --from=vendor --chown=www-data:www-data /app ./
+COPY --from=assets /app/public/build ./public/build
+USER www-data</code></pre>
+<p>A few explanations:</p>
+<ul>
+<li><strong><code>--mount=type=cache</code></strong> keeps Composer's cache between two builds on the same machine, without ever writing it into the image.</li>
+<li><strong><code>--ignore-platform-reqs</code></strong> is needed because the Composer image has neither the same PHP version nor the same extensions as the final image. Composer generates a <code>platform_check.php</code> file that checks the PHP version at startup, so an incompatibility will be detected immediately.</li>
+<li><strong><code>--classmap-authoritative</code></strong> produces a complete classmap, generated after the code is copied, and avoids any filesystem lookup when a class is loaded.</li>
+<li>The <strong>build dependencies</strong> (<code>icu-dev</code>, <code>$PHPIZE_DEPS</code>) are installed and removed in the same <code>RUN</code> instruction: only runtime libraries such as <code>icu-libs</code> remain in the image.</li>
+<li>The <code>assets</code> stage brings in Node.js, which has no business being in production: only the <code>public/build</code> directory is copied.</li>
+</ul>
+<p>Also remember the <code>.dockerignore</code> file. Without it, <code>COPY . .</code> sends the local <code>vendor/</code> directory to the build, where it would overwrite the one the stage just installed, along with <code>.git</code> and your local environment files:</p>
+<pre><code>.git
+vendor/
+node_modules/
+var/
+.env.local
+docker-compose*.yml</code></pre>
+
+<h3>Building a specific stage</h3>
+<p>The <code>--target</code> option stops the build at the given stage. It is useful for debugging an intermediate stage, or for reusing the same Dockerfile with a development stage:</p>
+<pre><code>docker build --target production -t myapp:1.4.2 .
+docker build --target vendor -t myapp:vendor .
+
+# Compare sizes and inspect layers
+docker image ls myapp
+docker history myapp:1.4.2</code></pre>
+<p>With BuildKit, enabled by default in recent Docker versions, only the stages needed for the target are built, and independent stages (here <code>vendor</code> and <code>assets</code>) are built in parallel.</p>
+<p>The same mechanism lets you describe a development stage that starts from the production image and only adds Xdebug and the test tools. Development and production then share the same base, and Docker Compose picks the stage to build through the <code>build.target</code> key.</p>
+
 <h3>Concrete benefits</h3>
 <ul>
-<li><strong>Smaller size</strong>: from 800 MB down to under 150 MB</li>
+<li><strong>Smaller size</strong>: from 800 MB down to less than 150 MB</li>
 <li><strong>Security</strong>: no development tools in production</li>
 <li><strong>Docker cache</strong>: each stage is cached independently</li>
 <li><strong>Reproducibility</strong>: the same result in every environment</li>
 </ul>
+
 <h3>Best practices</h3>
 <p>Use Alpine as the base image to minimize the attack surface. Install only the PHP extensions you need. Configure OPcache for production with optimal settings.</p>
-<pre><code>RUN echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini</code></pre>
-<p>This approach has been used successfully on platforms such as Keytchens to deploy Symfony applications with build times reduced by 60%.</p>
+<pre><code>RUN echo "opcache.memory_consumption=256" &gt;&gt; /usr/local/etc/php/conf.d/opcache.ini \
+    &amp;&amp; echo "opcache.max_accelerated_files=20000" &gt;&gt; /usr/local/etc/php/conf.d/opcache.ini \
+    &amp;&amp; echo "opcache.validate_timestamps=0" &gt;&gt; /usr/local/etc/php/conf.d/opcache.ini</code></pre>
+<p>Rather than a series of <code>echo</code> commands, a versioned <code>docker/php/opcache.ini</code> file copied into the image (as in the complete version above) is easier to read. It can also enable the preloading offered by Symfony and tune the <code>realpath</code> cache:</p>
+<pre><code>opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+opcache.preload=/var/www/html/config/preload.php
+opcache.preload_user=www-data
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+<p>With <code>validate_timestamps=0</code>, PHP no longer checks whether files have changed: that is exactly what you want in an immutable image, but it means you must never modify the code of a running container. A deployment is done by replacing the container.</p>
+<p>Finally, order the Dockerfile instructions from least to most frequently changed (system packages, extensions, dependencies, then code) and pin base image versions so that two builds of the same commit produce the same result.</p>
+<p>This approach is used successfully on platforms such as Keytchens to deploy Symfony applications with build times cut by 60%.</p>

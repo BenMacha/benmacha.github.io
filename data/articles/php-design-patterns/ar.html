@@ -1,6 +1,9 @@
 <h2>أنماط أساسية لـ PHP الحديثة</h2>
-<p>أنماط التصميم (design patterns) حلول مُجرَّبة لمشكلات متكررة في تصميم البرمجيات. إليكم أكثرها فائدة في PHP.</p>
+<p>أنماط التصميم (design patterns) حلول مُجرَّبة لمشكلات متكررة في تصميم البرمجيات. إليك أكثرها فائدة في PHP، مع أمثلة مكتوبة بـ PHP 8 وSymfony كما تُكتب اليوم.</p>
+<p>النمط ليس مكتبة تُثبَّت ولا قاعدة تُطبَّق في كل مكان، بل هو مفردات مشتركة وشكل حلٍّ أثبت جدواه. فائدته الأساسية أنه يجعل الشيفرة <strong>متوقَّعة</strong>: حين يقرأ المطوّر <code>PricingStrategy</code> أو <code>ProductRepositoryInterface</code> يعرف فوراً دور الصنف وأين يبحث عن المنطق. الأنماط المعروضة هنا هي التي نصادفها فعلاً في تطبيق Symfony في بيئة الإنتاج: بعضها يوفّره إطار العمل نفسه، وبعضها يُكتب في أسطر قليلة بفضل ميزات اللغة الحديثة (ترقية الخصائص في المُنشئ، والسمات attributes، والأنواع الصارمة).</p>
+
 <h3>نمط Repository</h3>
+<p>يعزل Repository منطق الوصول إلى البيانات خلف واجهة موجَّهة نحو منطق الأعمال. يطلب باقي التطبيق «منتجات هذه الفئة» دون أن يعرف إن كانت قادمة من MySQL عبر Doctrine، أو من API خارجية، أو من مصفوفة في الذاكرة أثناء الاختبارات.</p>
 <pre><code>interface ProductRepositoryInterface
 {
     public function findById(int $id): ?Product;
@@ -16,16 +19,55 @@ class DoctrineProductRepository implements ProductRepositoryInterface
 
     public function findById(int $id): ?Product
     {
-        return $this->em->find(Product::class, $id);
+        return $this-&gt;em-&gt;find(Product::class, $id);
+    }
+
+    public function findByCategory(string $category): array
+    {
+        return $this-&gt;em-&gt;getRepository(Product::class)
+            -&gt;findBy(['category' =&gt; $category], ['name' =&gt; 'ASC']);
     }
 
     public function save(Product $product): void
     {
-        $this->em->persist($product);
-        $this->em->flush();
+        $this-&gt;em-&gt;persist($product);
+        $this-&gt;em-&gt;flush();
     }
 }</code></pre>
+<p>بعض النقاط المهمة في هذا التنفيذ:</p>
+<ul>
+<li>تعتمد الخدمات على <code>ProductRepositoryInterface</code> وليس على صنف Doctrine أبداً. في Symfony، يربط الـ autowiring الواجهة تلقائياً بتنفيذها الوحيد.</li>
+<li>تحمل الدوال أسماء من لغة الأعمال (<code>findByCategory</code>) بدلاً من كشف الـ QueryBuilder للخارج: يبقى الاستعلام داخل الـ repository.</li>
+<li>نوع الإرجاع <code>?Product</code> يُلزم المستدعي بمعالجة حالة «غير موجود» صراحةً.</li>
+</ul>
+<p>تظهر الفائدة الأوضح في اختبارات الوحدة: تنفيذ في الذاكرة يحلّ محل قاعدة البيانات دون أي mock معقّد.</p>
+<pre><code>final class InMemoryProductRepository implements ProductRepositoryInterface
+{
+    /** @var array&lt;int, Product&gt; */
+    private array $products = [];
+
+    public function findById(int $id): ?Product
+    {
+        return $this-&gt;products[$id] ?? null;
+    }
+
+    public function findByCategory(string $category): array
+    {
+        return array_values(array_filter(
+            $this-&gt;products,
+            fn (Product $p): bool =&gt; $p-&gt;getCategory() === $category,
+        ));
+    }
+
+    public function save(Product $product): void
+    {
+        $this-&gt;products[$product-&gt;getId()] = $product;
+    }
+}</code></pre>
+<p><strong>فخ شائع:</strong> استدعاء <code>flush()</code> داخل كل <code>save()</code> بسيط، لكنه مكلف حين نحفظ مئات الكائنات داخل حلقة. للمعالجة على دفعات، وفّر دالة مخصصة أو اترك لطبقة التطبيق (معالج أوامر مثلاً) أن تقرر متى يُستدعى <code>flush()</code>.</p>
+
 <h3>نمط Strategy</h3>
+<p>يغلّف نمط Strategy عائلة من الخوارزميات القابلة للتبديل خلف واجهة واحدة. إنه العلاج لسلاسل <code>if</code>/<code>switch</code> الطويلة التي تتضخم مع كل حالة أعمال جديدة: إضافة قاعدة تسعير تعني إضافة صنف دون المساس بالشيفرة الموجودة (مبدأ المفتوح/المغلق).</p>
 <pre><code>interface PricingStrategy
 {
     public function calculate(float $basePrice): float;
@@ -46,18 +88,70 @@ class PremiumPricing implements PricingStrategy
         return $basePrice * 0.8; // 20% discount
     }
 }</code></pre>
+<p>يبقى اختيار الاستراتيجية المناسبة وقت التنفيذ. في Symfony، الطريقة الأنظف هي وسم كل التنفيذات تلقائياً وحقنها كمجموعة قابلة للتكرار (iterable) في صنف يتولى الاختيار. كل استراتيجية تحدد بنفسها إن كانت تنطبق:</p>
+<pre><code>use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+
+#[AutoconfigureTag('app.pricing_strategy')]
+interface CustomerPricingStrategy extends PricingStrategy
+{
+    public function supports(Customer $customer): bool;
+}
+
+final class PricingResolver
+{
+    /** @param iterable&lt;CustomerPricingStrategy&gt; $strategies */
+    public function __construct(
+        #[AutowireIterator('app.pricing_strategy')]
+        private iterable $strategies,
+    ) {}
+
+    public function priceFor(Customer $customer, float $basePrice): float
+    {
+        foreach ($this-&gt;strategies as $strategy) {
+            if ($strategy-&gt;supports($customer)) {
+                return $strategy-&gt;calculate($basePrice);
+            }
+        }
+
+        throw new \LogicException('No applicable pricing strategy.');
+    }
+}</code></pre>
+<p>السمة <code>#[AutowireIterator]</code> متاحة منذ Symfony 6.4؛ وفي الإصدارات السابقة تؤدي <code>#[TaggedIterator]</code> الدور نفسه. نصيحة عابرة: تستخدم الأمثلة النوع <code>float</code> للوضوح، لكن للمبالغ الحقيقية فضّل أعداداً صحيحة بالسنتيمات أو مكتبة مثل <code>brick/money</code> لتجنّب أخطاء التقريب.</p>
+
 <h3>نمط Observer مع أحداث Symfony</h3>
+<p>يسمح نمط Observer لكائن بإخطار كائنات أخرى لا يعرفها. في Symfony، الـ EventDispatcher تنفيذ كامل لهذا النمط: الشيفرة التي تنشئ طلباً تنشر حدثاً، وكل مستمع (listener) يتفاعل من جهته (بريد تأكيد، تحديث المخزون، إحصاءات). إضافة تفاعل جديد لا تتطلب أي تعديل على الشيفرة المُرسِلة.</p>
 <pre><code>#[AsEventListener(event: OrderCreatedEvent::class)]
 class SendOrderConfirmation
 {
+    public function __construct(
+        private MailerInterface $mailer,
+    ) {}
+
     public function __invoke(OrderCreatedEvent $event): void
     {
-        $this->mailer->send(
-            new OrderConfirmationEmail($event->getOrder())
+        $this-&gt;mailer-&gt;send(
+            new OrderConfirmationEmail($event-&gt;getOrder())
         );
     }
 }</code></pre>
+<p>من جهة المُرسِل، يكفي إطلاق الحدث بعد حفظ الطلب:</p>
+<pre><code>final class OrderService
+{
+    public function __construct(
+        private EventDispatcherInterface $dispatcher,
+    ) {}
+
+    public function place(Order $order): void
+    {
+        // ... persist the order
+        $this-&gt;dispatcher-&gt;dispatch(new OrderCreatedEvent($order));
+    }
+}</code></pre>
+<p>انتبه: مستمعو الـ EventDispatcher يُنفَّذون <strong>بشكل متزامن</strong> داخل طلب HTTP نفسه. إن فشل إرسال البريد أو استغرق ثانيتين، فالمستخدم هو من ينتظر. للمعالجات البطيئة أو المعرّضة للفشل، انشر رسالة عبر Symfony Messenger وعالجها في عامل (worker) غير متزامن. فخ آخر: يجب ألا يعتمد مستمع على ترتيب تنفيذ المستمعين الآخرين؛ وإن لزم ذلك فاستخدم المعامل <code>priority</code> في السمة، لكنه غالباً علامة على اقتران خفي.</p>
+
 <h3>نمط Builder</h3>
+<p>يبني نمط Builder كائناً معقداً خطوة بخطوة عبر واجهة متسلسلة (fluent). يتجنب المُنشئات ذات المعاملات الاختيارية العشرة ويجعل الشيفرة المستدعية تُقرأ كجملة. يستخدمه Doctrine (<code>QueryBuilder</code>) وSymfony Mailer (<code>Email</code>) ومكوّن Form (<code>FormBuilder</code>) بكثرة.</p>
 <pre><code>class QueryBuilder
 {
     private array $conditions = [];
@@ -65,24 +159,84 @@ class SendOrderConfirmation
 
     public function where(string $field, mixed $value): self
     {
-        $this->conditions[$field] = $value;
+        $this-&gt;conditions[$field] = $value;
         return $this;
     }
 
     public function limit(int $limit): self
     {
-        $this->limit = $limit;
+        $this-&gt;limit = $limit;
         return $this;
     }
 
     public function build(): Query
     {
-        return new Query($this->conditions, $this->limit);
+        return new Query($this-&gt;conditions, $this-&gt;limit);
     }
 }</code></pre>
+<p>الاستخدام:</p>
+<pre><code>$query = (new QueryBuilder())
+    -&gt;where('status', 'published')
+    -&gt;where('category', 'php')
+    -&gt;limit(10)
+    -&gt;build();</code></pre>
+<p>الدالة <code>build()</code> هي المكان المناسب للتحقق من تماسك المجموع (حقول إلزامية، تركيبات ممنوعة) ورمي استثناء قبل إنتاج كائن غير صالح. والأفضل أن يكون الكائن الناتج (<code>Query</code>) غير قابل للتعديل: الـ Builder قابل للتعديل، والنتيجة ليست كذلك.</p>
+
+<h3>إضافة: نمط Decorator مع Symfony</h3>
+<p>يضيف نمط Decorator سلوكاً إلى خدمة دون تعديلها، بتغليفها في صنف ينفّذ الواجهة نفسها. إنه مثالي للـ cache والسجلات والمقاييس. يدعمه Symfony أصلاً عبر السمة <code>#[AsDecorator]</code>:</p>
+<pre><code>use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
+use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+
+#[AsDecorator(decorates: ProductRepositoryInterface::class)]
+final class CachedProductRepository implements ProductRepositoryInterface
+{
+    public function __construct(
+        #[AutowireDecorated]
+        private ProductRepositoryInterface $inner,
+        private CacheInterface $cache,
+    ) {}
+
+    public function findById(int $id): ?Product
+    {
+        return $this-&gt;inner-&gt;findById($id);
+    }
+
+    public function findByCategory(string $category): array
+    {
+        return $this-&gt;cache-&gt;get(
+            'products_category_'.md5($category),
+            function (ItemInterface $item) use ($category): array {
+                $item-&gt;expiresAfter(300);
+
+                return $this-&gt;inner-&gt;findByCategory($category);
+            },
+        );
+    }
+
+    public function save(Product $product): void
+    {
+        $this-&gt;inner-&gt;save($product);
+    }
+}</code></pre>
+<p>كل الخدمات التي تعتمد على <code>ProductRepositoryInterface</code> تتلقى الآن النسخة المزوّدة بالـ cache، دون تغيير سطر واحد من شيفرتها. لكن احذر من تخزين كيانات Doctrine في الـ cache: فبعد إلغاء تسلسلها لا يعود الـ EntityManager يديرها. للـ cache، فضّل المعرّفات أو كائنات DTO للقراءة فقط.</p>
+
+<h3>ملخّص</h3>
 <ul>
-<li><strong>Repository</strong>: تجريد طبقة الحفظ (persistence)</li>
+<li><strong>Repository</strong>: تجريد طبقة التخزين</li>
 <li><strong>Strategy</strong>: خوارزميات قابلة للتبديل</li>
-<li><strong>Observer</strong>: فكّ الارتباط عبر الأحداث</li>
+<li><strong>Observer</strong>: فكّ الاقتران عبر الأحداث</li>
 <li><strong>Builder</strong>: بناء الكائنات المعقدة</li>
+<li><strong>Decorator</strong>: إضافة سلوك (cache، سجلات) دون تعديل الخدمة الأصلية</li>
 </ul>
+
+<h3>متى لا تستخدم نمطاً</h3>
+<p>الخطر الأساسي في أنماط التصميم ليس تجاهلها، بل تطبيقها في كل مكان. واجهة بتنفيذ وحيد لن يكون لها تنفيذ ثانٍ أبداً، أو Strategy لحالتين لن تتغيرا، أو Factory تكتفي باستدعاء <code>new</code>: كل ذلك يضيف ملفات وطبقات وسيطة دون أي فائدة. بعض المعالم:</p>
+<ul>
+<li>ابدأ بأبسط شيفرة ممكنة؛ وأدخِل النمط حين تظهر حالة ملموسة ثانية، لا «احتياطاً».</li>
+<li>تجنّب Singleton: في تطبيق Symfony، حاوية الخدمات تتشارك أصلاً نسخة وحيدة، والحالة العامة تجعل الاختبارات هشّة.</li>
+<li>استخدم الأنماط التي يوفرها إطار العمل (الأحداث، التزيين، الخدمات الموسومة) بدلاً من إعادة تنفيذها.</li>
+<li>سمِّ الأصناف وفق دورها في الأعمال؛ قد يظهر اسم النمط، لكن لا ينبغي أن يحلّ محلّ المعنى.</li>
+</ul>
+<p>إذا أُحسن استخدامها، فهذه الأنماط القليلة تكفي لهيكلة الغالبية العظمى من تطبيقات PHP: التخزين خلف الـ repositories، والقواعد المتغيرة في الاستراتيجيات، والآثار الجانبية في المستمعين، والاهتمامات المشتركة في المُزيِّنات.</p>

@@ -1,13 +1,21 @@
 <h2>Zero-downtime database migrations</h2>
-<p>Database migrations are often the riskiest part of a deployment. Here is how to run them without any downtime.</p>
-<h3>Ground rules</h3>
+<p>Database migrations are often the riskiest part of a deployment. Here is how to run them without any interruption.</p>
+<p>Application code is easy to deploy without downtime: start the new version, switch traffic, stop the old one. The database, however, is shared by both versions during that switch. Two risks follow: a schema that is incompatible with one of the code versions, and locks that block queries for the duration of an <code>ALTER TABLE</code>. A zero-downtime migration has to avoid both.</p>
+
+<h3>Why the schema must stay compatible</h3>
+<p>During a blue-green or rolling deployment, the old and new versions of the code run at the same time, sometimes for several minutes. If the migration renames a column, the old version crashes as soon as it reads it. If it adds a <code>NOT NULL</code> column with no default value, the old version crashes as soon as it inserts a row. The golden rule: <strong>every migration must be compatible with the code currently in production and with the code about to replace it</strong>. Rollback must remain possible at all times.</p>
+
+<h3>Fundamental rules</h3>
 <ul>
 <li>Never drop a column that production code still uses</li>
 <li>Always add new columns as nullable</li>
 <li>Keep schema migrations separate from data migrations</li>
 <li>Test migrations on a copy of the production database</li>
 </ul>
+<p>A column can also be added with a default value, as in the example below: what matters is that the old code can keep inserting rows without knowing about it. Testing on a production copy is essential, because a migration that is instant on a development database of a few thousand rows can take many minutes on a table with tens of millions of rows.</p>
+
 <h3>The Expand-Contract pattern</h3>
+<p>The Expand-Contract pattern (or <em>parallel change</em>) breaks any incompatible change down into compatible steps, spread across several deployments.</p>
 <p><strong>Phase 1 - Expand:</strong> Add the new structure</p>
 <pre><code>-- Migration 1: Add the new column
 ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
@@ -15,18 +23,74 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
 -- Migration 2: Backfill the data
 UPDATE users SET email_verified = TRUE WHERE verified_at IS NOT NULL;</code></pre>
 <p><strong>Phase 2 - Deploy the code</strong> that uses both columns</p>
+<p>During this phase, the code writes to both columns and reads the new one. Rows created by the old version during the switch do not have the right value yet: run the backfill again once the deployment is finished to catch them up.</p>
 <p><strong>Phase 3 - Contract:</strong> Remove the old structure</p>
 <pre><code>-- Migration 3: Drop the old column
 ALTER TABLE users DROP COLUMN verified_at;</code></pre>
+<p>This last migration ships in a later deployment, once no version running in production reads the old column any more. Also remove it from the Doctrine mapping <strong>before</strong> dropping it, otherwise the ORM will keep including it in its queries.</p>
+<p>The same principle applies to renaming a column, which you never rename directly:</p>
+<ol>
+<li>add the new column;</li>
+<li>deploy code that writes to both columns;</li>
+<li>copy existing data in batches;</li>
+<li>deploy code that reads the new column;</li>
+<li>deploy code that no longer writes to the old one;</li>
+<li>drop the old column.</li>
+</ol>
+
+<h3>Backfilling data in batches</h3>
+<p>A single <code>UPDATE</code> on a large table opens a long transaction, locks many rows and increases replica lag. On MySQL, which accepts <code>LIMIT</code> in an <code>UPDATE</code>, process the rows in small batches instead:</p>
+<pre><code>$batchSize = 1000;
+
+do {
+    $affected = $connection-&gt;executeStatement(
+        'UPDATE users SET email_verified = TRUE
+         WHERE verified_at IS NOT NULL AND email_verified = FALSE
+         LIMIT ' . $batchSize
+    );
+
+    // Give the database and replicas room to breathe
+    usleep(100_000);
+} while ($affected &gt; 0);</code></pre>
+<p>Each batch is a short transaction. The script can be interrupted and restarted safely, because the <code>email_verified = FALSE</code> condition skips rows already processed. Put this code in a Symfony command rather than in a Doctrine migration: it can run for a long time and must be restartable independently of the schema.</p>
+
 <h3>Optimized Doctrine migrations</h3>
 <pre><code>public function up(Schema $schema): void
 {
     // Use non-blocking operations
-    $this->addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
+    $this-&gt;addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
 
     // For large tables, use pt-online-schema-change
     // or gh-ost to avoid locks
 }</code></pre>
+<p>On MySQL 8.0, adding a column usually uses the <code>INSTANT</code> algorithm, with no table copy. For other operations, explicitly request a lock-free algorithm: if MySQL cannot honour it, the query fails immediately instead of blocking the table.</p>
+<pre><code>ALTER TABLE orders ADD INDEX idx_orders_status (status), ALGORITHM=INPLACE, LOCK=NONE;</code></pre>
+<p>On PostgreSQL, an index can be created without blocking writes using <code>CREATE INDEX CONCURRENTLY</code>, which cannot run inside a transaction. You therefore need to disable Doctrine Migrations' wrapping transaction for that migration:</p>
+<pre><code>final class Version20241012120000 extends AbstractMigration
+{
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
+    public function up(Schema $schema): void
+    {
+        $this-&gt;addSql('SET lock_timeout = \'5s\'');
+        $this-&gt;addSql('CREATE INDEX CONCURRENTLY idx_orders_status ON orders (status)');
+    }
+}</code></pre>
+<p>The <code>lock_timeout</code> protects against a classic trap: an <code>ALTER TABLE</code>, even a fast one, must wait for ongoing transactions on the table to finish, and every subsequent query piles up behind it. With a short timeout, the migration fails cleanly and can be retried, instead of freezing the whole application. The MySQL equivalent is <code>SET SESSION lock_wait_timeout = 5</code>.</p>
+
+<h3>Online migration tools</h3>
+<p>When MySQL has to rebuild the table (changing a column type, for instance), pt-online-schema-change and gh-ost create a copy of the table with the new schema, keep it in sync during the copy, then swap the two tables in a very short operation:</p>
+<pre><code># Percona Toolkit: test, then execute
+pt-online-schema-change --alter "MODIFY status VARCHAR(100) DEFAULT NULL" D=app,t=orders --dry-run
+pt-online-schema-change --alter "MODIFY status VARCHAR(100) DEFAULT NULL" D=app,t=orders --execute
+
+# gh-ost: relies on the binlog rather than triggers
+gh-ost --host=db.internal --user=app --ask-pass --database=app --table=orders \
+  --alter="MODIFY status VARCHAR(100) DEFAULT NULL" --allow-on-master --execute</code></pre>
+
 <h3>Recommended tools</h3>
 <ul>
 <li><strong>pt-online-schema-change</strong>: lock-free migrations for MySQL</li>
@@ -34,3 +98,21 @@ ALTER TABLE users DROP COLUMN verified_at;</code></pre>
 <li><strong>Doctrine Migrations</strong>: versioned migration management</li>
 <li><strong>Flyway</strong>: multi-database migration tool</li>
 </ul>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong><code>doctrine:schema:update --force</code> in production</strong>: this command can drop or rename columns without warning. In production, only versioned and reviewed migrations should touch the schema.</li>
+<li><strong>Review the generated SQL</strong>: <code>doctrine:migrations:diff</code> sometimes produces a <code>DROP</code> followed by an <code>ADD</code> where you expected a rename.</li>
+<li><strong>Foreign keys and indexes on large tables</strong>: creating them can take a long time. Measure on the production copy.</li>
+<li><strong>The <code>down()</code> method</strong>: do not rely on it for a production rollback. Thanks to Expand-Contract, reverting to the previous version of the code is enough, without touching the schema.</li>
+</ul>
+
+<h3>Checklist before every migration</h3>
+<ol>
+<li>Is the migration compatible with both the current code and the new code?</li>
+<li>Has it been timed on a copy of the production database?</li>
+<li>Are heavy operations done online or in batches?</li>
+<li>Is a lock wait timeout set?</li>
+<li>Is the removal of old structures deferred to a later deployment?</li>
+</ol>
+<p>These rules mean a few more deployments for a given change, but each one becomes routine, reversible and invisible to users.</p>

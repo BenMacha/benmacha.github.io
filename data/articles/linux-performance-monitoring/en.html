@@ -1,5 +1,16 @@
 <h2>Monitoring system performance</h2>
-<p>Good monitoring is essential to detect problems before they affect users.</p>
+<p>Good monitoring is essential to detect problems before they affect users. A disk filling up, a memory leak in a PHP worker or a process hogging the CPU almost always shows up in the metrics hours, even days, before the outage. You still need to know what to look at, with which tools, and at what threshold to react.</p>
+<p>This article covers two complementary levels: <strong>live diagnosis</strong>, when you are logged in over SSH on a machine that is struggling, and <strong>continuous monitoring</strong>, with historical metrics and automatic alerts.</p>
+
+<h3>A method before the tools</h3>
+<p>When facing a slow server, the temptation is to start <code>htop</code> and stare at the screen. A more effective approach is to go through each resource (CPU, memory, disk, network) and ask three questions, following the USE method popularised by Brendan Gregg:</p>
+<ul>
+<li><strong>Utilisation</strong>: what percentage of the time is the resource busy?</li>
+<li><strong>Saturation</strong>: is work queuing up for lack of capacity?</li>
+<li><strong>Errors</strong>: is the resource reporting errors (dropped packets, I/O errors)?</li>
+</ul>
+<p>A resource can be 100% utilised without any problem, as long as there is no saturation. Conversely, a disk at 60% utilisation with a long queue is already a bottleneck.</p>
+
 <h3>Essential tools</h3>
 <pre><code># Real-time CPU and memory
 htop
@@ -12,11 +23,66 @@ iftop -i eth0
 
 # Resource-hungry processes
 ps aux --sort=-%mem | head -20</code></pre>
+<p>A few pointers for reading these outputs:</p>
+<ul>
+<li><strong><code>htop</code></strong> shows per-core usage, memory and swap. Sort by column with <code>F6</code> and display the process tree with <code>F5</code> to see which parent started which children.</li>
+<li><strong><code>iostat -x 1</code></strong> (<code>sysstat</code> package) refreshes every second. Watch <code>%util</code> (device busy time), <code>r_await</code> and <code>w_await</code> (average latency in milliseconds) and <code>aqu-sz</code> (average queue size). Rising latency signals saturation.</li>
+<li><strong><code>iftop</code></strong> shows throughput per connection. Adjust the interface name: on recent distributions it is often called <code>ens3</code> or <code>enp0s3</code> rather than <code>eth0</code> (check with <code>ip -br link</code>).</li>
+<li><strong><code>ps aux --sort=-%mem</code></strong> lists the processes using the most memory. Replace it with <code>--sort=-%cpu</code> for the processor.</li>
+</ul>
+
+<h3>Reading memory and load correctly</h3>
+<p>Two indicators are very often misread. First, <strong>memory</strong>: Linux uses free RAM as disk cache. A <code>free</code> value close to zero is therefore normal. The column that matters is <code>available</code>, the estimate of memory usable without resorting to swap.</p>
+<p>Second, the <strong>load average</strong>: the three values shown by <code>uptime</code> are 1, 5 and 15-minute averages of the number of processes running or waiting to run. On Linux they also include processes blocked waiting for I/O. A load of 4 on a 4-core machine means the processor is fully busy; beyond that, tasks are waiting.</p>
+<pre><code># Memory: look at the "available" column, not "free"
+free -h
+
+# Load average over 1, 5 and 15 minutes, and number of cores
+uptime
+nproc
+
+# Summary view every second, 5 times:
+# r = processes waiting for CPU, si/so = swap, wa = I/O wait
+vmstat 1 5
+
+# Resource pressure (kernel 4.20+)
+cat /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io</code></pre>
+<p>In the <code>vmstat</code> output, an <code>r</code> column consistently above the number of cores indicates CPU saturation, and non-zero values in <code>si</code>/<code>so</code> mean the machine is actively swapping, which severely degrades performance. The <code>/proc/pressure/*</code> files (PSI) directly give the percentage of time during which tasks were delayed for lack of a resource.</p>
+
 <h3>Monitoring with Prometheus and Node Exporter</h3>
+<p>Interactive tools only show the present moment. To understand a gradual degradation or analyse an incident that happened overnight, you need historical metrics. The <strong>Prometheus</strong> and <strong>Node Exporter</strong> pair has become the standard: Node Exporter exposes system metrics (CPU, memory, disks, network, file systems) on port 9100, and Prometheus scrapes them at regular intervals.</p>
 <pre><code># Install Node Exporter
 wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
 tar xvfz node_exporter-*.tar.gz
 sudo mv node_exporter-*/node_exporter /usr/local/bin/</code></pre>
+<p>Check the latest version on the project's releases page before installing. Then, rather than starting the binary by hand, run it as a systemd service under a dedicated user with no shell:</p>
+<pre><code>sudo useradd --system --no-create-home --shell /usr/sbin/nologin node_exporter
+
+# /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Prometheus Node Exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=127.0.0.1:9100
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now node_exporter
+curl -s http://127.0.0.1:9100/metrics | grep node_load1</code></pre>
+<p>Listening on <code>127.0.0.1</code> avoids exposing the metrics to the Internet. If Prometheus runs on another machine, listen on the private interface and restrict access to port 9100 with the firewall. On the Prometheus side, you only need to add a target:</p>
+<pre><code># prometheus.yml
+scrape_configs:
+  - job_name: node
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['10.0.0.5:9100']</code></pre>
+
 <h3>System alerts</h3>
 <p>Set up alerts for critical metrics:</p>
 <ul>
@@ -25,7 +91,35 @@ sudo mv node_exporter-*/node_exporter /usr/local/bin/</code></pre>
 <li><strong>Disk</strong>: alert above 85%</li>
 <li><strong>Load average</strong>: alert above the number of CPUs</li>
 </ul>
+<p>Translated into Prometheus rules, these thresholds give the following file. The <code>for</code> clause requires the condition to stay true for a minimum duration, which avoids being woken up by a spike lasting a few seconds:</p>
+<pre><code># /etc/prometheus/rules/node.yml
+groups:
+  - name: node
+    rules:
+      - alert: HighCpuUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) &gt; 80
+        for: 5m
+        labels:
+          severity: warning
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 &gt; 90
+        for: 5m
+        labels:
+          severity: critical
+      - alert: DiskAlmostFull
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 &gt; 85
+        for: 10m
+        labels:
+          severity: warning
+      - alert: HighLoadAverage
+        expr: node_load5 &gt; on (instance) count by (instance) (node_cpu_seconds_total{mode="idle"})
+        for: 10m
+        labels:
+          severity: warning</code></pre>
+<p>The memory rule relies on <code>MemAvailable</code> rather than free memory, for the reasons explained above. The load rule compares <code>node_load5</code> with the number of cores, counted from each instance's CPU series. Validate the file with <code>promtool check rules /etc/prometheus/rules/node.yml</code> before reloading Prometheus, then let Alertmanager handle sending notifications (email, Slack…).</p>
+
 <h3>Custom monitoring scripts</h3>
+<p>On a small standalone server without a Prometheus stack, a script run by cron can be enough to raise the alarm:</p>
 <pre><code>#!/bin/bash
 # check_resources.sh
 CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}')
@@ -34,6 +128,19 @@ DISK=$(df -h / | awk 'NR==2{print $5}' | tr -d '%')
 
 echo "CPU: ${CPU}% | MEM: ${MEM}% | DISK: ${DISK}%"
 
-if (( $(echo "$CPU > 80" | bc -l) )); then
+if (( $(echo "$CPU &gt; 80" | bc -l) )); then
   echo "ALERT: high CPU!" | mail -s "Server alert" admin@example.com
 fi</code></pre>
+<p>This script has a few limitations worth knowing. The CPU value extracted from <code>top</code> is user time only (<code>us</code>), and the line format depends on the version and the locale. The computed memory is "used" memory, which excludes cache. Finally, the <code>mail</code> command assumes a mail agent is configured on the machine. Schedule it in the crontab:</p>
+<pre><code>*/5 * * * * /usr/local/bin/check_resources.sh &gt;&gt; /var/log/check_resources.log 2&gt;&amp;1</code></pre>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong>Too many alerts</strong>: an alert that fires every day with no action is quickly ignored. Every alert should map to a concrete action.</li>
+<li><strong>Only monitoring from the inside</strong>: a server can have excellent metrics and still be unreachable. Add an external probe on your public URLs.</li>
+<li><strong>Forgetting inodes</strong>: a disk can run out of inodes while still having free space, typically because of millions of small session or cache files. Check with <code>df -i</code>.</li>
+<li><strong>Ignoring the trend</strong>: a disk at 70% gaining 5% per day is more urgent than a disk stable at 88%. Prometheus's <code>predict_linear</code> function lets you alert on the predicted fill date.</li>
+</ul>
+
+<h3>In summary</h3>
+<p>For diagnosis, follow a method (utilisation, saturation, errors) and read available memory and load correctly. For the long run, install Node Exporter as a service, scrape it with Prometheus and define a small number of alerts with realistic thresholds and durations. The best monitoring is not the one that measures everything, but the one that warns you in time, and only when it matters.</p>

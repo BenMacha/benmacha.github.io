@@ -1,6 +1,9 @@
 <h2>Essential patterns for modern PHP</h2>
-<p>Design patterns are proven solutions to recurring software design problems. Here are the most useful ones in PHP.</p>
+<p>Design patterns are proven solutions to recurring software design problems. Here are the most useful ones in PHP, illustrated with PHP 8 and Symfony code as it is written today.</p>
+<p>A pattern is neither a library you install nor a rule to apply everywhere: it is a shared vocabulary and a solution shape that has stood the test of time. Its main benefit is to make code <strong>predictable</strong>. When a developer reads <code>PricingStrategy</code> or <code>ProductRepositoryInterface</code>, they immediately know what role the class plays and where to look for the logic. The patterns covered here are the ones you actually find in a production Symfony application: some are provided by the framework itself, others take only a few lines thanks to modern language features (constructor property promotion, attributes, strict types).</p>
+
 <h3>Repository Pattern</h3>
+<p>The Repository isolates data access logic behind a business-oriented interface. The rest of the application asks for "the products in this category" without knowing whether they come from MySQL through Doctrine, from an external API or from an in-memory array during tests.</p>
 <pre><code>interface ProductRepositoryInterface
 {
     public function findById(int $id): ?Product;
@@ -16,16 +19,55 @@ class DoctrineProductRepository implements ProductRepositoryInterface
 
     public function findById(int $id): ?Product
     {
-        return $this->em->find(Product::class, $id);
+        return $this-&gt;em-&gt;find(Product::class, $id);
+    }
+
+    public function findByCategory(string $category): array
+    {
+        return $this-&gt;em-&gt;getRepository(Product::class)
+            -&gt;findBy(['category' =&gt; $category], ['name' =&gt; 'ASC']);
     }
 
     public function save(Product $product): void
     {
-        $this->em->persist($product);
-        $this->em->flush();
+        $this-&gt;em-&gt;persist($product);
+        $this-&gt;em-&gt;flush();
     }
 }</code></pre>
+<p>A few important points about this implementation:</p>
+<ul>
+<li>Services depend on <code>ProductRepositoryInterface</code>, never on the Doctrine class. In Symfony, autowiring automatically resolves the interface to its single implementation.</li>
+<li>Methods carry business names (<code>findByCategory</code>) instead of exposing the QueryBuilder to the outside world: the query stays inside the repository.</li>
+<li>The <code>?Product</code> return type forces the caller to handle the "not found" case explicitly.</li>
+</ul>
+<p>The most tangible benefit shows up in unit tests: an in-memory implementation replaces the database without any complex mocking.</p>
+<pre><code>final class InMemoryProductRepository implements ProductRepositoryInterface
+{
+    /** @var array&lt;int, Product&gt; */
+    private array $products = [];
+
+    public function findById(int $id): ?Product
+    {
+        return $this-&gt;products[$id] ?? null;
+    }
+
+    public function findByCategory(string $category): array
+    {
+        return array_values(array_filter(
+            $this-&gt;products,
+            fn (Product $p): bool =&gt; $p-&gt;getCategory() === $category,
+        ));
+    }
+
+    public function save(Product $product): void
+    {
+        $this-&gt;products[$product-&gt;getId()] = $product;
+    }
+}</code></pre>
+<p><strong>Classic pitfall:</strong> calling <code>flush()</code> in every <code>save()</code> is simple, but costly when you store hundreds of objects in a loop. For batch processing, provide a dedicated method or let the application layer (a command handler, for example) decide when to <code>flush()</code>.</p>
+
 <h3>Strategy Pattern</h3>
+<p>The Strategy encapsulates a family of interchangeable algorithms behind a single interface. It is the antidote to long <code>if</code>/<code>switch</code> cascades that grow with every new business case: adding a pricing rule means adding a class, without touching existing code (the open/closed principle).</p>
 <pre><code>interface PricingStrategy
 {
     public function calculate(float $basePrice): float;
@@ -46,18 +88,70 @@ class PremiumPricing implements PricingStrategy
         return $basePrice * 0.8; // 20% discount
     }
 }</code></pre>
+<p>You still have to pick the right strategy at runtime. With Symfony, the cleanest approach is to tag every implementation automatically and inject them as an iterable into a resolver. Each strategy states whether it applies:</p>
+<pre><code>use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+
+#[AutoconfigureTag('app.pricing_strategy')]
+interface CustomerPricingStrategy extends PricingStrategy
+{
+    public function supports(Customer $customer): bool;
+}
+
+final class PricingResolver
+{
+    /** @param iterable&lt;CustomerPricingStrategy&gt; $strategies */
+    public function __construct(
+        #[AutowireIterator('app.pricing_strategy')]
+        private iterable $strategies,
+    ) {}
+
+    public function priceFor(Customer $customer, float $basePrice): float
+    {
+        foreach ($this-&gt;strategies as $strategy) {
+            if ($strategy-&gt;supports($customer)) {
+                return $strategy-&gt;calculate($basePrice);
+            }
+        }
+
+        throw new \LogicException('No applicable pricing strategy.');
+    }
+}</code></pre>
+<p>The <code>#[AutowireIterator]</code> attribute has been available since Symfony 6.4; on earlier versions, <code>#[TaggedIterator]</code> plays the same role. A word of advice: the examples use <code>float</code> to stay readable, but for real amounts prefer integers in cents or a library such as <code>brick/money</code> to avoid rounding errors.</p>
+
 <h3>Observer Pattern with Symfony Events</h3>
+<p>The Observer lets an object notify other objects it does not know about. In Symfony, the EventDispatcher is a complete implementation of it: the code that creates an order publishes an event, and each listener reacts on its own (confirmation email, stock update, statistics). Adding a reaction requires no change to the emitting code.</p>
 <pre><code>#[AsEventListener(event: OrderCreatedEvent::class)]
 class SendOrderConfirmation
 {
+    public function __construct(
+        private MailerInterface $mailer,
+    ) {}
+
     public function __invoke(OrderCreatedEvent $event): void
     {
-        $this->mailer->send(
-            new OrderConfirmationEmail($event->getOrder())
+        $this-&gt;mailer-&gt;send(
+            new OrderConfirmationEmail($event-&gt;getOrder())
         );
     }
 }</code></pre>
+<p>On the emitting side, you only need to dispatch the event once the order has been saved:</p>
+<pre><code>final class OrderService
+{
+    public function __construct(
+        private EventDispatcherInterface $dispatcher,
+    ) {}
+
+    public function place(Order $order): void
+    {
+        // ... persist the order
+        $this-&gt;dispatcher-&gt;dispatch(new OrderCreatedEvent($order));
+    }
+}</code></pre>
+<p>Be careful: EventDispatcher listeners run <strong>synchronously</strong>, within the same HTTP request. If sending the email fails or takes two seconds, the user is the one waiting. For slow or failure-prone work, publish a message with Symfony Messenger instead and handle it in an asynchronous worker. Another pitfall: a listener must not depend on the execution order of the others; if it has to, use the attribute's <code>priority</code> parameter, but this is often a sign of hidden coupling.</p>
+
 <h3>Builder Pattern</h3>
+<p>The Builder constructs a complex object step by step through a fluent interface. It avoids constructors with ten optional parameters and makes the calling code read like a sentence. Doctrine (<code>QueryBuilder</code>), Symfony Mailer (<code>Email</code>) and the Form component (<code>FormBuilder</code>) use it extensively.</p>
 <pre><code>class QueryBuilder
 {
     private array $conditions = [];
@@ -65,24 +159,84 @@ class SendOrderConfirmation
 
     public function where(string $field, mixed $value): self
     {
-        $this->conditions[$field] = $value;
+        $this-&gt;conditions[$field] = $value;
         return $this;
     }
 
     public function limit(int $limit): self
     {
-        $this->limit = $limit;
+        $this-&gt;limit = $limit;
         return $this;
     }
 
     public function build(): Query
     {
-        return new Query($this->conditions, $this->limit);
+        return new Query($this-&gt;conditions, $this-&gt;limit);
     }
 }</code></pre>
+<p>Usage:</p>
+<pre><code>$query = (new QueryBuilder())
+    -&gt;where('status', 'published')
+    -&gt;where('category', 'php')
+    -&gt;limit(10)
+    -&gt;build();</code></pre>
+<p>The <code>build()</code> method is the right place to check that the whole is consistent (required fields, forbidden combinations) and to throw an exception before producing an invalid object. Ideally, the resulting object (<code>Query</code>) is immutable: the Builder is mutable, the result is not.</p>
+
+<h3>Bonus: Decorator with Symfony</h3>
+<p>The Decorator adds behavior to a service without modifying it, by wrapping it in a class that implements the same interface. It is ideal for caching, logging or metrics. Symfony supports it natively with the <code>#[AsDecorator]</code> attribute:</p>
+<pre><code>use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
+use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+
+#[AsDecorator(decorates: ProductRepositoryInterface::class)]
+final class CachedProductRepository implements ProductRepositoryInterface
+{
+    public function __construct(
+        #[AutowireDecorated]
+        private ProductRepositoryInterface $inner,
+        private CacheInterface $cache,
+    ) {}
+
+    public function findById(int $id): ?Product
+    {
+        return $this-&gt;inner-&gt;findById($id);
+    }
+
+    public function findByCategory(string $category): array
+    {
+        return $this-&gt;cache-&gt;get(
+            'products_category_'.md5($category),
+            function (ItemInterface $item) use ($category): array {
+                $item-&gt;expiresAfter(300);
+
+                return $this-&gt;inner-&gt;findByCategory($category);
+            },
+        );
+    }
+
+    public function save(Product $product): void
+    {
+        $this-&gt;inner-&gt;save($product);
+    }
+}</code></pre>
+<p>Every service that depends on <code>ProductRepositoryInterface</code> now receives the cached version, without a single line of its code changing. Be careful about caching Doctrine entities, though: once deserialized, they are no longer managed by the EntityManager. For caching, prefer identifiers or read-only DTOs.</p>
+
+<h3>Summary</h3>
 <ul>
-<li><strong>Repository</strong>: abstracts the persistence layer</li>
+<li><strong>Repository</strong>: abstraction of the persistence layer</li>
 <li><strong>Strategy</strong>: interchangeable algorithms</li>
 <li><strong>Observer</strong>: decoupling through events</li>
-<li><strong>Builder</strong>: constructing complex objects</li>
+<li><strong>Builder</strong>: construction of complex objects</li>
+<li><strong>Decorator</strong>: adding behavior (cache, logs) without modifying the original service</li>
 </ul>
+
+<h3>When not to use a pattern</h3>
+<p>The main risk with design patterns is not ignoring them, but applying them everywhere. An interface with a single implementation that will never get a second one, a Strategy for two cases that will never change, a Factory that merely calls <code>new</code>: all of this adds files and indirection without adding value. A few guidelines:</p>
+<ul>
+<li>Start with the simplest code; introduce a pattern when a second concrete case appears, not "just in case".</li>
+<li>Avoid the Singleton: in a Symfony application, the service container already shares a single instance, and global state makes tests fragile.</li>
+<li>Use the patterns the framework provides (events, decoration, tagged services) rather than reimplementing them.</li>
+<li>Name classes after their business role; the pattern name may appear, but it must not replace the meaning.</li>
+</ul>
+<p>Used well, these few patterns are enough to structure the vast majority of PHP applications: persistence behind repositories, variable rules in strategies, side effects in listeners, and cross-cutting concerns in decorators.</p>

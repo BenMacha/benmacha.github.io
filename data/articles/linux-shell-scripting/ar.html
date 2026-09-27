@@ -1,13 +1,20 @@
 <h2>فن كتابة سكربتات Shell</h2>
-<p>تظل كتابة سكربتات shell أداة أساسية لكل مهندس DevOps. إليك الأنماط وأفضل الممارسات الأساسية.</p>
+<p>تظل كتابة سكربتات Shell أداة أساسية لكل مهندس DevOps. فرغم انتشار Ansible وTerraform وخطوط CI التصريحية، تأتي دائماً لحظة تكتب فيها بضعة أسطر من Bash: خطّاف نشر (deployment hook)، أو نسخة احتياطية ليلية، أو نقطة دخول لحاوية، أو خطوة في خط CI. غالباً ما تُكتب هذه السكربتات على عجل ونادراً ما تُراجَع، مما يجعلها مصدراً كلاسيكياً للحوادث. إليك الأنماط وأفضل الممارسات الأساسية لكتابة سكربتات موثوقة وسهلة القراءة والصيانة.</p>
+
+<h3>متى تختار Bash (ومتى تتجنبه)</h3>
+<p>يتفوق Bash في <strong>تنسيق الأوامر الموجودة</strong>: ربط <code>git</code> و<code>rsync</code> و<code>docker</code> و<code>systemctl</code>، والتحقق من رمز الخروج، وكتابة سطر في السجل. وهو متوفر على كل خوادم Linux تقريباً ولا يتطلب أي اعتمادية.</p>
+<p>في المقابل، بمجرد أن يتعامل السكربت مع هياكل بيانات (JSON، مصفوفات ترابطية متداخلة)، أو يجري حسابات غير بسيطة، أو يتجاوز بضع مئات من الأسطر، تصبح لغة مثل Python أو PHP أكثر أماناً ووضوحاً. في بيئة الإنتاج، أوصي بقاعدة بسيطة: إذا بدأت تحلل JSON باستخدام <code>grep</code> و<code>sed</code>، فقد حان وقت تغيير الأداة (أو على الأقل استخدام <code>jq</code>).</p>
+
 <h3>بنية سكربت متين</h3>
+<p>يتبع السكربت الجيد دائماً الهيكل نفسه: سطر shebang صريح، ووضع صارم، وثوابت في الأعلى، ودوال، وتنظيف مضمون، ودالة <code>main</code> تُستدعى في النهاية.</p>
 <pre><code>#!/bin/bash
 set -euo pipefail
 IFS=$'\n\t'
 
 # Variables
-readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
 readonly LOG_FILE="/var/log/deploy.log"
+readonly TEMP_DIR="$(mktemp -d)"
 
 # Functions
 log() {
@@ -24,17 +31,40 @@ trap cleanup EXIT
 main() {
     log "Starting deployment"
     # ...
-    log "Deployment complete"
+    log "Deployment finished"
 }
 
 main "$@"</code></pre>
+<p>لنفصّل كل عنصر:</p>
+<ul>
+<li><strong><code>set -e</code></strong>: يتوقف السكربت فور فشل أي أمر، بدلاً من الاستمرار في حالة غير متسقة.</li>
+<li><strong><code>set -u</code></strong>: أي متغير غير معرَّف يسبب خطأ. لم يعد خطأ إملائي في <code>$TEMP_DIR</code> يتحول إلى <code>rm -rf /</code>.</li>
+<li><strong><code>set -o pipefail</code></strong>: يفشل خط الأنابيب (pipeline) إذا فشل أي أمر فيه، وليس الأخير فقط. من دونه، يُعدّ <code>failing_command | tee file</code> ناجحاً.</li>
+<li><strong><code>IFS=$'\n\t'</code></strong>: لم يعد تقسيم الكلمات يتم على المسافات، مما يجنّبك المفاجآت السيئة مع أسماء الملفات التي تحتوي على مسافات.</li>
+<li><strong><code>readonly</code></strong>: لا يمكن الكتابة فوق الثوابت عن طريق الخطأ لاحقاً في السكربت.</li>
+<li><strong><code>mktemp -d</code></strong>: ينشئ مجلداً مؤقتاً فريداً، بدلاً من مسار ثابت مثل <code>/tmp/deploy</code> قد يتعارض مع تنفيذ آخر.</li>
+<li><strong><code>trap cleanup EXIT</code></strong>: تُنفَّذ الدالة <code>cleanup</code> مهما كانت طريقة انتهاء السكربت (نجاح، خطأ، <code>exit</code> صريح). لا تبقى الملفات المؤقتة أبداً.</li>
+<li><strong><code>main "$@"</code></strong>: يُنفَّذ كل الكود داخل دالة، مما يجعل التدفق واضحاً ويضمن أن Bash قرأ الملف كاملاً قبل البدء.</li>
+</ul>
+
+<h3>حدود <code>set -e</code></h3>
+<p>الوضع الصارم ليس سحراً. يُتجاهل <code>set -e</code> في بعض الحالات: في شرط <code>if</code>، وعلى يسار <code>&amp;&amp;</code> أو <code>||</code>، وفي دالة تُستدعى من أحد هذه السياقات. وبالمثل، فإن <code>local var=$(command)</code> يخفي رمز خروج الأمر، لأن الرمز المعتبر هو رمز <code>local</code>. صرّح بالمتغير ثم أسند قيمته على سطرين منفصلين:</p>
+<pre><code># Bad: the curl failure is hidden by "local"
+local body=$(curl -fsS "$url")
+
+# Good: the curl failure stops the script
+local body
+body=$(curl -fsS "$url")</code></pre>
+<p>فخ كلاسيكي آخر: يعيد <code>((counter++))</code> رمز خطأ عندما تكون القيمة <em>قبل</em> الزيادة تساوي 0. مع <code>set -e</code>، يتوقف السكربت دون أي رسالة. فضّل <code>counter=$((counter + 1))</code> عندما يمكن أن يبدأ العداد من الصفر.</p>
+
 <h3>أنماط مفيدة</h3>
+<p>تتكرر بعض الدوال في كل سكربتات التشغيل تقريباً. الدالتان التاليتان مثالان جيدان: التحقق من حالة خدمة، وإعادة المحاولة مع تأخير تصاعدي.</p>
 <pre><code># Check whether a service is active
 check_service() {
     if systemctl is-active --quiet "$1"; then
         echo "$1 is active"
     else
-        echo "$1 is inactive" && return 1
+        echo "$1 is inactive" &amp;&amp; return 1
     fi
 }
 
@@ -50,11 +80,65 @@ retry() {
     done
     return 1
 }</code></pre>
+<p>تأخذ الدالة <code>retry</code> عدد المحاولات كوسيط أول، ثم الأمر المراد تنفيذه. يزيل <code>shift</code> الوسيط الأول، وينفّذ <code>"$@"</code> الباقي كما هو مع الحفاظ على المسافات وعلامات الاقتباس. تزداد مدة الانتظار بعد كل فشل (2، 4، 6 ثوانٍ…)، مما يمنح قاعدة البيانات أو الـ API وقتاً للعودة. هنا يبدأ <code>attempt</code> من 1، لذا فإن <code>((attempt++))</code> آمن مع <code>set -e</code>. مثال على الاستخدام:</p>
+<pre><code>retry 5 curl -fsS https://example.com/health
+check_service nginx || systemctl restart nginx</code></pre>
+
+<h3>التحقق من الوسائط والمتطلبات المسبقة</h3>
+<p>يجب أن يفشل السكربت الذي يُشغَّل بوسائط خاطئة فوراً، برسالة واضحة، قبل أن يغيّر أي شيء. وبالمثل، تحقق من أن الأدوات اللازمة مثبتة:</p>
+<pre><code>usage() {
+    echo "Usage: $(basename "$0") &lt;environment&gt; [version]" &gt;&amp;2
+    exit 1
+}
+
+require() {
+    local cmd
+    for cmd in "$@"; do
+        command -v "$cmd" &gt;/dev/null 2&gt;&amp;1 || {
+            echo "Required command not found: $cmd" &gt;&amp;2
+            exit 1
+        }
+    done
+}
+
+[ $# -ge 1 ] || usage
+readonly ENVIRONMENT="$1"
+readonly VERSION="${2:-latest}"
+
+case "$ENVIRONMENT" in
+    staging|production) ;;
+    *) echo "Invalid environment: $ENVIRONMENT" &gt;&amp;2; exit 1 ;;
+esac
+
+require git rsync curl</code></pre>
+<p>لاحظ استخدام <code>${2:-latest}</code> لقيمة افتراضية متوافقة مع <code>set -u</code>، وتوجيه رسائل الخطأ إلى مخرج الأخطاء القياسي (<code>&gt;&amp;2</code>) حتى لا تختلط بمخرجات قد يستهلكها برنامج آخر.</p>
+
+<h3>منع التنفيذ المتزامن</h3>
+<p>قد يتداخل سكربت يشغّله cron كل خمس دقائق مع التنفيذ السابق إذا تأخر. نسختان احتياطيتان أو عمليتا نشر بالتوازي تعنيان حتماً حالة غير متسقة. يحل الأمر <code>flock</code> (من حزمة util-linux) هذه المشكلة بشكل نظيف:</p>
+<pre><code>exec 9&gt;/var/lock/deploy.lock
+if ! flock -n 9; then
+    echo "Another run is already in progress" &gt;&amp;2
+    exit 1
+fi</code></pre>
+<p>تحرر النواة القفل تلقائياً عند انتهاء السكربت، حتى في حالة انهياره: لا يوجد ملف قفل يتيم يجب حذفه يدوياً.</p>
+
+<h3>علامات الاقتباس والمتغيرات</h3>
+<p>تأتي معظم أخطاء Bash من المتغيرات غير المحمية بعلامات الاقتباس. اكتب دائماً <code>"$variable"</code> بين علامتي اقتباس مزدوجتين، إلا إذا كنت تريد صراحةً تقسيم الكلمات. فضّل <code>$(command)</code> على علامات backticks التي يصعب تداخلها، و<code>[[ ... ]]</code> على <code>[ ... ]</code> في سكربتات Bash: فهو يتعامل بشكل أفضل مع السلاسل الفارغة ويدعم التعابير النمطية عبر <code>=~</code>.</p>
+
 <h3>أفضل الممارسات</h3>
 <ul>
 <li>استخدم دائماً <code>set -euo pipefail</code></li>
 <li>وثّق المتغيرات والدوال</li>
-<li>استخدم الدوال لتحسين قابلية القراءة</li>
+<li>استخدم الدوال لتحسين القراءة</li>
 <li>عالج الأخطاء باستخدام <code>trap</code></li>
 <li>اختبر باستخدام shellcheck</li>
+<li>ضع المتغيرات دائماً بين علامتي اقتباس مزدوجتين</li>
+<li>اكتب الأخطاء على <code>stderr</code> وأعد رمز خروج غير صفري</li>
+<li>اجعل السكربتات متساوية القوة (idempotent): يجب ألا يكسر التنفيذ الثاني أي شيء</li>
 </ul>
+<p>يستحق <strong>ShellCheck</strong> إشارة خاصة: فهذا المحلل الساكن يكتشف المتغيرات غير المحمية، والمقارنات الخاطئة، وفخاخ <code>local</code>، وعشرات الأخطاء الأخرى. يندمج مع معظم المحررات ويسهل تشغيله في CI:</p>
+<pre><code>shellcheck scripts/*.sh
+bash -n scripts/deploy.sh   # syntax check only</code></pre>
+
+<h3>متى لا تكتب سكربتاً</h3>
+<p>قبل كتابة سكربت جديد، تحقق مما إذا كانت هناك أداة مخصصة موجودة بالفعل. لجدولة مهمة، يوفّر مؤقّت systemd (timer) التسجيل ومعالجة حالات الفشل. ولإعداد مجموعة من الخوادم بشكل قابل للتكرار، يُعدّ Ansible أنسب من حلقة SSH. السكربت الجيد قصير، ويؤدي مهمة واحدة، ويفشل بصوت عالٍ، ويمكن مراجعته في دقيقتين.</p>

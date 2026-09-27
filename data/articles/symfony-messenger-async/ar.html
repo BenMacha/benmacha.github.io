@@ -1,6 +1,18 @@
 <h2>Symfony Messenger: المعالجة غير المتزامنة بكل بساطة</h2>
-<p>يتيح مكوّن Messenger في Symfony فصل المعالجات الطويلة عن طلبات HTTP لتقديم تجربة مستخدم أفضل.</p>
-<h3>معمارية Message/Handler</h3>
+<p>يتيح مكوّن Messenger في Symfony فصل المعالجات الطويلة عن طلبات HTTP، لتحسين تجربة المستخدم.</p>
+<p>إرسال بريد إلكتروني، أو توليد ملف PDF، أو استدعاء API خارجية بطيئة، أو تغيير أبعاد صورة: لا تحتاج أيّ من هذه المهام إلى تعطيل الاستجابة المرسَلة إلى المستخدم. مع Messenger، يحفظ المتحكّم (controller) ما هو أساسي، وينشر رسالة في طابور انتظار (queue)، ثم يستجيب فوراً. بعد ذلك تتولّى عملية مستقلة، هي <em>العامل (worker)</em>، معالجة الرسالة في الخلفية.</p>
+
+<h3>مكوّنات Messenger</h3>
+<ul>
+<li><strong>الرسالة (message)</strong>: كائن PHP بسيط يحمل البيانات اللازمة للمعالجة، ولا يحتوي على أي منطق.</li>
+<li><strong>المعالِج (handler)</strong>: الصنف الذي يعرف كيف يعالج نوعاً معيّناً من الرسائل.</li>
+<li><strong>الناقل (bus)</strong>: نقطة الدخول <code>MessageBusInterface</code>، التي نسلّمها الرسائل عبر <code>dispatch()</code>.</li>
+<li><strong>وسيلة النقل (transport)</strong>: الطابور الذي تنتظر فيه الرسائل (RabbitMQ، Redis، جدول Doctrine، Amazon SQS…).</li>
+<li><strong>العامل (worker)</strong>: الأمر <code>messenger:consume</code>، الذي يقرأ وسيلة النقل ويستدعي المعالِجات.</li>
+</ul>
+<p>من دون إعداد للتوجيه (routing)، تُعالَج الرسالة بشكل متزامن داخل الطلب نفسه. إن توجيهها إلى وسيلة نقل هو ما يجعل المعالجة غير متزامنة، دون المساس بشيفرة الرسالة أو المعالِج.</p>
+
+<h3>بنية Message/Handler</h3>
 <pre><code>// Message
 class SendNotificationMessage
 {
@@ -20,16 +32,20 @@ class SendNotificationHandler
 
     public function __invoke(SendNotificationMessage $message): void
     {
-        $this->notificationService->send(
-            $message->userId,
-            $message->content,
+        $this-&gt;notificationService-&gt;send(
+            $message-&gt;userId,
+            $message-&gt;content,
         );
     }
 }</code></pre>
-<h3>إعداد وسائل النقل (transports)</h3>
+<p>الرسالة غير قابلة للتعديل (<code>readonly</code>) ولا تحتوي إلا على قيم بسيطة (scalars): إذ ستُسلسَل (serialize) لتخزينها في الطابور، ثم يعيد العامل بناءها، أحياناً بعد عدة دقائق. مرّر مُعرّفاً بدلاً من كيان Doctrine: سيعيد المعالِج تحميل نسخة حديثة من قاعدة البيانات. تكفي السمة <code>#[AsMessageHandler]</code> ليربط Symfony المعالِج بالرسالة، بالاعتماد على نوع وسيط الدالة <code>__invoke()</code>.</p>
+
+<h3>إعداد وسائل النقل</h3>
 <pre><code># config/packages/messenger.yaml
 framework:
     messenger:
+        failure_transport: failed
+
         transports:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
@@ -43,30 +59,92 @@ framework:
         routing:
             App\Message\SendNotificationMessage: async
             App\Message\ProcessOrderMessage: async</code></pre>
+<p>تُعبَّر استراتيجية إعادة المحاولة بالمللي ثانية: عند حدوث استثناء، يُعاد تنفيذ الرسالة بعد ثانية واحدة، ثم ثانيتين، ثم أربع. بعد الإخفاق الثالث، تنتقل إلى وسيلة النقل المحدّدة في <code>failure_transport</code>، وهي هنا جدول Doctrine. من دون هذا المفتاح، تضيع ببساطة كل رسالة استنفدت محاولاتها.</p>
+<p>يعتمد DSN وسيلة النقل الرئيسية على بنيتك التحتية:</p>
+<pre><code># .env
+# RabbitMQ (requires the amqp PHP extension)
+MESSENGER_TRANSPORT_DSN=amqp://guest:guest@localhost:5672/%2f/messages
+# Redis
+# MESSENGER_TRANSPORT_DSN=redis://localhost:6379/messages
+# Database, no extra infrastructure
+# MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0</code></pre>
+<p>تُعدّ وسيلة النقل Doctrine نقطة انطلاق جيدة: فهي لا تتطلب شيئاً غير قاعدة البيانات الموجودة. ويصبح RabbitMQ أو Redis خياراً مجدياً حين يزداد حجم الرسائل أو حين تتشارك عدة تطبيقات الطوابير نفسها.</p>
+
 <h3>إرسال الرسائل (dispatch)</h3>
 <pre><code>class OrderController extends AbstractController
 {
+    public function __construct(
+        private OrderService $orderService,
+    ) {}
+
     #[Route('/order', methods: ['POST'])]
     public function create(
         MessageBusInterface $bus,
         Request $request,
     ): JsonResponse {
-        // Fast synchronous processing
-        $order = $this->orderService->create($request);
+        // Fast synchronous work
+        $order = $this-&gt;orderService-&gt;create($request);
 
-        // Asynchronous processing
-        $bus->dispatch(new SendNotificationMessage(
-            $order->getUserId(),
-            "Order #{$order->getId()} confirmed"
+        // Asynchronous work
+        $bus-&gt;dispatch(new SendNotificationMessage(
+            $order-&gt;getUserId(),
+            "Order #{$order-&gt;getId()} confirmed"
         ));
 
-        return $this->json($order, 201);
+        return $this-&gt;json($order, 201);
     }
 }</code></pre>
-<h3>الإشراف على الـ workers</h3>
+<p>يبقى إنشاء الطلب متزامناً: يجب أن يعرف المستخدم فوراً هل نجح أم لا. وحده الإشعار يذهب إلى الطابور. أرسل الرسالة <strong>بعد</strong> الحفظ في قاعدة البيانات: فإذا عالجها العامل قبل انتهاء المعاملة (transaction)، فلن يجد الطلب.</p>
+
+<h3>تشغيل العمّال ومراقبتهم</h3>
+<p>في بيئة التطوير، تكفي نافذة طرفية واحدة:</p>
+<pre><code>php bin/console messenger:consume async -vv
+
+# In production: restart the worker regularly
+php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M</code></pre>
+<p>العامل في PHP عملية طويلة الأمد: لا يعيد قراءة الشيفرة بعد النشر، وقد تتضخّم ذاكرته. يوقفه الخياران <code>--time-limit</code> و<code>--memory-limit</code> بشكل نظيف بعد الرسالة الجارية، فيعيد مدير العمليات تشغيله فوراً. مع systemd، تتيح وحدة قالب (template unit) تشغيل عدة عمّال:</p>
+<pre><code># /etc/systemd/system/messenger-worker@.service
+[Unit]
+Description=Symfony Messenger worker %i
+After=network.target
+
+[Service]
+User=app
+WorkingDirectory=/var/www/app
+ExecStart=/usr/bin/php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now messenger-worker@1 messenger-worker@2</code></pre>
+<p>عند كل نشر، نفّذ <code>php bin/console messenger:stop-workers</code>: ينهي العمّال رسالتهم الجارية ثم يتوقفون، ويعيد systemd تشغيلهم بالشيفرة الجديدة.</p>
+
+<h3>التعامل مع الرسائل الفاشلة</h3>
+<pre><code>php bin/console messenger:failed:show
+php bin/console messenger:failed:retry
+php bin/console messenger:failed:remove 42</code></pre>
+<p>بعد إصلاح خلل ما، يعيد <code>messenger:failed:retry</code> تشغيل الرسائل العالقة. وإذا كان الخطأ نهائياً (مستخدم محذوف، بيانات غير صالحة)، فارفع الاستثناء <code>UnrecoverableMessageHandlingException</code> داخل المعالِج: فلن تُعاد محاولة الرسالة دون جدوى.</p>
+
+<h3>أخطاء شائعة</h3>
 <ul>
-<li>استخدم systemd لإدارة الـ workers في بيئة الإنتاج</li>
-<li>اضبط <code>--time-limit</code> لتفادي تسرّب الذاكرة</li>
-<li>راقب قائمة الانتظار <code>failed</code> لتتبّع الرسائل التي فشلت معالجتها</li>
-<li>استخدم الـ middleware الخاص بالتسجيل (logging) لتصحيح الأخطاء</li>
+<li><strong>معالِجات غير متساوية الأثر (non-idempotent)</strong>: يضمن Messenger التسليم «مرة واحدة على الأقل». قد تُعالَج رسالة مرتين بعد انهيار ما، ويجب أن يتحمّل المعالِج ذلك دون إرسال دفعتين أو رسالتين إلكترونيتين.</li>
+<li><strong>انقطاع الاتصال بقاعدة البيانات</strong>: قد يغلق خادم MySQL اتصال عامل بقي خاملاً مدة طويلة. يتحقق الوسيط (middleware) <code>doctrine_ping_connection</code> من الاتصال قبل كل رسالة.</li>
+<li><strong>رسائل ثقيلة</strong>: لا تضع فيها كيانات ولا ملفات ولا خدمات. المعرّفات والقيم البسيطة تكفي.</li>
+<li><strong>الاختبارات</strong>: في بيئة الاختبار، وجّه الرسائل إلى وسيلة النقل <code>in-memory://</code> للتحقق من أن رسالة ما قد أُرسلت، أو إلى <code>sync://</code> لتنفيذها فوراً.</li>
 </ul>
+
+<h3>مراقبة العمّال</h3>
+<ul>
+<li>استخدم systemd لإدارة العمّال في الإنتاج</li>
+<li>اضبط <code>--time-limit</code> لتجنّب تسرّب الذاكرة</li>
+<li>راقب الطابور <code>failed</code> لرصد الرسائل الفاشلة</li>
+<li>استخدم وسيط التسجيل (logging middleware) لتصحيح الأخطاء</li>
+<li>أوقف العمّال بشكل نظيف عند كل نشر باستخدام <code>messenger:stop-workers</code></li>
+<li>تابع حجم الطوابير بالأمر <code>messenger:stats</code> لاكتشاف أي عامل متوقف</li>
+</ul>
+
+<h3>متى لا تلجأ إلى المعالجة غير المتزامنة</h3>
+<p>إذا كان المستخدم يحتاج إلى النتيجة لمتابعة مساره (دفعة يجب التحقق منها، مخزون يجب حجزه)، فيجب أن تبقى المعالجة متزامنة أو أن تُرفق بآلية متابعة، كحالة (status) تستعلم عنها الواجهة الأمامية. كما تضيف المعالجة غير المتزامنة بنية تحتية تحتاج إلى مراقبة: فلمهمة تستغرق بضع مللي ثوانٍ، لا فائدة منها. خصّصها للمهام البطيئة أو الهشّة أو غير الأساسية للاستجابة.</p>
+<p>باختصار: رسائل صغيرة وغير قابلة للتعديل، ومعالِجات متساوية الأثر، ووسيلة نقل للإخفاقات مُعدّة، وعمّال يُعاد تشغيلهم بانتظام ويُوقَفون بشكل نظيف عند كل نشر. بهذه القواعد القليلة، يصبح Messenger أساساً موثوقاً لامتصاص ذروات الحمل والحفاظ على أزمنة استجابة قصيرة.</p>

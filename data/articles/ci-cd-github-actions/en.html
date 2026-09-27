@@ -1,6 +1,17 @@
 <h2>GitHub Actions for your PHP projects</h2>
 <p>GitHub Actions provides a CI/CD solution built right into your repository. Here is how to set up a complete pipeline.</p>
+<p>The main benefit is that there is no infrastructure to maintain: workflows are YAML files placed in <code>.github/workflows/</code>, versioned with the code, and executed on virtual machines provided by GitHub (the <em>runners</em>). Every push or pull request triggers the checks, and their result shows up directly in the review interface. For a PHP/Symfony project, a few dozen lines give you static analysis, tests against a real database and automatic deployment.</p>
+
+<h3>The basics</h3>
+<ul>
+<li><strong>Workflow</strong>: a YAML file describing when to run (<code>on</code>) and what to do (<code>jobs</code>).</li>
+<li><strong>Job</strong>: a set of steps executed on the same runner. Jobs in a workflow run in parallel by default, unless <code>needs</code> enforces an order.</li>
+<li><strong>Step</strong>: a shell command (<code>run</code>) or a reusable action (<code>uses</code>), published on the Marketplace or in your own repository.</li>
+<li><strong>Service</strong>: a side container (MySQL, Redis…) started next to the job for the duration of its run.</li>
+</ul>
+
 <h3>Test workflow</h3>
+<p>This first workflow runs on every push to <code>main</code> and <code>develop</code>, as well as on every pull request targeting <code>main</code>. It starts MySQL 8, installs PHP 8.3 with the required extensions, then runs PHPStan and PHPUnit.</p>
 <pre><code>name: CI
 on:
   push:
@@ -40,7 +51,15 @@ jobs:
         run: php bin/phpunit --coverage-clover coverage.xml
         env:
           DATABASE_URL: mysql://root:root@127.0.0.1:3306/test</code></pre>
-<h3>Automated deployment</h3>
+<p>A few details that matter:</p>
+<ul>
+<li><strong><code>shivammathur/setup-php</code></strong> is the reference action for PHP: it installs the requested version, the extensions, Composer and the code coverage driver.</li>
+<li>The <code>3306:3306</code> port mapping exposes MySQL on the runner, hence the <code>127.0.0.1</code> address in <code>DATABASE_URL</code>. If the job itself ran inside a container (<code>container:</code>), you would use the service name, <code>mysql</code>, as the host.</li>
+<li>The <code>root</code> password is acceptable here: the database is disposable and only exists for the duration of the job. Real secrets, however, must never appear in the YAML.</li>
+</ul>
+
+<h3>Automatic deployment</h3>
+<p>The deployment job goes under <code>jobs:</code>. It waits for the tests to succeed (<code>needs</code>) and only runs on the <code>main</code> branch.</p>
 <pre><code>  deploy:
     needs: tests
     runs-on: ubuntu-latest
@@ -58,10 +77,133 @@ jobs:
             composer install --no-dev
             php bin/console cache:clear
             php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>This script is deliberately simple. In production, I recommend adding <code>set -e</code> as the first line to stop the deployment at the first error, and <code>--optimize-autoloader</code> to <code>composer install</code>. To avoid the few seconds during which code and dependencies are out of sync, the release-directory strategy (one folder per version and a <code>current</code> symlink) remains the safest.</p>
+
+<h3>A production-ready workflow</h3>
+<p>The following version keeps the same steps while applying best practices: lint and tests in separate jobs running in parallel, a PHP version matrix, Composer caching, waiting for MySQL and minimal permissions.</p>
+<pre><code>name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --prefer-dist --no-progress
+      - run: vendor/bin/php-cs-fixer fix --dry-run --diff
+      - run: vendor/bin/phpstan analyse src --error-format=github
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: &gt;-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_mysql, intl
+          coverage: pcov
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" &gt;&gt; "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - run: composer install --prefer-dist --no-progress
+      - run: php bin/phpunit --coverage-clover coverage.xml
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/test</code></pre>
+<p>What changes compared to the first workflow:</p>
+<ul>
+<li><strong><code>permissions: contents: read</code></strong> reduces the <code>GITHUB_TOKEN</code> rights to the bare minimum. A job that needs to comment on a pull request or publish an image will explicitly request additional permissions.</li>
+<li><strong><code>concurrency</code></strong> cancels the previous run when a new commit lands on the same branch: there is no point testing code that has already been replaced.</li>
+<li><strong>The matrix</strong> starts one job per PHP version. With <code>fail-fast: false</code>, a failure on PHP 8.4 does not stop the other versions, giving you a complete view of compatibility.</li>
+<li><strong>The MySQL health check</strong>: without the <code>options</code>, the job may start while MySQL is still initializing its database, and the first tests fail randomly. GitHub now waits until the container reports healthy.</li>
+<li><strong>The Composer cache</strong> is keyed on the hash of <code>composer.lock</code>: as long as dependencies do not change, packages are restored instead of downloaded.</li>
+<li><strong><code>pcov</code></strong> collects code coverage much faster than Xdebug, which is only useful if you need its other features.</li>
+<li><strong><code>--error-format=github</code></strong> turns PHPStan errors into annotations displayed directly on the relevant lines of the pull request.</li>
+</ul>
+
+<h3>Protecting deployment with an environment</h3>
+<p>GitHub offers <strong>environments</strong>: secrets specific to each target and, depending on your GitHub plan, protection rules such as manual approval by designated reviewers. The deployment job simply declares the environment it uses:</p>
+<pre><code>  deploy:
+    needs: [lint, tests]
+    if: github.ref == 'refs/heads/main' &amp;&amp; github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/app
+            git pull origin main
+            composer install --no-dev --optimize-autoloader
+            php bin/console cache:clear
+            php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>Here, the <code>production</code> concurrency group guarantees that only one deployment runs at a time, without ever cancelling one in progress: interrupting a deployment in the middle of migrations would be far worse than waiting.</p>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong>Secrets and forks</strong>: workflows triggered by a pull request from a fork do not have access to secrets. Tests must therefore work without them.</li>
+<li><strong>Third-party actions</strong>: an action referenced by a tag (<code>@v1</code>) can change without you knowing. For sensitive actions, pin them to a full commit SHA and let Dependabot propose updates.</li>
+<li><strong>Status check names</strong>: with a matrix, checks are named for example <code>tests (8.3)</code>. Renaming a job or changing the matrix requires updating the branch protection rules.</li>
+<li><strong>Deploying from a pull request</strong>: the <code>github.event_name == 'push'</code> condition prevents an unexpected event on <code>main</code> from triggering a production release.</li>
+</ul>
+
 <h3>Best practices</h3>
 <ul>
-<li>Use the Composer dependency cache</li>
+<li>Use Composer dependency caching</li>
 <li>Run test and lint jobs in parallel</li>
 <li>Protect branches with required status checks</li>
 <li>Store secrets in GitHub Secrets</li>
+<li>Restrict the <code>GITHUB_TOKEN</code> <code>permissions</code></li>
+<li>Use a protected environment for production</li>
 </ul>
+<p>With these few rules, every pull request is checked automatically, errors show up directly in code review, and releasing to production becomes a routine operation rather than a dreaded event.</p>

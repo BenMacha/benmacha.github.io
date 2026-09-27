@@ -1,5 +1,11 @@
 <h2>ترحيل Symfony دون انقطاع في الخدمة</h2>
 <p>يُعدّ ترحيل تطبيق Symfony من الإصدار 2.8 إلى 6.4 تحدياً كبيراً. في Keytchens، أنجزنا هذا الترحيل على منصة قيد الإنتاج تدير الطلبات في الزمن الحقيقي، دون أي انقطاع في الخدمة.</p>
+<p>تفصل أربعة إصدارات رئيسية بين Symfony 2.8 وSymfony 6.4. وخلال هذه المسافة، تغيّرت بنية المجلدات، وأصبح حقن الاعتماديات تلقائياً، وأُعيدت كتابة نظام الأمان، وانتقل PHP من الإصدار 5 إلى الإصدار 8. يعرض هذا المقال طريقة لتجاوز هذه المراحل واحدة تلو الأخرى، مع إبقاء التطبيق في الإنتاج في كل لحظة.</p>
+
+<h3>المبدأ: اتّباع نموذج إصدارات Symfony</h3>
+<p>يُصدر Symfony نسخة فرعية (minor) كل ستة أشهر، وآخر نسخة فرعية من كل إصدار رئيسي (x.4) هي نسخة LTS. القاعدة الأساسية هي التالية: لا تُحذف أي ميزة في إصدار رئيسي دون أن تكون قد وُسمت بأنها مُهمَلة (deprecated) في الإصدار السابق. لذا فإن التطبيق الذي يعمل على آخر نسخة فرعية من إصدار رئيسي <strong>دون أي عنصر مُهمَل</strong> يمكنه الانتقال إلى الإصدار الرئيسي التالي دون أعطال.</p>
+<p>وبذلك ينقسم الترحيل إلى مراحل، تُعتمد كل منها وتُنشر في الإنتاج قبل الانتقال إلى التي تليها.</p>
+
 <h3>استراتيجية ترحيل تدريجية</h3>
 <p>بدلاً من إعادة الكتابة الكاملة، اخترنا الترحيل التدريجي:</p>
 <ul>
@@ -8,15 +14,48 @@
 <li><strong>المرحلة 3</strong>: Symfony 4.4 → 5.4 (إزالة العناصر المُهمَلة (deprecations))</li>
 <li><strong>المرحلة 4</strong>: Symfony 5.4 → 6.4 (اعتماد PHP 8.1+)</li>
 </ul>
+<p>تفرض كل مرحلة أيضاً حداً أدنى لإصدار PHP: PHP 7.1.3 لـ Symfony 4.4، وPHP 7.2.5 لـ Symfony 5.4، وPHP 8.1 لـ Symfony 6.4. غالباً ما يكون الأبسط ترقية PHP أولاً على إصدار Symfony الحالي، ثم ترحيل Symfony: فلا نغيّر إلا متغيّراً واحداً في كل مرة.</p>
+
+<h3>قبل البدء</h3>
+<ol>
+<li><strong>الاختبارات</strong>: من دون اختبارات وظيفية تغطي المسارات الحرجة، تصبح كل مرحلة مجازفة. ابدأ من هنا.</li>
+<li><strong>جرد الاعتماديات</strong>: الأمر <code>composer outdated</code> وقائمة الحزم (bundles) الخارجية. أي حزمة مهجورة وغير متوافقة مع الإصدار المستهدف يجب استبدالها قبل الترحيل، لا أثناءه.</li>
+<li><strong>بيئة ما قبل الإنتاج (staging)</strong> مغذّاة بنسخة مجهّلة الهوية من بيانات الإنتاج.</li>
+<li><strong>تتبّع الأخطاء</strong> (سجلات مركزية، أداة من نوع Sentry) لرصد أي تراجع فور النشر.</li>
+</ol>
+
 <h3>أدوات لا غنى عنها</h3>
+<p>يسرد PHPUnit Bridge الخاص بـ Symfony كل العناصر المُهمَلة التي تُستدعى أثناء الاختبارات. ويطبّق Rector جزءاً كبيراً من التصحيحات تلقائياً:</p>
 <pre><code># Detect deprecations
-composer require symfony/phpunit-bridge
-PHPUnit_SYMFONY_DEPRECATIONS_HELPER=max[total]=0 php bin/phpunit
+composer require --dev symfony/phpunit-bridge
+SYMFONY_DEPRECATIONS_HELPER='max[total]=0' php bin/phpunit
 
 # Fix automatically
-composer require rector/rector
-vendor/bin/rector process src --set symfony54</code></pre>
+composer require --dev rector/rector
+vendor/bin/rector process --dry-run
+vendor/bin/rector process</code></pre>
+<p>مع <code>max[total]=0</code>، يكفي عنصر مُهمَل واحد لإفشال مجموعة الاختبارات: وهذا هو الإعداد الذي ينبغي بلوغه في التكامل المستمر (CI) قبل تغيير الإصدار الرئيسي. يُضبط Rector في ملف <code>rector.php</code> في جذر المشروع، باختيار مجموعة القواعد المطابقة للإصدار المستهدف:</p>
+<pre><code>&lt;?php
+
+use Rector\Config\RectorConfig;
+use Rector\Symfony\Set\SymfonySetList;
+
+return RectorConfig::configure()
+    -&gt;withPaths([__DIR__ . '/src', __DIR__ . '/tests'])
+    -&gt;withSets([SymfonySetList::SYMFONY_54]);</code></pre>
+<p>شغّل Rector دائماً مع <code>--dry-run</code> أولاً وراجع الفروقات (diff): إنه أداة قوية، لكنها ليست معصومة. ومن جهة حاوية الخدمات، يسرد الأمر <code>php bin/console debug:container --deprecations</code> (المتاح منذ Symfony 5.1) العناصر المُهمَلة التي تظهر أثناء الترجمة (compilation).</p>
+<p>بدءاً من بنية Flex، يُتحكَّم في إصدار Symfony من خلال <code>composer.json</code>، ثم يُحدَّث بأمر واحد:</p>
+<pre><code>{
+    "extra": {
+        "symfony": {
+            "require": "6.4.*"
+        }
+    }
+}</code></pre>
+<pre><code>composer update "symfony/*" --with-all-dependencies</code></pre>
+
 <h3>نقاط حرجة</h3>
+<p>التغيير الأبرز هو إعداد الخدمات. كان Symfony 2.8 يفرض التصريح بكل خدمة يدوياً؛ أما منذ Symfony 3.3، فإن الربط التلقائي (autowiring) والإعداد التلقائي (autoconfiguration) يسجّلان أصناف <code>src/</code> تلقائياً:</p>
 <pre><code># Service migration (before - services.yml)
 services:
     app.manager.order:
@@ -30,12 +69,41 @@ services:
         autoconfigure: true
     App\:
         resource: '../src/'</code></pre>
-<h3>ضمان عدم التوقف (zero-downtime)</h3>
+<p>إذا كانت بعض الشيفرة لا تزال تجلب الخدمة بمعرّفها القديم، مثل <code>$container-&gt;get('app.manager.order')</code>، فصرّح بـ alias مؤقت نحو الصنف، ثم استبدل هذه الاستدعاءات تدريجياً بالحقن عبر الباني (constructor). الخدمات خاصة (private) افتراضياً منذ Symfony 4.0: يجب أن يختفي الوصول المباشر إلى الحاوية.</p>
+<p>نقاط أخرى تستحق الانتباه:</p>
+<ul>
+<li><strong>بنية المجلدات</strong> (الانتقال إلى 4.x): يصبح <code>app/config</code> هو <code>config/</code>، ويصبح <code>web/</code> هو <code>public/</code>، وتنتقل القوالب إلى <code>templates/</code>، وتُسجَّل الحزم في <code>config/bundles.php</code>.</li>
+<li><strong>الأمان</strong>: حلّ نظام authenticators الجديد محلّ نظام المصادقة Guard، وقد قُدّم في 5.1 وأصبح الوحيد المتاح في 6.0. يجب إعادة كتابة أدوات المصادقة المخصّصة.</li>
+<li><strong>الأوامر والمتحكّمات</strong>: حُذف <code>ContainerAwareCommand</code> في 5.0، ويجب أن تتلقى المتحكّمات اعتمادياتها عبر الحقن بدلاً من <code>$this-&gt;get()</code>.</li>
+<li><strong>أنواع الإرجاع</strong>: يضيف Symfony 6 أنواع إرجاع أصلية (native return types) إلى واجهاته. ويجب على الأصناف التي تطبّقها أو ترثها (voters، normalizers، الأوامر) التصريح بالأنواع نفسها.</li>
+</ul>
+
+<h3>إدارة النشر دون توقف (zero-downtime)</h3>
 <p>للحفاظ على الخدمة أثناء الترحيل:</p>
 <ul>
-<li>النشر بأسلوب blue-green مع Docker</li>
-<li>مفاتيح الميزات (feature flags) لتفعيل الوظائف الجديدة تدريجياً</li>
+<li>نشر blue-green باستخدام Docker</li>
+<li>مفاتيح الميزات (feature flags) لتفعيل الميزات الجديدة تدريجياً</li>
 <li>اختبارات انحدار (regression) مؤتمتة تغطي 85% من الشيفرة</li>
-<li>تراجع (rollback) تلقائي عند اكتشاف أخطاء</li>
+<li>تراجع تلقائي (rollback) عند اكتشاف أخطاء</li>
 </ul>
+<p>يقوم نشر blue-green على تشغيل بيئتين جنباً إلى جنب: تستقبل النسخة الحالية الحركة بينما تبدأ النسخة الجديدة وتجتاز فحوص السلامة. ثم يحوّل الوكيل العكسي (reverse proxy) الحركة إليها، وتبقى النسخة القديمة متاحة لتراجع فوري. شرط لا غنى عنه: يجب أن تعمل النسختان مع مخطط قاعدة البيانات نفسه. لذا يجب أن تبقى ترحيلات Doctrine متوافقة مع الإصدارات السابقة، وفق المبدأ المفصّل في مقال <a href="/blog/database-migration-zero-downtime">ترحيلات قاعدة البيانات دون انقطاع</a>.</p>
+<p>تُكمل مفاتيح الميزات هذه المنظومة: تُنشر الشيفرة الجديدة وهي معطّلة، ثم تُفعَّل لجزء من المستخدمين، وتُوقَف في لحظة إذا ظهرت مشكلة.</p>
+
+<h3>أخطاء يجب تجنّبها</h3>
+<ul>
+<li><strong>تخطّي المراحل</strong>: القفز مباشرة من 2.8 إلى 4.4 يراكم مئات التغييرات ويجعل تحديد مصدر كل خطأ صعباً.</li>
+<li><strong>خلط الترحيل بالميزات الجديدة</strong>: فرع ترحيل يعيش لأشهر يصبح دمجه مستحيلاً. سلّم كل مرحلة بسرعة، عبر pull requests صغيرة.</li>
+<li><strong>تجاهل العناصر المُهمَلة في الحزم الخارجية</strong>: ستعطّل الإصدار الرئيسي التالي تماماً كما تفعل عناصرك أنت.</li>
+<li><strong>نسيان الذاكرة المؤقتة (cache) وOPcache</strong> عند النشر: لا غنى عن <code>cache:clear</code> وإعادة تحميل PHP-FPM بعد كل مرحلة.</li>
+</ul>
+
+<h3>قائمة التحقق لكل مرحلة</h3>
+<ol>
+<li>ترقية PHP إلى الإصدار المطلوب والتحقق من الاختبارات.</li>
+<li>بلوغ صفر عناصر مُهمَلة على الإصدار الحالي.</li>
+<li>تحديث Symfony والحزم إلى الإصدار الرئيسي التالي.</li>
+<li>تشغيل Rector، ومراجعة الفروقات، وتصحيح الحالات المتبقية.</li>
+<li>الاعتماد في بيئة ما قبل الإنتاج، ثم النشر بأسلوب blue-green.</li>
+<li>مراقبة الأخطاء والأداء قبل الانتقال إلى المرحلة التالية.</li>
+</ol>
 <p>أتاح هذا الترحيل تحسين الأداء بنسبة 40% وتقليص الدين التقني بشكل ملحوظ.</p>

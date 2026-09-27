@@ -1,6 +1,9 @@
 <h2>Optimizing PHP for production</h2>
-<p>PHP performance is critical for high-traffic applications. At CCM Benchmark, where the sites serve millions of visitors every day, every millisecond counts.</p>
+<p>PHP performance is crucial for high-traffic applications. At CCM Benchmark, where sites handle millions of daily visitors, every millisecond counts.</p>
+<p>Optimizing does not mean rewriting everything. In the vast majority of applications, the gains come from a few well-chosen settings: a properly configured OPcache, an optimized autoloader, well-controlled SQL queries and a PHP-FPM pool sized according to the available memory. The golden rule stays the same at every step: <strong>measure before optimizing</strong>, then measure again to confirm the gain. This article follows that order, from the most cost-effective setting to the most specific one.</p>
+
 <h3>OPcache: the foundation</h3>
+<p>On every request, PHP normally has to read, parse and compile the source files into bytecode. OPcache keeps that bytecode in shared memory: subsequent requests execute it directly. It is the setting with the best effort-to-gain ratio, and it must be enabled on every production server.</p>
 <pre><code>; php.ini - Optimal OPcache configuration
 opcache.enable=1
 opcache.memory_consumption=256
@@ -9,7 +12,21 @@ opcache.validate_timestamps=0
 opcache.save_comments=1
 opcache.preload=/var/www/app/config/preload.php
 opcache.preload_user=www-data</code></pre>
+<p>What these directives do:</p>
+<ul>
+<li><code>memory_consumption</code> (in MB) must hold all the bytecode of the application and its dependencies. If it fills up, OPcache stops caching new files or restarts, and performance drops without any visible error.</li>
+<li><code>max_accelerated_files</code> must exceed the number of PHP files in the project, <code>vendor/</code> included. A <code>find . -name '*.php' | wc -l</code> gives the order of magnitude.</li>
+<li><code>validate_timestamps=0</code> removes the modification-time check on every request. The trade-off: you must <strong>reload PHP-FPM on every deployment</strong>, otherwise the old code keeps running.</li>
+<li><code>save_comments=1</code> is essential if you use annotations read through reflection (older versions of Doctrine or validation libraries).</li>
+</ul>
+<p>To check the actual state of the cache, <code>opcache_get_status()</code> returns the hit rate (<code>opcache_hit_rate</code>), the memory in use and the number of restarts. On a stable application, the hit rate should stay very close to 100%.</p>
+<p>Complete this with the realpath cache, which avoids repeated system calls to resolve file paths:</p>
+<pre><code>; php.ini - realpath cache
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+
 <h3>PHP 8 preloading</h3>
+<p>Since PHP 7.4, preloading loads a set of classes into memory when the server starts. They stay available to every request, without even going through the autoloader.</p>
 <pre><code>// config/preload.php
 require dirname(__DIR__).'/vendor/autoload.php';
 
@@ -18,26 +35,82 @@ $files = glob(dirname(__DIR__).'/src/Entity/*.php');
 foreach ($files as $file) {
     opcache_compile_file($file);
 }</code></pre>
+<p>With Symfony, there is no need to write this list by hand: the <code>config/preload.php</code> file provided by the recipe includes <code>var/cache/prod/App_KernelProdContainer.preload.php</code>, generated during <code>cache:warmup</code> with the classes the container actually uses. Two precautions: any change to a preloaded class requires a full PHP-FPM restart, and the gain depends on the application. It is often modest once OPcache is well tuned, so measure it before keeping it.</p>
+
+<h3>An optimized autoloader</h3>
+<p>In production, Composer can generate a complete classmap, which avoids checking for files on disk for every class:</p>
+<pre><code>composer install --no-dev --optimize-autoloader --classmap-authoritative
+composer dump-env prod
+APP_ENV=prod php bin/console cache:warmup</code></pre>
+<p><code>--classmap-authoritative</code> tells the autoloader to look for classes only in the classmap. It is fast, but a class generated at runtime and missing from the classmap will not be found. <code>composer dump-env prod</code> compiles the <code>.env</code> files into a PHP file, which avoids parsing them on every request.</p>
+
 <h3>Profiling with Blackfire</h3>
-<pre><code># Install the Blackfire agent
-curl -s https://packagecloud.io/install/repositories/blackfire/agent/script.deb.sh | sudo bash
-sudo apt install blackfire-agent
+<p>Optimizing without profiling is guesswork. A profiler shows exactly where time and memory are spent: function by function, SQL query by SQL query, HTTP call by HTTP call. Blackfire is designed to be usable in production with zero overhead when not profiling. Installation goes through the official APT repository:</p>
+<pre><code># Add the Blackfire repository (Debian/Ubuntu)
+wget -q -O - https://packages.blackfire.io/gpg.key | sudo dd of=/usr/share/keyrings/blackfire-archive-keyring.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/blackfire-archive-keyring.asc] http://packages.blackfire.io/debian any main" | sudo tee /etc/apt/sources.list.d/blackfire.list
+sudo apt update
+
+# Install the Blackfire agent and the PHP probe
+sudo apt install blackfire blackfire-php
+sudo blackfire agent:config
 
 # Profile a request
 blackfire curl http://localhost/api/products</code></pre>
+<p>Read the profile starting from the nodes with the highest "exclusive" time: they are the ones actually doing the work. A call repeated hundreds of times, often an SQL query inside a loop, is the most frequent signal. If Blackfire is not an option, the Xdebug profiler or the open source SPX extension provide comparable information, to be kept for development environments.</p>
+
 <h3>Doctrine optimizations</h3>
+<p>In a Symfony application, the database is almost always the biggest cost. The main levers:</p>
 <ul>
-<li>Enable the query and result caches</li>
-<li>Use DQL queries with partial selects</li>
-<li>Avoid lazy loading by using explicit joins</li>
+<li>Enable the query cache and the result cache</li>
+<li>Use DQL queries with partial selections</li>
+<li>Avoid lazy loading with explicit joins</li>
 <li>Configure the second-level cache</li>
 </ul>
-<pre><code>// Doctrine query cache
-$query = $em->createQuery('SELECT p FROM App\Entity\Product p')
-    ->enableResultCache(3600, 'products_list');
+<p>The query cache (the DQL-to-SQL translation) and the result cache are configured in <code>config/packages/doctrine.yaml</code>. The Symfony recipe already enables a configuration of this kind for the production environment:</p>
+<pre><code>when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
 
-$results = $query->getResult();</code></pre>
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system</code></pre>
+<p>The result cache is then enabled query by query:</p>
+<pre><code>// Doctrine query cache
+$query = $em-&gt;createQuery('SELECT p FROM App\Entity\Product p')
+    -&gt;enableResultCache(3600, 'products_list');
+
+$results = $query-&gt;getResult();</code></pre>
+<p>Think about invalidation: when a product changes, delete the relevant entry, for example with <code>$em-&gt;getConfiguration()-&gt;getResultCache()?-&gt;deleteItem('products_list')</code>. A cache without an invalidation strategy always ends up serving stale data.</p>
+<p>The most common problem remains "N+1": one query to load a list, then one extra query per item as soon as a relation is accessed. An explicit join with <code>addSelect</code> loads everything at once, and selecting into a DTO avoids hydrating full entities when you only need a few fields:</p>
+<pre><code>// Explicit join: categories are loaded in the same query
+$products = $em-&gt;createQueryBuilder()
+    -&gt;select('p', 'c')
+    -&gt;from(Product::class, 'p')
+    -&gt;leftJoin('p.category', 'c')
+    -&gt;where('p.active = :active')
+    -&gt;setParameter('active', true)
+    -&gt;getQuery()
+    -&gt;getResult();
+
+// Partial selection into a DTO, without entity hydration
+$items = $em-&gt;createQuery(
+    'SELECT NEW App\Dto\ProductListItem(p.id, p.name, p.price) FROM App\Entity\Product p'
+)-&gt;getResult();</code></pre>
+<p>For batch processing (imports, exports), use <code>toIterable()</code> and call <code>$em-&gt;clear()</code> regularly so that the EntityManager does not keep thousands of objects in memory. And do not forget indexes: the Symfony debug toolbar shows every query, and an <code>EXPLAIN</code> on the slowest ones quickly reveals a missing index.</p>
+
 <h3>PHP-FPM tuning</h3>
+<p>PHP-FPM manages a pool of processes that handle requests. Too few processes and requests queue up; too many and the server runs out of memory and starts swapping, which is far worse.</p>
 <pre><code>; PHP-FPM configuration for high performance
 pm = dynamic
 pm.max_children = 50
@@ -45,3 +118,23 @@ pm.start_servers = 10
 pm.min_spare_servers = 5
 pm.max_spare_servers = 20
 pm.max_requests = 500</code></pre>
+<p>These values are not meant to be copied: they must be calculated. <code>pm.max_children</code> is roughly the memory available to PHP divided by the average memory of one process. With 4 GB reserved for PHP and 80 MB processes, you get 50. The actual process memory is measured on the server:</p>
+<pre><code># Average memory (in MB) of PHP-FPM processes
+ps -o rss= -C php-fpm8.3 | awk '{ sum += $1; n++ } END { if (n) printf "%.0f\n", sum / n / 1024 }'</code></pre>
+<p><code>pm.max_requests</code> recycles each process after 500 requests, which limits the impact of any memory leaks. To find out whether the pool is correctly sized, enable the status page and the slow request log:</p>
+<pre><code>; Pool monitoring
+pm.status_path = /fpm-status
+request_slowlog_timeout = 5s
+slowlog = /var/log/php-fpm/slow.log</code></pre>
+<p>If the status page often shows <code>max children reached</code> or a non-empty queue (<code>listen queue</code>), the pool is undersized, or requests are too slow. The slowlog then shows exactly which function was blocking. Protect the status URL so that it is only reachable internally.</p>
+
+<h3>Production checklist</h3>
+<ol>
+<li>OPcache enabled, with a hit rate close to 100% and no unexpected restarts.</li>
+<li><code>APP_ENV=prod</code>, <code>APP_DEBUG=0</code>, Symfony cache warmed up on deployment.</li>
+<li>Optimized autoloader and development dependencies excluded.</li>
+<li>No N+1 on the main pages, and indexes on filtered or sorted columns.</li>
+<li>PHP-FPM pool sized according to measured memory, with status and slowlog enabled.</li>
+<li>A Blackfire profile (or equivalent) of critical pages before and after each optimization.</li>
+</ol>
+<p>Beyond PHP itself, the most powerful lever is often not to run PHP at all: HTTP caching (<code>Cache-Control</code> headers, a reverse proxy or a CDN) for public pages, and heavy work offloaded to asynchronous workers. A request served from a cache costs almost nothing, whatever the quality of the code behind it.</p>

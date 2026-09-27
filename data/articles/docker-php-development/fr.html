@@ -1,5 +1,8 @@
 <h2>Un environnement de dev identique pour toute l'équipe</h2>
 <p>Fini les "ça marche sur ma machine". Docker garantit que chaque développeur travaille dans un environnement identique, éliminant les problèmes de compatibilité.</p>
+<p>Sans conteneurs, chaque poste de travail finit par avoir sa propre version de PHP, ses propres extensions, une version de MySQL différente de celle de la production et des réglages <code>php.ini</code> hérités d'anciens projets. Les bugs qui en découlent sont les plus coûteux à diagnostiquer, parce qu'ils ne se reproduisent pas ailleurs. Avec Docker, l'environnement est décrit dans des fichiers versionnés avec le code : mettre à jour PHP devient une modification relue en code review, et chaque membre de l'équipe la récupère avec un simple <code>git pull</code>.</p>
+<p>Cet article construit une stack de développement PHP complète : PHP avec Xdebug, MySQL et un serveur mail de test, puis aborde le débogage, les performances des volumes sur macOS et Windows et les pièges classiques.</p>
+
 <h3>Stack de développement complète</h3>
 <pre><code>version: '3.8'
 services:
@@ -32,6 +35,32 @@ services:
 volumes:
   composer-cache:
   mysql-data:</code></pre>
+<p>Détaillons les choix de ce fichier :</p>
+<ul>
+<li><strong>Le code est monté</strong> (<code>.:/var/www/html</code>) : toute modification dans l'IDE est immédiatement visible dans le conteneur, sans reconstruire l'image.</li>
+<li><strong>Le cache Composer</strong> vit dans un volume nommé : les paquets téléchargés sont conservés même si le conteneur est recréé.</li>
+<li><strong>MySQL</strong> publie le port 3306 pour permettre à un client graphique de s'y connecter depuis le poste. Les données survivent aux redémarrages grâce au volume <code>mysql-data</code>. Utilisez la même version majeure qu'en production.</li>
+<li><strong>MailHog</strong> intercepte tous les e-mails envoyés par l'application et les affiche sur <code>http://localhost:8025</code> : aucun risque d'écrire à de vrais clients depuis un poste de développement. Dans un projet Symfony, pointez <code>MAILER_DSN</code> vers <code>smtp://mailhog:1025</code>. MailHog n'étant plus maintenu, <strong>Mailpit</strong> (image <code>axllent/mailpit</code>, mêmes ports) est aujourd'hui une alternative active et compatible.</li>
+</ul>
+<p>Les mots de passe en clair sont acceptables ici parce que cet environnement ne quitte jamais le poste du développeur. Comme dans les autres exemples, la clé <code>version</code> est obsolète avec Docker Compose v2 et peut être retirée.</p>
+
+<h3>Le Dockerfile de développement</h3>
+<p>Le fichier <code>Dockerfile.dev</code> part de l'image officielle PHP et ajoute les extensions courantes, Composer et Xdebug. Il reste volontairement distinct du Dockerfile de production, qui ne doit jamais contenir Xdebug :</p>
+<pre><code>FROM php:8.3-fpm
+
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends git unzip libicu-dev libzip-dev \
+    &amp;&amp; docker-php-ext-install intl pdo_mysql zip opcache \
+    &amp;&amp; pecl install xdebug \
+    &amp;&amp; docker-php-ext-enable xdebug \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/php/xdebug.ini /usr/local/etc/php/conf.d/zz-xdebug.ini
+
+WORKDIR /var/www/html</code></pre>
+<p>La ligne <code>COPY --from=composer:2</code> récupère le binaire Composer depuis l'image officielle, sans script d'installation. Le fichier de configuration Xdebug est préfixé par <code>zz-</code> pour être chargé après ceux générés par <code>docker-php-ext-enable</code>.</p>
+
 <h3>Configuration Xdebug</h3>
 <p>Le debugging est essentiel en développement. Voici la configuration Xdebug optimale :</p>
 <pre><code>[xdebug]
@@ -39,11 +68,52 @@ xdebug.mode=debug
 xdebug.start_with_request=yes
 xdebug.client_host=host.docker.internal
 xdebug.client_port=9003</code></pre>
+<p>Chaque ligne a son importance. <code>xdebug.mode=debug</code> active le débogage pas à pas ; la variable d'environnement <code>XDEBUG_MODE</code> du fichier Compose a priorité sur cette valeur, ce qui permet de passer à <code>XDEBUG_MODE=off</code> sans reconstruire l'image lorsque vous n'en avez pas besoin. <code>start_with_request=yes</code> démarre une session à chaque requête ; si cela ralentit trop votre application, utilisez plutôt <code>trigger</code> avec une extension de navigateur qui ajoute le déclencheur à la demande. Le port <code>9003</code> est celui par défaut depuis Xdebug 3 (l'ancien 9000 entrait en conflit avec PHP-FPM).</p>
+<p>Le nom <code>host.docker.internal</code> désigne la machine hôte, là où tourne l'IDE. Docker Desktop le fournit automatiquement sur macOS et Windows ; sur Linux, il faut le déclarer. Pour PhpStorm, ajoutez aussi un nom de serveur, qui sert à retrouver le mapping de chemins, y compris pour les commandes CLI :</p>
+<pre><code>services:
+  php:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - PHP_IDE_CONFIG=serverName=docker</code></pre>
+<p>Dans PhpStorm, créez ensuite un serveur nommé <code>docker</code> et associez la racine du projet à <code>/var/www/html</code>. Sans ce mapping, l'IDE reçoit bien la connexion mais ne s'arrête sur aucun point d'arrêt.</p>
+
 <h3>Hot reload et performances</h3>
 <p>Sur macOS et Windows, les volumes montés peuvent être lents. Utilisez des stratégies de synchronisation :</p>
 <ul>
 <li>Mutagen pour la synchronisation rapide des fichiers</li>
 <li>Exclure <code>vendor/</code> et <code>node_modules/</code> du montage</li>
 <li>Utiliser des volumes nommés pour les dépendances</li>
+</ul>
+<p>La lenteur vient du fait que Docker tourne dans une machine virtuelle sur ces systèmes : chaque accès à un fichier monté traverse la frontière entre l'hôte et la VM. Les versions récentes de Docker Desktop utilisent VirtioFS, nettement plus rapide qu'auparavant, mais un projet Symfony lit des milliers de fichiers dans <code>vendor/</code> à chaque requête. Placer ces dossiers dans des volumes nommés les garde à l'intérieur de la VM :</p>
+<pre><code>services:
+  php:
+    volumes:
+      - .:/var/www/html
+      - vendor:/var/www/html/vendor
+      - composer-cache:/root/.composer
+
+volumes:
+  vendor:
+  composer-cache:</code></pre>
+<p>Contrepartie : le dossier <code>vendor/</code> n'est plus visible depuis l'hôte, et l'IDE perd l'autocomplétion des dépendances. Beaucoup d'équipes lancent donc aussi un <code>composer install</code> local pour l'IDE, ou utilisent l'interpréteur distant de PhpStorm. Le cache de Symfony (<code>var/</code>) peut être traité de la même manière. Sur Linux, les montages sont natifs et rapides : ces optimisations ne sont pas nécessaires.</p>
+
+<h3>Les commandes du quotidien</h3>
+<p>Toutes les commandes PHP s'exécutent dans le conteneur, jamais avec le PHP de l'hôte :</p>
+<pre><code>docker compose up -d --build
+docker compose exec php composer install
+docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec php bin/console cache:clear
+
+# Sur Linux, pour que les fichiers créés appartiennent à votre utilisateur
+docker compose exec -u "$(id -u):$(id -g)" php composer require symfony/uid</code></pre>
+<p>Regroupez ces commandes dans un <code>Makefile</code> ou un script documenté dans le README : un nouveau développeur ne doit avoir à retenir qu'une ou deux commandes.</p>
+
+<h3>Pièges fréquents</h3>
+<ul>
+<li><strong>Fichiers appartenant à root</strong> sur Linux : les commandes lancées en root dans le conteneur créent des fichiers que l'utilisateur de l'hôte ne peut plus modifier. Exécutez-les avec votre UID, comme ci-dessus.</li>
+<li><strong>Utiliser <code>localhost</code> pour joindre la base</strong> : dans un conteneur, <code>localhost</code> désigne le conteneur lui-même. L'hôte de la base est le nom du service, ici <code>mysql</code>.</li>
+<li><strong>Xdebug laissé actif en permanence</strong> : il ralentit sensiblement chaque requête et chaque commande Composer. Désactivez-le quand vous ne déboguez pas.</li>
+<li><strong>Environnement de dev trop éloigné de la production</strong> : même version de PHP, mêmes extensions, même moteur de base de données, sinon l'avantage de Docker disparaît.</li>
 </ul>
 <p>Cette approche permet d'avoir un environnement de développement opérationnel en moins de 5 minutes pour tout nouveau développeur rejoignant l'équipe.</p>

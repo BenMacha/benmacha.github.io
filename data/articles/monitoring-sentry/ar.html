@@ -1,8 +1,20 @@
 <h2>Sentry: لا تفوّت أي خطأ بعد اليوم</h2>
-<p>Sentry أداة لمراقبة الأخطاء تلتقط الاستثناءات (exceptions) في تطبيقك وتجمّعها وتنبّهك إليها في الوقت الفعلي.</p>
+<p>Sentry أداة لمراقبة الأخطاء تلتقط الاستثناءات (exceptions) في تطبيقك وتجمّعها وتنبّه إليها في الوقت الفعلي.</p>
+<p>من دون أداة من هذا النوع، يُكتشف الخطأ في الإنتاج بإحدى طريقتين: إما أن يبلّغ عنه مستخدم، أو أن يقرأ أحدهم السجلات في نهاية المطاف. وفي الحالتين، يغيب معظم السياق. يغيّر Sentry المعادلة: يُرسَل كل استثناء مع مكدس الاستدعاءات (stack trace) الكامل، وطلب HTTP، والمستخدم المعني، والإصدار المنشور، والبيئة. وتُجمَّع التكرارات المتطابقة في <strong>issue</strong> واحد، مما يتيح لك أن ترى فوراً أن خطأً ما يطال مئات المستخدمين منذ آخر عملية نشر، بدلاً من تلقي مئات الرسائل الإلكترونية.</p>
+<p>يتوفر Sentry كخدمة SaaS وكنسخة مستضافة ذاتياً. والـ SDK والإعدادات المعروضة هنا متطابقة في الحالتين؛ ولا يتغير سوى الـ DSN.</p>
+
 <h3>التثبيت في Symfony</h3>
 <pre><code>composer require sentry/sentry-symfony</code></pre>
-<h3>الإعداد</h3>
+<p>تثبّت الحزمة الـ SDK الخاص بـ PHP والـ bundle الخاص بـ Symfony. ومع Symfony Flex، تنشئ الوصفة (recipe) ملف الإعدادات وتضيف المتغير <code>SENTRY_DSN</code> إلى الملف <code>.env</code>. الـ DSN هو العنوان الذي يرسل إليه الـ SDK الأحداث؛ وتجده في إعدادات مشروع Sentry. اتركه فارغاً في بيئة التطوير: من دون DSN، لا يُرسَل أي حدث.</p>
+<pre><code># .env
+SENTRY_DSN=
+APP_VERSION=dev
+
+# .env.local on the production server (or environment variables)
+SENTRY_DSN=https://publicKey@o0.ingest.sentry.io/0
+APP_VERSION=1.4.2</code></pre>
+
+<h3>الإعدادات</h3>
 <pre><code># config/packages/sentry.yaml
 sentry:
     dsn: '%env(SENTRY_DSN)%'
@@ -11,7 +23,23 @@ sentry:
         release: '%env(APP_VERSION)%'
         traces_sample_rate: 0.2
         profiles_sample_rate: 0.1</code></pre>
+<p>لكل خيار دور محدد:</p>
+<ul>
+<li><strong><code>environment</code></strong> يفصل أخطاء الإنتاج وما قبل الإنتاج والاختبار في الواجهة، لتسهيل التصفية والتنبيه على الإنتاج فقط.</li>
+<li><strong><code>release</code></strong> يربط كل خطأ بالإصدار المنشور. وهذا ما يتيح لـ Sentry الإشارة إلى أن خطأً ظهر مع إصدار معين، أو أن خطأً اعتُبر محلولاً قد عاد للظهور.</li>
+<li><strong><code>traces_sample_rate</code></strong> يحدد نسبة الطلبات التي يُسجَّل لها أثر أداء (trace): <code>0.2</code> تعني 20٪. أما الأخطاء فتُرسَل كلها دائماً. وعلى موقع كثيف الزيارات، تكفي قيمة منخفضة وتحافظ على حصتك (quota).</li>
+<li><strong><code>profiles_sample_rate</code></strong> يفعّل التنميط (profiling) لجزء من الطلبات المتتبَّعة. ويتطلب امتداد PHP <code>excimer</code> على الخادم؛ ومن دونه لا يكون للخيار أي أثر.</li>
+</ul>
+<p>بعض الاستثناءات لا تستحق تنبيهاً: فالصفحة غير الموجودة أو الوصول المرفوض جزء من السير العادي للتطبيق. والأفضل تجاهلها صراحةً، في الإنتاج فقط:</p>
+<pre><code># config/packages/prod/sentry.yaml
+sentry:
+    options:
+        ignore_exceptions:
+            - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+            - Symfony\Component\Security\Core\Exception\AccessDeniedException</code></pre>
+
 <h3>سياق المستخدم</h3>
+<p>معرفة أن خطأً قد وقع أمر مفيد؛ ومعرفة من يطاله أكثر فائدة. يضيف هذا المستمع (listener) المستخدمَ المسجَّل دخوله إلى الـ scope الخاص بـ Sentry مع كل طلب:</p>
 <pre><code>use Sentry\State\Scope;
 
 class SentryUserListener
@@ -19,31 +47,101 @@ class SentryUserListener
     #[AsEventListener(event: KernelEvents::REQUEST)]
     public function onRequest(RequestEvent $event): void
     {
-        $user = $this->security->getUser();
+        $user = $this-&gt;security-&gt;getUser();
         if ($user) {
             \Sentry\configureScope(function (Scope $scope) use ($user): void {
-                $scope->setUser([
-                    'id' => $user->getId(),
-                    'email' => $user->getEmail(),
+                $scope-&gt;setUser([
+                    'id' =&gt; $user-&gt;getId(),
+                    'email' =&gt; $user-&gt;getEmail(),
                 ]);
             });
         }
     }
 }</code></pre>
+<p>انتبه إلى اللائحة العامة لحماية البيانات (RGPD/GDPR): البريد الإلكتروني بيانات شخصية ستُخزَّن لدى Sentry. إذا كان المعرّف (ID) كافياً للعثور على الحساب في لوحة الإدارة، فأرسله وحده. وتحقق أيضاً من الخيار <code>send_default_pii</code>، المعطَّل افتراضياً، الذي يتحكم في الإرسال التلقائي لمعلومات مثل عنوان IP.</p>
+
+<h3>إثراء خطأ مُلتقَط يدوياً</h3>
+<p>لا تظهر كل الأخطاء على شكل استثناء غير معالَج. فعندما تعترض استثناءً لعرض رسالة لائقة للمستخدم، أرسله مع ذلك إلى Sentry، مرفقاً بالسياق الوظيفي المفيد للتشخيص:</p>
+<pre><code>use Sentry\State\Scope;
+
+try {
+    $this-&gt;paymentGateway-&gt;charge($order);
+} catch (PaymentException $e) {
+    \Sentry\withScope(function (Scope $scope) use ($e, $order): void {
+        $scope-&gt;setTag('payment.provider', $order-&gt;getProvider());
+        $scope-&gt;setContext('order', [
+            'id' =&gt; $order-&gt;getId(),
+            'amount' =&gt; $order-&gt;getAmount(),
+        ]);
+        \Sentry\captureException($e);
+    });
+
+    throw new OrderNotPaidException($order, previous: $e);
+}</code></pre>
+<p>تنشئ <code>withScope</code> نطاقاً مؤقتاً: لا ينطبق الوسم والسياق إلا على هذا الحدث، دون تلويث الأخطاء اللاحقة. <strong>الوسوم</strong> (tags) مفهرسة وتُستخدم لتصفية الـ issues أو تجميعها؛ أما <strong>السياق</strong> (context) فيُعرض ببساطة في تفاصيل الحدث.</p>
+
 <h3>التنبيهات والإشعارات</h3>
 <ul>
 <li>اضبط تنبيهات Slack للأخطاء الجديدة</li>
 <li>حدّد عتبات لحجم الأخطاء</li>
-<li>استخدم تتبّعات الأداء (traces) لتحديد مواضع الاختناق</li>
-<li>اربط Sentry بسير عمل GitHub لمتابعة الإصلاحات</li>
+<li>استخدم آثار الأداء لتحديد الاختناقات</li>
+<li>ادمج Sentry مع سير عمل GitHub لمتابعة الإصلاحات</li>
 </ul>
-<h3>مراقبة الأداء (Performance Monitoring)</h3>
+<p>الفخ الكلاسيكي هو إرهاق التنبيهات: إذا أطلق كل خطأ إشعاراً، ينتهي الفريق بتجاهلها جميعاً. أنصح بالتنبيه على الـ issues <strong>الجديدة</strong> وحالات <strong>التراجع</strong> (regressions) في الإنتاج، وتخصيص تنبيهات الحجم للمسارات الحرجة مثل الدفع أو المصادقة.</p>
+
+<h3>Performance Monitoring</h3>
+<p>إلى جانب الأخطاء، يقيس Sentry مدة الطلبات ومراحلها. يتتبّع الـ bundle الخاص بـ Symfony تلقائياً طلبات HTTP، وبحسب الإعدادات، استعلامات Doctrine والـ cache واستدعاءات HTTP الصادرة. ولعملية وظيفية محددة، يمكنك إنشاء transactions وspans خاصة بك:</p>
 <pre><code>// Measure a specific operation
-$transaction = \Sentry\startTransaction(['name' => 'process-order']);
-\Sentry\configureScope(fn(Scope $scope) => $scope->setSpan($transaction));
+$transaction = \Sentry\startTransaction(['name' =&gt; 'process-order']);
+\Sentry\configureScope(fn(Scope $scope) =&gt; $scope-&gt;setSpan($transaction));
 
-$span = $transaction->startChild(['op' => 'db.query']);
+$span = $transaction-&gt;startChild(['op' =&gt; 'db.query']);
 // ... database query
-$span->finish();
+$span-&gt;finish();
 
-$transaction->finish();</code></pre>
+$transaction-&gt;finish();</code></pre>
+<p>توضح هذه الشيفرة المبدأ. مع الإصدار 4 من SDK الخاص بـ PHP، تتوقع <code>startTransaction()</code> و<code>startChild()</code> كائنات سياق بدلاً من مصفوفات، وتسهّل الدالة <code>\Sentry\trace()</code> إنشاء span حول كتلة من الشيفرة:</p>
+<pre><code>use Sentry\SentrySdk;
+use Sentry\Tracing\SpanContext;
+use Sentry\Tracing\TransactionContext;
+
+$transaction = \Sentry\startTransaction(
+    TransactionContext::make()
+        -&gt;setName('process-order')
+        -&gt;setOp('task')
+);
+SentrySdk::getCurrentHub()-&gt;setSpan($transaction);
+
+try {
+    $orders = \Sentry\trace(
+        fn () =&gt; $this-&gt;orderRepository-&gt;findPending(),
+        SpanContext::make()-&gt;setOp('db.query')-&gt;setDescription('Pending orders'),
+    );
+    // ... process the orders
+} finally {
+    $transaction-&gt;finish();
+}</code></pre>
+<p>تضمن كتلة <code>finally</code> إغلاق الـ transaction حتى لو وقع استثناء: فالـ transaction التي لا تُنهى لا تُرسَل أبداً.</p>
+
+<h3>ربط الأخطاء بعمليات النشر</h3>
+<p>يكتسب الخيار <code>release</code> قيمته الكاملة عندما يُصرَّح بالإصدار أيضاً في Sentry مع الـ commits الخاصة به. عندها يستطيع Sentry اقتراح الـ commit المسؤول على الأرجح عن خطأ ما. باستخدام <code>sentry-cli</code>، ضمن خط أنابيب النشر:</p>
+<pre><code>export SENTRY_AUTH_TOKEN=...   # API token, stored in the CI secrets
+export SENTRY_ORG=my-organization
+export SENTRY_PROJECT=my-project
+VERSION="$(git rev-parse --short HEAD)"
+
+sentry-cli releases new "$VERSION"
+sentry-cli releases set-commits "$VERSION" --auto
+sentry-cli releases finalize "$VERSION"</code></pre>
+<p>يجب تمرير القيمة نفسها إلى التطبيق عبر <code>APP_VERSION</code>، وإلا فلن تُربط الأخطاء بالإصدار الصحيح.</p>
+
+<h3>قائمة التحقق قبل الإنتاج</h3>
+<ul>
+<li>تعريف الـ DSN فقط في البيئات التي يجب أن ترسل الأخطاء</li>
+<li>تعبئة <code>environment</code> و<code>release</code> عند كل عملية نشر</li>
+<li>تجاهل الاستثناءات المتوقعة (404، 403)</li>
+<li>تقليص البيانات الشخصية إلى الحد الأدنى الضروري</li>
+<li>نسبة أخذ عينات للآثار ملائمة لحجم الزيارات والحصة</li>
+<li>تنبيهات مركّزة على الأخطاء الجديدة وحالات التراجع</li>
+</ul>
+<p>لا يحل Sentry محل السجلات ولا محل مراقبة البنية التحتية: فلن يخبرك بأن القرص ممتلئ أو أن الخادم توقف عن الاستجابة. لكنه يبقى الأداة الأكثر فعالية لتعرف، قبل مستخدميك، أن سطراً من الشيفرة يسبب مشكلة في الإنتاج.</p>

@@ -1,13 +1,20 @@
 <h2>L'art du shell scripting</h2>
-<p>Le shell scripting reste un outil fondamental pour tout ingénieur DevOps. Voici les patterns et bonnes pratiques essentiels.</p>
+<p>Le shell scripting reste un outil fondamental pour tout ingénieur DevOps. Malgré l'essor d'Ansible, de Terraform ou des pipelines CI déclaratifs, il y a toujours un moment où l'on écrit quelques lignes de Bash : un hook de déploiement, une sauvegarde nocturne, un point d'entrée de conteneur, une étape de pipeline. Ces scripts sont souvent écrits vite et relus rarement, ce qui en fait une source classique d'incidents. Voici les patterns et bonnes pratiques essentiels pour écrire des scripts fiables, lisibles et faciles à maintenir.</p>
+
+<h3>Quand choisir Bash (et quand l'éviter)</h3>
+<p>Bash excelle pour <strong>orchestrer des commandes existantes</strong> : enchaîner <code>git</code>, <code>rsync</code>, <code>docker</code>, <code>systemctl</code>, vérifier un code de retour, écrire un log. Il est présent sur pratiquement tous les serveurs Linux et ne demande aucune dépendance.</p>
+<p>En revanche, dès qu'un script manipule des structures de données (JSON, tableaux associatifs imbriqués), fait des calculs non triviaux ou dépasse quelques centaines de lignes, un langage comme Python ou PHP devient plus sûr et plus lisible. En production, je recommande une règle simple : si vous commencez à parser du JSON avec <code>grep</code> et <code>sed</code>, il est temps de changer d'outil (ou au minimum d'utiliser <code>jq</code>).</p>
+
 <h3>Structure d'un script robuste</h3>
+<p>Un bon script suit toujours le même squelette : un shebang explicite, un mode strict, des constantes en tête, des fonctions, un nettoyage garanti et une fonction <code>main</code> appelée à la fin.</p>
 <pre><code>#!/bin/bash
 set -euo pipefail
 IFS=$'\n\t'
 
 # Variables
-readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
 readonly LOG_FILE="/var/log/deploy.log"
+readonly TEMP_DIR="$(mktemp -d)"
 
 # Fonctions
 log() {
@@ -28,13 +35,36 @@ main() {
 }
 
 main "$@"</code></pre>
+<p>Détaillons chaque élément :</p>
+<ul>
+<li><strong><code>set -e</code></strong> : le script s'arrête dès qu'une commande échoue, au lieu de continuer dans un état incohérent.</li>
+<li><strong><code>set -u</code></strong> : toute variable non définie provoque une erreur. Une faute de frappe dans <code>$TEMP_DIR</code> ne se transforme plus en <code>rm -rf /</code>.</li>
+<li><strong><code>set -o pipefail</code></strong> : un pipeline échoue si n'importe laquelle de ses commandes échoue, pas seulement la dernière. Sans lui, <code>commande_qui_echoue | tee fichier</code> est considéré comme un succès.</li>
+<li><strong><code>IFS=$'\n\t'</code></strong> : le découpage des mots ne se fait plus sur les espaces, ce qui évite les mauvaises surprises avec des noms de fichiers contenant des espaces.</li>
+<li><strong><code>readonly</code></strong> : les constantes ne peuvent pas être écrasées par erreur plus loin dans le script.</li>
+<li><strong><code>mktemp -d</code></strong> : crée un répertoire temporaire unique, au lieu d'un chemin fixe comme <code>/tmp/deploy</code> qui peut entrer en collision avec une autre exécution.</li>
+<li><strong><code>trap cleanup EXIT</code></strong> : la fonction <code>cleanup</code> est exécutée quelle que soit la façon dont le script se termine (succès, erreur, <code>exit</code> explicite). Les fichiers temporaires ne traînent jamais.</li>
+<li><strong><code>main "$@"</code></strong> : tout le code s'exécute dans une fonction, ce qui rend le flux lisible et garantit que Bash a lu le fichier en entier avant de commencer.</li>
+</ul>
+
+<h3>Les limites de <code>set -e</code></h3>
+<p>Le mode strict n'est pas magique. <code>set -e</code> est ignoré dans certaines situations : dans la condition d'un <code>if</code>, à gauche d'un <code>&amp;&amp;</code> ou d'un <code>||</code>, et dans une fonction appelée depuis l'un de ces contextes. De même, <code>local var=$(commande)</code> masque le code de retour de la commande, car c'est celui de <code>local</code> qui compte. Déclarez la variable puis affectez-la sur deux lignes :</p>
+<pre><code># Mauvais : l'échec de curl est masqué par "local"
+local body=$(curl -fsS "$url")
+
+# Bon : l'échec de curl arrête le script
+local body
+body=$(curl -fsS "$url")</code></pre>
+<p>Autre piège classique : <code>((compteur++))</code> renvoie un code d'erreur quand la valeur <em>avant</em> incrémentation vaut 0. Avec <code>set -e</code>, le script s'arrête sans message. Préférez <code>compteur=$((compteur + 1))</code> quand le compteur peut partir de zéro.</p>
+
 <h3>Patterns utiles</h3>
+<p>Certaines fonctions reviennent dans presque tous les scripts d'exploitation. Les deux suivantes sont de bons exemples : une vérification d'état de service et une relance avec temporisation progressive.</p>
 <pre><code># Vérifier si un service est actif
 check_service() {
     if systemctl is-active --quiet "$1"; then
         echo "$1 est actif"
     else
-        echo "$1 est inactif" && return 1
+        echo "$1 est inactif" &amp;&amp; return 1
     fi
 }
 
@@ -50,6 +80,51 @@ retry() {
     done
     return 1
 }</code></pre>
+<p>La fonction <code>retry</code> prend le nombre de tentatives en premier argument, puis la commande à exécuter. <code>shift</code> retire le premier argument, et <code>"$@"</code> exécute le reste tel quel, en préservant les espaces et les guillemets. L'attente augmente à chaque échec (2, 4, 6 secondes…), ce qui laisse le temps à une base de données ou une API de redémarrer. Ici <code>attempt</code> commence à 1, donc <code>((attempt++))</code> ne pose pas de problème avec <code>set -e</code>. Exemple d'utilisation :</p>
+<pre><code>retry 5 curl -fsS https://example.com/health
+check_service nginx || systemctl restart nginx</code></pre>
+
+<h3>Valider les arguments et les prérequis</h3>
+<p>Un script lancé avec de mauvais arguments doit échouer immédiatement, avec un message clair, avant d'avoir modifié quoi que ce soit. De même, vérifiez que les outils nécessaires sont installés :</p>
+<pre><code>usage() {
+    echo "Usage: $(basename "$0") &lt;environnement&gt; [version]" &gt;&amp;2
+    exit 1
+}
+
+require() {
+    local cmd
+    for cmd in "$@"; do
+        command -v "$cmd" &gt;/dev/null 2&gt;&amp;1 || {
+            echo "Commande requise introuvable : $cmd" &gt;&amp;2
+            exit 1
+        }
+    done
+}
+
+[ $# -ge 1 ] || usage
+readonly ENVIRONMENT="$1"
+readonly VERSION="${2:-latest}"
+
+case "$ENVIRONMENT" in
+    staging|production) ;;
+    *) echo "Environnement invalide : $ENVIRONMENT" &gt;&amp;2; exit 1 ;;
+esac
+
+require git rsync curl</code></pre>
+<p>Notez l'usage de <code>${2:-latest}</code> pour une valeur par défaut, compatible avec <code>set -u</code>, et la redirection des messages d'erreur vers la sortie d'erreur (<code>&gt;&amp;2</code>), pour qu'ils ne se mélangent pas à une sortie éventuellement exploitée par un autre programme.</p>
+
+<h3>Empêcher les exécutions simultanées</h3>
+<p>Un script lancé par cron toutes les cinq minutes peut se chevaucher avec l'exécution précédente si celle-ci prend du retard. Deux sauvegardes ou deux déploiements en parallèle, c'est la garantie d'un état incohérent. La commande <code>flock</code> (paquet util-linux) règle le problème proprement :</p>
+<pre><code>exec 9&gt;/var/lock/deploy.lock
+if ! flock -n 9; then
+    echo "Une autre exécution est déjà en cours" &gt;&amp;2
+    exit 1
+fi</code></pre>
+<p>Le verrou est libéré automatiquement par le noyau quand le script se termine, même en cas de plantage : pas de fichier de verrou orphelin à supprimer à la main.</p>
+
+<h3>Guillemets et variables</h3>
+<p>La majorité des bugs Bash viennent des variables non protégées. Écrivez toujours <code>"$variable"</code> entre guillemets doubles, sauf si vous voulez explicitement le découpage en mots. Préférez <code>$(commande)</code> aux backticks, qui s'imbriquent mal, et <code>[[ ... ]]</code> à <code>[ ... ]</code> dans les scripts Bash : il gère mieux les chaînes vides et supporte les expressions régulières avec <code>=~</code>.</p>
+
 <h3>Bonnes pratiques</h3>
 <ul>
 <li>Toujours utiliser <code>set -euo pipefail</code></li>
@@ -57,4 +132,13 @@ retry() {
 <li>Utiliser des fonctions pour la lisibilité</li>
 <li>Gérer les erreurs avec <code>trap</code></li>
 <li>Tester avec shellcheck</li>
+<li>Mettre les variables entre guillemets doubles, systématiquement</li>
+<li>Écrire les erreurs sur <code>stderr</code> et renvoyer un code de sortie non nul</li>
+<li>Rendre les scripts idempotents : une deuxième exécution ne doit rien casser</li>
 </ul>
+<p><strong>ShellCheck</strong> mérite une mention particulière : cet analyseur statique détecte les variables non protégées, les comparaisons incorrectes, les pièges de <code>local</code> et des dizaines d'autres erreurs. Il s'intègre dans la plupart des éditeurs et se lance facilement en CI :</p>
+<pre><code>shellcheck scripts/*.sh
+bash -n scripts/deploy.sh   # vérification de syntaxe seule</code></pre>
+
+<h3>Quand ne pas écrire de script</h3>
+<p>Avant d'écrire un nouveau script, vérifiez qu'un outil dédié n'existe pas déjà. Pour planifier une tâche, un timer systemd offre journalisation et gestion des échecs. Pour configurer un parc de serveurs de façon reproductible, Ansible est plus adapté qu'une boucle SSH. Le bon script shell est court, fait une seule chose, échoue bruyamment et se relit en deux minutes.</p>

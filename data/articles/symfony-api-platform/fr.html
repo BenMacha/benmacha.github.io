@@ -1,13 +1,32 @@
 <h2>API Platform : le framework API pour Symfony</h2>
 <p>API Platform est le framework de référence pour construire des APIs modernes avec Symfony. Il génère automatiquement une API REST et GraphQL à partir de vos entités.</p>
+<p>Concrètement, vous décrivez vos ressources avec des attributs PHP (quelles opérations sont exposées, qui peut y accéder, quels champs sont lisibles ou modifiables) et API Platform se charge du reste : routage, sérialisation, validation, pagination, filtres, négociation de contenu et documentation OpenAPI. Le temps gagné sur ce code répétitif peut être consacré aux règles métier. Cet article couvre la mise en place d'une ressource complète, puis les points qui font la différence en production : groupes de sérialisation, sécurité, logique métier personnalisée et tests.</p>
+
 <h3>Installation et configuration</h3>
 <pre><code>composer require api
 # Crée automatiquement la configuration API Platform</code></pre>
+<p>Grâce à Symfony Flex, l'alias <code>api</code> installe API Platform et sa recette : fichier <code>config/packages/api_platform.yaml</code>, routes sous le préfixe <code>/api</code>, et configuration CORS. Une fois le serveur lancé, <code>/api</code> affiche une documentation interactive (Swagger UI) générée à partir de vos ressources. La configuration globale permet de fixer des valeurs par défaut pour toutes les ressources :</p>
+<pre><code># config/packages/api_platform.yaml
+api_platform:
+    title: 'Catalogue API'
+    version: '1.0.0'
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    defaults:
+        pagination_items_per_page: 20
+        pagination_maximum_items_per_page: 100
+        pagination_client_items_per_page: true</code></pre>
+<p>Avec <code>pagination_client_items_per_page</code>, le client peut choisir la taille de page via le paramètre <code>itemsPerPage</code>, mais jamais au-delà du maximum fixé. Sans ce plafond, une seule requête pourrait demander toute la table.</p>
+
 <h3>Créer une ressource API</h3>
+<p>Une ressource est une classe marquée avec <code>#[ApiResource]</code>. Il s'agit souvent d'une entité Doctrine, comme ici, même si ce n'est pas obligatoire. La liste <code>operations</code> déclare explicitement les opérations exposées : tout ce qui n'y figure pas n'existe pas dans l'API.</p>
 <pre><code>use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -32,15 +51,112 @@ class Product
 
     // Getters et setters...
 }</code></pre>
+<p>Ce seul fichier produit <code>GET /api/products</code> (collection paginée), <code>GET /api/products/{id}</code> et <code>POST /api/products</code>, réservé aux administrateurs. Le prix est stocké en <code>decimal</code> et manipulé comme une chaîne en PHP : c'est volontaire, pour éviter les erreurs d'arrondi des nombres flottants sur des montants. Les contraintes de validation (<code>#[Assert\NotBlank]</code>) sont appliquées automatiquement lors des écritures : une donnée invalide produit une réponse <strong>422</strong> qui détaille chaque violation, champ par champ.</p>
+
 <h3>Filtres et recherche</h3>
-<pre><code>#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
+<p>Les filtres ajoutent des paramètres de requête aux collections, sans écrire une ligne de requête SQL :</p>
+<pre><code>use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+
+#[ApiFilter(SearchFilter::class, properties: ['name' =&gt; 'partial'])]
 #[ApiFilter(RangeFilter::class, properties: ['price'])]
-#[ApiFilter(OrderFilter::class, properties: ['name', 'price'])]</code></pre>
+#[ApiFilter(OrderFilter::class, properties: ['name', 'price'])]
+class Product
+{
+    // ...
+}</code></pre>
+<p>Le client peut alors appeler <code>/api/products?name=clavier&amp;price[lt]=100&amp;order[price]=asc</code>. Chaque filtre apparaît aussi dans la documentation OpenAPI. Deux précautions : un filtre <code>partial</code> se traduit par un <code>LIKE '%…%'</code> qui ne profite pas d'un index B-tree classique et devient coûteux sur de grosses tables ; et n'exposez des filtres que sur les champs réellement utiles, chacun étant une surface de requête supplémentaire. Les versions récentes d'API Platform proposent aussi une approche par paramètres (<code>QueryParameter</code>) déclarés directement sur l'opération.</p>
+
 <h3>Serialization Groups</h3>
-<pre><code>#[ApiResource(
-    normalizationContext: ['groups' => ['product:read']],
-    denormalizationContext: ['groups' => ['product:write']],
+<p>Par défaut, toutes les propriétés accessibles sont exposées en lecture comme en écriture. C'est rarement ce que l'on veut : l'identifiant ne doit pas être modifiable, et certains champs internes ne doivent jamais sortir. Les groupes de sérialisation séparent ce que l'API lit de ce qu'elle accepte :</p>
+<pre><code>use ApiPlatform\Metadata\ApiResource;
+use Symfony\Component\Serializer\Attribute\Groups;
+
+#[ApiResource(
+    normalizationContext: ['groups' =&gt; ['product:read']],
+    denormalizationContext: ['groups' =&gt; ['product:write']],
+)]
+class Product
+{
+    #[Groups(['product:read'])]
+    private ?int $id = null;
+
+    #[Groups(['product:read', 'product:write'])]
+    private string $name;
+
+    #[Groups(['product:read', 'product:write'])]
+    private string $price;
+}</code></pre>
+<p>Une propriété sans groupe est invisible pour l'API. C'est la protection la plus simple contre l'exposition accidentelle d'un champ ajouté plus tard à l'entité, comme un prix d'achat ou une note interne. Adoptez une convention de nommage (<code>ressource:read</code>, <code>ressource:write</code>) et tenez-vous-y.</p>
+
+<h3>Sécurité par opération</h3>
+<p>L'option <code>security</code> accepte une expression évaluée avant l'opération. Pour les opérations sur un élément, la variable <code>object</code> donne accès à la ressource concernée, ce qui permet des règles de propriété :</p>
+<pre><code>use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Patch;
+
+#[ApiResource(
+    operations: [
+        new Patch(security: "is_granted('ROLE_ADMIN') or object.getOwner() == user"),
+        new Delete(security: "is_granted('ROLE_ADMIN')"),
+    ],
 )]</code></pre>
+<p>Pour des règles plus riches, déléguez à un Voter Symfony avec <code>is_granted('PRODUCT_EDIT', object)</code> : la logique d'autorisation reste testable et réutilisable en dehors de l'API.</p>
+
+<h3>Logique métier : les State Processors</h3>
+<p>Par défaut, les écritures sont persistées directement par Doctrine. Pour ajouter un comportement (envoi d'un message, calcul, appel externe), API Platform utilise des <strong>State Providers</strong> pour la lecture et des <strong>State Processors</strong> pour l'écriture. Le schéma le plus courant consiste à décorer le processor Doctrine :</p>
+<pre><code>namespace App\State;
+
+use ApiPlatform\Metadata\Operation;
+use ApiPlatform\State\ProcessorInterface;
+use App\Entity\Product;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+
+/** @implements ProcessorInterface&lt;Product, Product&gt; */
+final class ProductProcessor implements ProcessorInterface
+{
+    public function __construct(
+        #[Autowire(service: 'api_platform.doctrine.orm.state.persist_processor')]
+        private ProcessorInterface $persistProcessor,
+        private LoggerInterface $logger,
+    ) {}
+
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Product
+    {
+        $product = $this-&gt;persistProcessor-&gt;process($data, $operation, $uriVariables, $context);
+
+        $this-&gt;logger-&gt;info('Produit enregistré', ['id' =&gt; $product-&gt;getId()]);
+
+        return $product;
+    }
+}</code></pre>
+<p>On l'active ensuite sur l'opération concernée : <code>new Post(processor: ProductProcessor::class)</code>. Le même mécanisme permet d'exposer des ressources qui ne sont pas des entités, comme un DTO alimenté par une API tierce, avec un provider et un processor dédiés. C'est souvent plus propre que d'exposer directement le modèle de base de données.</p>
+
+<h3>Tester l'API</h3>
+<p>API Platform fournit <code>ApiTestCase</code>, une classe de test basée sur le client HTTP de Symfony, avec des assertions adaptées aux réponses JSON :</p>
+<pre><code>use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+
+final class ProductApiTest extends ApiTestCase
+{
+    public function testCollectionIsPublic(): void
+    {
+        static::createClient()-&gt;request('GET', '/api/products');
+
+        $this-&gt;assertResponseIsSuccessful();
+        $this-&gt;assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+    }
+
+    public function testUnknownProductReturns404(): void
+    {
+        static::createClient()-&gt;request('GET', '/api/products/999999');
+
+        $this-&gt;assertResponseStatusCodeSame(404);
+    }
+}</code></pre>
+<p>Ajoutez au minimum un test par règle de sécurité : un utilisateur sans droits doit recevoir une erreur, et un administrateur doit réussir. C'est là que se cachent les régressions les plus graves.</p>
+
 <h3>Avantages</h3>
 <ul>
 <li>Documentation OpenAPI générée automatiquement</li>
@@ -49,4 +165,14 @@ class Product
 <li>Validation automatique via les contraintes Symfony</li>
 <li>Support GraphQL natif</li>
 </ul>
+<p>Le support GraphQL demande l'installation d'un paquet supplémentaire, puis réutilise les mêmes ressources, groupes et règles de sécurité que l'API REST. La spécification OpenAPI peut être exportée avec <code>php bin/console api:openapi:export</code> pour générer des clients ou alimenter une CI de contrat.</p>
 <p>Des plateformes comme CCM Benchmark utilisent API Platform pour exposer leurs services internes via des APIs standardisées.</p>
+
+<h3>Les pièges à éviter</h3>
+<ul>
+<li><strong>Exposer l'entité telle quelle</strong> : sans groupes de sérialisation, chaque nouvelle propriété devient publique. Définissez toujours des groupes, ou passez par des DTO.</li>
+<li><strong>Oublier le N+1</strong> : une collection qui sérialise des relations peut déclencher une requête par élément. Surveillez le profiler Symfony et ajoutez des jointures (via une extension Doctrine d'API Platform) si nécessaire.</li>
+<li><strong>Laisser toutes les opérations par défaut</strong> : sans liste <code>operations</code>, API Platform expose aussi <code>PUT</code>, <code>PATCH</code> et <code>DELETE</code>. Déclarez explicitement ce que vous voulez.</li>
+<li><strong>Coder la sécurité dans les contrôleurs</strong> : gardez-la dans les attributs <code>security</code> et les Voters, là où elle est visible et testable.</li>
+</ul>
+<p>API Platform n'est pas le meilleur choix pour une API faite de quelques endpoints très spécifiques, sans lien avec un modèle de ressources : un contrôleur Symfony classique sera alors plus simple. Mais dès qu'il s'agit d'exposer un modèle métier en CRUD avec pagination, filtres, sécurité et documentation, c'est l'un des moyens les plus productifs de le faire en PHP.</p>

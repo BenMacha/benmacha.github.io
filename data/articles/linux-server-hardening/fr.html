@@ -1,5 +1,19 @@
 <h2>Sécuriser votre serveur Linux</h2>
-<p>La sécurisation d'un serveur Linux est la première étape avant tout déploiement en production. Voici les mesures essentielles.</p>
+<p>La sécurisation d'un serveur Linux est la première étape avant tout déploiement en production. Un VPS fraîchement créé avec une adresse IP publique reçoit des tentatives de connexion SSH automatisées en quelques minutes : des robots parcourent en permanence Internet à la recherche de mots de passe faibles, de services mal configurés et de logiciels non mis à jour. Voici les mesures essentielles, dans l'ordre où je les applique sur une nouvelle machine.</p>
+<p>L'objectif n'est pas de rendre le serveur inviolable, ce qui n'existe pas, mais de <strong>réduire la surface d'attaque</strong> et de rendre les attaques opportunistes inefficaces. Les exemples ci-dessous visent Debian et Ubuntu ; les principes s'appliquent à toutes les distributions.</p>
+
+<h3>Préparer un utilisateur et une clé SSH</h3>
+<p>Avant de toucher à la configuration SSH, créez un utilisateur non privilégié et vérifiez que vous pouvez vous connecter avec une clé. C'est l'étape qui évite de s'enfermer dehors. Sur votre poste, générez une clé Ed25519 si vous n'en avez pas, puis copiez-la sur le serveur :</p>
+<pre><code># Sur le serveur (en root)
+adduser deploy
+usermod -aG sudo deploy
+
+# Sur votre poste
+ssh-keygen -t ed25519 -C "deploy@monserveur"
+ssh-copy-id -i ~/.ssh/id_ed25519.pub deploy@203.0.113.10
+ssh deploy@203.0.113.10</code></pre>
+<p>Ne passez à la suite qu'une fois la connexion par clé réussie avec le nouvel utilisateur, et vérifiez qu'il peut utiliser <code>sudo</code>.</p>
+
 <h3>Configuration SSH</h3>
 <pre><code># /etc/ssh/sshd_config
 PermitRootLogin no
@@ -8,20 +22,80 @@ PubkeyAuthentication yes
 Port 2222
 MaxAuthTries 3
 AllowUsers deploy</code></pre>
+<p>Chaque directive a un rôle précis :</p>
+<ul>
+<li><strong><code>PermitRootLogin no</code></strong> : le compte root, présent sur toutes les machines, est la première cible des attaques. Les administrateurs se connectent avec leur propre compte, puis utilisent <code>sudo</code>, ce qui laisse une trace nominative.</li>
+<li><strong><code>PasswordAuthentication no</code></strong> : sans mot de passe, les attaques par dictionnaire deviennent inutiles. Pensez aussi à <code>KbdInteractiveAuthentication no</code>, sinon une authentification par mot de passe peut rester possible via PAM.</li>
+<li><strong><code>Port 2222</code></strong> : changer de port ne protège pas contre une attaque ciblée, mais réduit fortement le bruit dans les logs.</li>
+<li><strong><code>MaxAuthTries 3</code></strong> : limite le nombre de tentatives par connexion.</li>
+<li><strong><code>AllowUsers deploy</code></strong> : liste blanche des comptes autorisés à se connecter. Tout autre utilisateur est refusé, même avec une clé valide.</li>
+</ul>
+<p>Sur les distributions récentes, vous pouvez placer ces directives dans un fichier dédié, par exemple <code>/etc/ssh/sshd_config.d/hardening.conf</code>, plutôt que de modifier le fichier principal. Attention : pour chaque directive, sshd retient la <em>première</em> valeur lue, et les fichiers inclus sont lus au début. Avant de redémarrer, testez toujours la configuration et <strong>gardez votre session actuelle ouverte</strong> :</p>
+<pre><code>sudo sshd -t &amp;&amp; sudo systemctl restart ssh
+# Depuis un second terminal, avant de fermer la session actuelle :
+ssh -p 2222 deploy@203.0.113.10</code></pre>
+<p>Sur Ubuntu 24.04, SSH est activé par socket systemd : après un changement de port, lancez <code>sudo systemctl daemon-reload</code> puis <code>sudo systemctl restart ssh.socket</code> pour que le nouveau port soit pris en compte.</p>
+
 <h3>Firewall avec UFW</h3>
+<p>Le principe du pare-feu est simple : tout refuser en entrée, puis ouvrir explicitement les seuls ports nécessaires. UFW (Uncomplicated Firewall) est une surcouche lisible à nftables/iptables, installée par défaut sur Ubuntu.</p>
 <pre><code>sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 2222/tcp    # SSH
 sudo ufw allow 80/tcp      # HTTP
 sudo ufw allow 443/tcp     # HTTPS
 sudo ufw enable</code></pre>
+<p>L'ordre compte : autorisez le port SSH <strong>avant</strong> d'exécuter <code>ufw enable</code>, sinon la connexion en cours risque d'être coupée. Vérifiez ensuite les règles avec <code>sudo ufw status verbose</code>. Deux options utiles :</p>
+<ul>
+<li><code>sudo ufw limit 2222/tcp</code> remplace la règle <code>allow</code> et refuse une adresse qui tente 6 connexions ou plus en 30 secondes.</li>
+<li><code>sudo ufw allow from 10.0.0.0/24 to any port 5432 proto tcp</code> ouvre un port uniquement pour un réseau privé, par exemple pour une base de données.</li>
+</ul>
+<p>Piège important : <strong>Docker contourne UFW</strong>. Un port publié avec <code>-p 5432:5432</code> est accessible depuis Internet même si UFW ne l'autorise pas, car Docker écrit ses propres règles iptables. Publiez les ports internes sur <code>127.0.0.1</code> (<code>-p 127.0.0.1:5432:5432</code>) ou ne les publiez pas du tout.</p>
+
 <h3>Mises à jour automatiques</h3>
+<p>La majorité des compromissions exploitent des vulnérabilités connues et déjà corrigées. Le paquet <code>unattended-upgrades</code> installe automatiquement les mises à jour de sécurité :</p>
 <pre><code>sudo apt install unattended-upgrades
 sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+<p>Par défaut, seules les mises à jour de sécurité sont appliquées. Certaines, notamment celles du noyau, ne prennent effet qu'après un redémarrage. Vous pouvez autoriser un redémarrage automatique à une heure creuse dans <code>/etc/apt/apt.conf.d/50unattended-upgrades</code> :</p>
+<pre><code>Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";</code></pre>
+<p>Pour vérifier la configuration sans rien installer : <code>sudo unattended-upgrade --dry-run --debug</code>. Sur un serveur qui ne doit pas redémarrer seul, laissez cette option désactivée et surveillez la présence du fichier <code>/var/run/reboot-required</code>.</p>
+
 <h3>Fail2Ban</h3>
 <p>Protégez-vous contre les attaques par force brute :</p>
 <pre><code>sudo apt install fail2ban
 sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
+<p>Fail2Ban lit les journaux, repère les échecs d'authentification répétés et bannit temporairement l'adresse IP fautive via le pare-feu. Le fichier <code>jail.conf</code> peut être écrasé lors des mises à jour : on travaille toujours dans <code>jail.local</code>. Plutôt que de copier tout le fichier, il suffit souvent d'y écrire uniquement les valeurs à surcharger :</p>
+<pre><code># /etc/fail2ban/jail.local
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+backend  = systemd
+
+[sshd]
+enabled = true
+port    = 2222</code></pre>
+<p>Le <code>backend = systemd</code> est nécessaire sur Debian 12, où les connexions SSH sont journalisées dans journald et non plus dans <code>/var/log/auth.log</code>. N'oubliez pas d'indiquer le port SSH personnalisé, sinon le bannissement porterait sur le port 22. Quelques commandes utiles :</p>
+<pre><code>sudo systemctl restart fail2ban
+sudo fail2ban-client status sshd
+sudo fail2ban-client set sshd unbanip 198.51.100.7</code></pre>
+
+<h3>Réduire la surface d'attaque</h3>
+<p>Chaque service qui écoute sur le réseau est une porte potentielle. Listez les ports ouverts et désactivez tout ce qui n'est pas nécessaire :</p>
+<pre><code>sudo ss -tulpn
+sudo systemctl disable --now cups.service   # exemple : service inutile sur un serveur</code></pre>
+<p>Les bases de données, Redis ou les interfaces d'administration doivent écouter sur <code>127.0.0.1</code> ou sur un réseau privé, jamais sur l'interface publique. Quelques paramètres noyau renforcent aussi la pile réseau :</p>
+<pre><code># /etc/sysctl.d/99-hardening.conf
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0</code></pre>
+<p>Appliquez-les avec <code>sudo sysctl --system</code>.</p>
+
+<h3>Logs et audit</h3>
+<p>Un serveur sécurisé doit aussi permettre de comprendre ce qui s'est passé après coup. Rendez le journal systemd persistant (<code>Storage=persistent</code> dans <code>/etc/systemd/journald.conf</code>), et envoyez les journaux vers une machine distincte : un attaquant qui obtient les droits root peut effacer les logs locaux. Pour un contrôle régulier, l'outil <strong>Lynis</strong> (<code>sudo lynis audit system</code>) passe en revue des centaines de points de configuration et propose des améliorations concrètes.</p>
+
 <h3>Checklist de sécurité</h3>
 <ul>
 <li>Désactiver le login root par SSH</li>
@@ -31,4 +105,7 @@ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
 <li>Activer les mises à jour automatiques de sécurité</li>
 <li>Configurer les logs centralisés</li>
 <li>Mettre en place un monitoring système</li>
+<li>Vérifier les ports ouverts avec <code>ss -tulpn</code> et les ports publiés par Docker</li>
+<li>Mettre en place des sauvegardes externalisées et tester leur restauration</li>
 </ul>
+<p>La sécurité est un processus continu, pas une configuration faite une fois pour toutes : relancez un audit après chaque changement important et gardez les accès au strict nécessaire.</p>

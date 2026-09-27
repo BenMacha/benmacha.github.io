@@ -1,6 +1,12 @@
 <h2>Jenkins Pipeline: أتمتة متقدمة</h2>
-<p>يبقى Jenkins حلاً شائعاً للتكامل والنشر المستمرين (CI/CD) لدى المؤسسات التي تحتاج إلى تحكم كامل في بنية البناء (build) الخاصة بها.</p>
-<h3>الـ Pipeline التصريحي (Declarative)</h3>
+<p>يبقى Jenkins حلاً شائعاً للتكامل والنشر المستمرين (CI/CD) لدى المؤسسات التي تحتاج إلى تحكم كامل في بنية البناء الخاصة بها. فبينما تفرض GitHub Actions أو GitLab CI منصتها، يُثبَّت Jenkins على خوادمك الخاصة، ويتصل بأي مستودع Git، ويتوسع بفضل منظومة إضافات (plugins) واسعة جداً. لهذه الحرية ثمن: فتحديث وحدة التحكم (controller) والوكلاء (agents) والإضافات مسؤوليتك أنت.</p>
+<p>منذ Jenkins 2، لم تعد الطريقة الصحيحة لوصف عملية البناء هي النقر في الواجهة، بل كتابة ملف <strong>Jenkinsfile</strong> مُدار بالإصدارات في جذر المشروع. عندها يتطور خط الأنابيب (pipeline) مع الشيفرة: يمكن لفرع أن يعدّل سلسلة البناء الخاصة به، وتمر كل تغييراته بالمراجعة مثل أي تعديل آخر.</p>
+
+<h3>تصريحي أم برمجي؟</h3>
+<p>يقدم Jenkins صيغتين. خط الأنابيب <strong>البرمجي</strong> (scripted) هو Groovy حر: قوي، لكنه صعب القراءة والتحقق. أما خط الأنابيب <strong>التصريحي</strong> (declarative) فيفرض بنية محددة (<code>pipeline</code>، <code>agent</code>، <code>stages</code>، <code>post</code>) يُتحقق منها قبل التنفيذ. بالنسبة لتطبيق PHP تقليدي، تغطي الصيغة التصريحية كل الاحتياجات؛ وحين يصبح منطق معقد ضرورياً، تتيح كتلة <code>script { }</code> أو مكتبة مشتركة الخروج منها عند الحاجة.</p>
+
+<h3>خط أنابيب تصريحي</h3>
+<p>إليك خط أنابيب كاملاً لمشروع Symfony: تثبيت الاعتماديات، ثم التحليل الساكن والاختبارات بالتوازي، ثم النشر انطلاقاً من الفرع الرئيسي.</p>
 <pre><code>pipeline {
     agent {
         docker {
@@ -62,11 +68,126 @@
         }
     }
 }</code></pre>
+
+<h3>قراءة خط الأنابيب كتلةً كتلة</h3>
+<ul>
+<li><strong><code>agent { docker { … } }</code></strong>: يُنفَّذ كل بناء داخل حاوية مؤقتة تُنشأ من الصورة المحددة. تلزم إضافة <em>Docker Pipeline</em>، ويجب أن يتوفر Docker على الوكيل.</li>
+<li><strong><code>environment</code></strong>: يعرّف متغيرات مرئية لكل الخطوات. تجلب <code>credentials('database-url')</code> سراً مخزناً في Jenkins؛ وبالنسبة لبيانات اعتماد من نوع «Secret text»، يحتوي المتغير على القيمة مباشرة ويخفيها Jenkins في السجلات.</li>
+<li><strong><code>parallel</code></strong>: لا يعتمد PHPStan وPHP-CS-Fixer أحدهما على الآخر، لذا يعملان في الوقت نفسه. تفشل المرحلة الأم إذا فشل أيٌّ منهما.</li>
+<li><strong><code>junit</code></strong>: عند وضعه في كتلة <code>post { always { } }</code>، ينشر تقرير الاختبارات حتى عند فشل بعضها. يعرض Jenkins حينها السجل التاريخي والاختبارات غير المستقرة.</li>
+<li><strong><code>when { branch 'main' }</code></strong>: لا يعمل هذا الشرط إلا في مهمة من نوع <em>Multibranch Pipeline</em>، حيث يعرف Jenkins اسم الفرع. في مهمة Pipeline بسيطة، ستُتجاوز هذه المرحلة دائماً.</li>
+<li><strong><code>post { failure { } }</code></strong>: لا يُرسل إشعار Slack إلا عند الفشل. الأمر <code>slackSend</code> توفره إضافة <em>Slack Notification</em>.</li>
+</ul>
+
+<h3>صورة بناء تحتوي فعلاً على Composer</h3>
+<p>فخ كلاسيكي: الصورة الرسمية <code>php:8.3-cli</code> لا تحتوي على Composer ولا على <code>git</code> ولا على الامتداد <code>zip</code>. لذلك سيفشل الأمر <code>composer install</code> في خط الأنابيب أعلاه ما لم تُوسَّع الصورة. الحل الأنظف هو ملف <code>Dockerfile.ci</code> مُدار بالإصدارات مع المشروع:</p>
+<pre><code>FROM php:8.3-cli
+
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends git unzip libzip-dev libicu-dev openssh-client \
+    &amp;&amp; docker-php-ext-install zip intl pdo_mysql \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer</code></pre>
+<p>يكفي بعد ذلك استبدال كتلة <code>docker</code> بـ <code>dockerfile { filename 'Dockerfile.ci' }</code>: يبني Jenkins الصورة، ويخزنها مؤقتاً على الوكيل، ويشغّل البناء داخلها. وهكذا تصبح بيئة CI موصوفة في المستودع لا في إعدادات جهاز بعينه.</p>
+
+<h3>خط أنابيب أكثر متانة</h3>
+<p>يعمل المثال الأول، لكنه يفتقر إلى عدة ضمانات تُضاف دائماً في بيئة الإنتاج: مدة قصوى، ومنع عمليات البناء المتزامنة على الفرع نفسه، وتدوير السجل، وأرشفة المخرجات (artifacts)، وموافقة بشرية قبل النشر في الإنتاج.</p>
+<pre><code>pipeline {
+    agent {
+        dockerfile {
+            filename 'Dockerfile.ci'
+        }
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timestamps()
+    }
+
+    environment {
+        APP_ENV = 'test'
+        COMPOSER_HOME = "${env.WORKSPACE}/.composer"
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'composer install --prefer-dist --no-progress --no-interaction'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mkdir -p dist &amp;&amp; tar --exclude=./dist --exclude=./.git -czf dist/app.tar.gz .'
+                archiveArtifacts artifacts: 'dist/app.tar.gz', fingerprint: true
+            }
+        }
+
+        stage('Deploy production') {
+            when {
+                branch 'main'
+                beforeInput true
+            }
+            input {
+                message 'Deploy to production?'
+                ok 'Deploy'
+                submitter 'release-managers'
+            }
+            steps {
+                sshagent(credentials: ['deploy-ssh-key']) {
+                    sh './deploy.sh production'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}</code></pre>
+<p>بعض التوضيحات:</p>
+<ul>
+<li><strong><code>timeout</code></strong> يوقف بناءً عالقاً (اختبار ينتظر خدمة غير متاحة مثلاً) بدلاً من احتجاز منفِّذ (executor) لساعات.</li>
+<li><strong><code>disableConcurrentBuilds()</code></strong> يمنع تداخل عمليتي نشر للفرع نفسه.</li>
+<li><strong><code>COMPOSER_HOME</code></strong> يشير إلى مساحة العمل (workspace): يشغّل Jenkins الحاوية بمعرّف UID الخاص بالوكيل، وغالباً ما يكون مجلده الشخصي غير قابل للكتابة داخل الصورة.</li>
+<li><strong><code>input</code></strong> يوقف خط الأنابيب مؤقتاً إلى أن يوافق عضو من مجموعة <code>release-managers</code>. ومع <code>beforeInput true</code>، يُقيَّم شرط الفرع قبل طلب الموافقة، فلا تُحجب الفروع الأخرى أبداً.</li>
+<li><strong><code>sshagent</code></strong> (إضافة <em>SSH Agent</em>) يحمّل مفتاح النشر طوال مدة الخطوة فقط، دون أن يكتبه أبداً في مساحة العمل.</li>
+<li><strong><code>cleanWs()</code></strong> (إضافة <em>Workspace Cleanup</em>) يحذف مساحة العمل في النهاية، لينطلق البناء التالي من حالة نظيفة.</li>
+</ul>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong>استيفاء الأسرار</strong>: كتابة <code>sh "mysql -p${DB_PASSWORD}"</code> بعلامتي تنصيص مزدوجتين تجعل Groovy يستوفي السر قبل التنفيذ، ويعرض Jenkins تحذيراً أمنياً. استخدم علامات تنصيص مفردة، <code>sh 'mysql -p"$DB_PASSWORD"'</code>، ليقرأ الـ shell متغير البيئة بنفسه.</li>
+<li><strong>وكيل محتجز أثناء <code>input</code></strong>: مع وكيل عام، يبقى المنفِّذ محجوزاً أثناء انتظار الموافقة، ويستمر <code>timeout</code> العام في العد. في حالات الانتظار الطويل، صرّح بـ <code>agent none</code> على مستوى خط الأنابيب ووكيل لكل مرحلة.</li>
+<li><strong>إضافات غير مُصانة</strong>: كل إضافة هي اعتمادية. اكتفِ بما تحتاجه منها وحدّثها بانتظام، فهي مصدر متكرر للثغرات.</li>
+<li><strong>البناء على وحدة التحكم</strong>: اضبط عدد المنفِّذين على صفر في العقدة المدمجة، وشغّل عمليات البناء على وكلاء مخصصين، لحماية وحدة التحكم وأسرارها.</li>
+</ul>
+
+<h3>التحقق من Jenkinsfile قبل الدفع</h3>
+<p>غالباً لا يُكتشف خطأ الصياغة في Jenkinsfile إلا بعد الدفع (push). يوفر Jenkins أداة تدقيق (linter) لخطوط الأنابيب التصريحية، يمكن استخدامها برمز API:</p>
+<pre><code>curl -X POST --user "$JENKINS_USER:$JENKINS_TOKEN" \
+  -F "jenkinsfile=&lt;Jenkinsfile" \
+  "$JENKINS_URL/pipeline-model-converter/validate"</code></pre>
+<p>تبيّن الاستجابة ما إذا كان الملف صالحاً أو تحدد السطر الذي يحتوي على الخطأ. ويمكن دمج هذا الأمر بسهولة في Git hook أو في المحرر.</p>
+
+<h3>المشاركة عبر Shared Libraries</h3>
+<p>عندما تتشارك عدة مشاريع الخطوات نفسها (الإشعار، النشر، نشر الصور)، يصبح تكرار Jenkinsfile سريعاً أمراً يصعب التحكم فيه. تتيح <strong>Shared Libraries</strong> وضع هذه الشيفرة المشتركة في مستودع Git منفصل، يُحمَّل بـ <code>@Library('library-name') _</code> في أعلى Jenkinsfile. وهكذا يحتفظ كل مشروع بخط أنابيب قصير وسهل القراءة.</p>
+
 <h3>أفضل ممارسات Jenkins</h3>
 <ul>
-<li>استخدام وكلاء (agents) Docker لضمان العزل</li>
-<li>تشغيل المراحل (stages) المستقلة بالتوازي</li>
+<li>استخدام وكلاء Docker للعزل</li>
+<li>تشغيل المراحل المستقلة بالتوازي</li>
 <li>تخزين بيانات الاعتماد في Jenkins Credentials</li>
-<li>إعداد التنبيهات عند الفشل</li>
-<li>أرشفة مخرجات البناء (build artifacts)</li>
+<li>إعداد إشعارات عند الفشل</li>
+<li>أرشفة مخرجات البناء</li>
+<li>إدارة Jenkinsfile وصورة البناء بالإصدارات مع الشيفرة</li>
+<li>تحديد <code>timeout</code> وتدوير للسجل دائماً</li>
 </ul>
+
+<h3>متى لا تختار Jenkins</h3>
+<p>إذا كانت شيفرتك مستضافة على GitHub أو GitLab ولم يكن لديك قيد استضافة خاص، فإن الأدوات المدمجة في هاتين المنصتين تتطلب صيانة أقل بكثير. يصبح Jenkins منطقياً تماماً حين يجب أن تبقى عمليات البناء داخل شبكتك، أو تصل إلى موارد داخلية، أو حين يكون لديك فريق قادر على إدارة المنصة على المدى الطويل.</p>

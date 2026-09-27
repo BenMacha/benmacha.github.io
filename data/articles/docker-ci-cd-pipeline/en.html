@@ -1,6 +1,48 @@
 <h2>Docker and continuous integration</h2>
 <p>Docker has become essential in modern CI/CD pipelines. It guarantees consistency between test and production environments.</p>
-<h3>A GitHub Actions pipeline with Docker</h3>
+<p>The principle is simple: instead of rebuilding the environment on every CI machine (PHP version, extensions, system dependencies), you build an <strong>image</strong> once, test it, then deploy exactly that image. The famous "it works on my machine" disappears, because the machine is now part of the delivered artifact. The pipeline also becomes independent of the CI provider: the same <code>docker build</code> and <code>docker run</code> commands work on GitHub Actions, GitLab CI or Jenkins.</p>
+
+<h3>A multi-stage Dockerfile</h3>
+<p>Everything relies on a <strong>multi-stage</strong> Dockerfile (<em>multi-stage build</em>): a shared base stage, a <code>test</code> target that contains the development dependencies, and a slimmed-down <code>production</code> target. The pipeline picks the target with the <code>--target</code> option.</p>
+<pre><code># syntax=docker/dockerfile:1
+FROM php:8.3-fpm-alpine AS base
+RUN apk add --no-cache icu-libs libzip \
+    &amp;&amp; apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev \
+    &amp;&amp; docker-php-ext-install intl zip pdo_mysql opcache \
+    &amp;&amp; apk del .build-deps
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+WORKDIR /var/www/app
+
+FROM base AS vendor
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-progress
+
+FROM base AS test
+ENV APP_ENV=test
+COPY composer.json composer.lock ./
+RUN composer install --no-scripts --no-autoloader --prefer-dist --no-progress
+COPY . .
+RUN composer dump-autoload
+
+FROM base AS production
+ENV APP_ENV=prod
+COPY --from=vendor /var/www/app/vendor ./vendor
+COPY . .
+RUN composer dump-autoload --classmap-authoritative --no-dev \
+    &amp;&amp; php bin/console cache:warmup \
+    &amp;&amp; chown -R www-data:www-data var
+USER www-data</code></pre>
+<p>The order of instructions matters: <code>composer.json</code> and <code>composer.lock</code> are copied <strong>before</strong> the rest of the code. As long as dependencies do not change, Docker reuses the layer containing <code>vendor/</code>, and only the source code copy is redone. That is what makes subsequent builds fast.</p>
+<p>Also remember the <code>.dockerignore</code> file, which avoids sending useless or sensitive files to the build and invalidating the cache on every local change:</p>
+<pre><code>.git
+vendor
+var
+node_modules
+.env.local
+.env.*.local</code></pre>
+
+<h3>GitHub Actions pipeline with Docker</h3>
+<p>Here is a first version of the pipeline: one job builds the test image and runs PHPUnit inside it, then, if the tests pass, a second job builds the production image and pushes it to the registry.</p>
 <pre><code>name: CI/CD Pipeline
 on:
   push:
@@ -27,6 +69,8 @@ jobs:
         run: |
           echo "$REGISTRY_TOKEN" | docker login -u user --password-stdin
           docker push app:latest</code></pre>
+<p>This version illustrates the principle, but it has three limitations. The <code>app:latest</code> tag does not point to any registry: you need a full name such as <code>ghcr.io/organization/app</code>. The <code>latest</code> tag alone does not tell you which commit is running in production, nor does it make rolling back easy. Finally, each job rebuilds everything from scratch, because runners do not keep the Docker cache between two runs.</p>
+
 <h3>Cache optimization</h3>
 <p>Docker layer caching is crucial for pipeline speed:</p>
 <pre><code>- name: Set up Docker Buildx
@@ -36,10 +80,115 @@ jobs:
   with:
     cache-from: type=gha
     cache-to: type=gha,mode=max</code></pre>
+<p><code>type=gha</code> stores layers in the GitHub Actions cache. With <code>mode=max</code>, layers from intermediate stages (such as <code>vendor</code>) are exported too, not only those of the final image. When several builds share the same cache, give each one its own <code>scope</code> so they do not overwrite each other.</p>
+
+<h3>A complete, traceable pipeline</h3>
+<p>The following version fixes these limitations: image published to GitHub Container Registry, commit-based tags, a separate cache per target, and tests run with their services thanks to Docker Compose.</p>
+<pre><code>name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: test
+          tags: app:test
+          load: true
+          cache-from: type=gha,scope=test
+          cache-to: type=gha,scope=test,mode=max
+      - name: Run tests
+        run: docker compose -f compose.ci.yaml run --rm app php bin/phpunit
+      - name: Clean up
+        if: always()
+        run: docker compose -f compose.ci.yaml down -v
+
+  build-and-push:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=production
+          cache-to: type=gha,scope=production,mode=max</code></pre>
+<p>Key points:</p>
+<ul>
+<li><strong><code>load: true</code></strong> loads the test image into the runner's Docker daemon so it can be run afterwards; without this option, Buildx keeps the result in its own cache.</li>
+<li><strong><code>docker/login-action</code></strong> authenticates to GHCR with the workflow's <code>GITHUB_TOKEN</code>: no personal token to create, you only need to grant <code>packages: write</code> to the job.</li>
+<li><strong><code>docker/metadata-action</code></strong> generates the tags: <code>type=sha</code> produces a tag like <code>sha-1a2b3c4</code>, and <code>latest</code> is only added on the default branch. Every image in production is thus tied to a specific commit, and a rollback means redeploying the previous tag.</li>
+<li><strong>The publishing job</strong> only runs on <code>main</code>: pull requests are tested but publish nothing.</li>
+</ul>
+
 <h3>Parallel tests</h3>
 <ul>
-<li>Use Docker Compose to spin up test services (DB, Redis)</li>
-<li>Parallelize test suites across separate containers</li>
+<li>Use Docker Compose to start test services (DB, Redis)</li>
+<li>Run test suites in parallel in separate containers</li>
 <li>Clean up resources after each run</li>
 </ul>
+<p>The <code>compose.ci.yaml</code> file used above starts the database next to the test image, and only runs the tests once MySQL is actually ready:</p>
+<pre><code>services:
+  app:
+    image: app:test
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:root@mysql:3306/test
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10</code></pre>
+<p>The <code>service_healthy</code> condition is essential: a plain <code>depends_on</code> only waits for the container to start, not for MySQL to accept connections. To parallelize, a GitHub Actions matrix can start several jobs with the same image, each running a different PHPUnit suite (<code>--testsuite unit</code>, <code>--testsuite integration</code>). The final <code>down -v</code>, executed even on failure thanks to <code>if: always()</code>, removes containers and volumes.</p>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong>Secrets in the image</strong>: never copy a <code>.env.local</code> file or a key into the image, and do not pass secrets through <code>ARG</code>, which stays visible in the history. Production secrets are injected when the container starts.</li>
+<li><strong>Test image deployed</strong>: without <code>--target production</code>, Docker builds the last stage of the Dockerfile. Make sure it is the one you expect.</li>
+<li><strong>Uppercase image names</strong>: registries require lowercase names, which is a problem if the GitHub organization name contains uppercase letters.</li>
+<li><strong>Constantly invalidated cache</strong>: a <code>COPY . .</code> placed too early, or a missing <code>.dockerignore</code>, makes dependencies rebuild on every commit.</li>
+</ul>
+
+<h3>Summary</h3>
+<p>A multi-stage Dockerfile, a properly configured Buildx cache, images tagged by commit and test services orchestrated by Compose: with these four elements, the pipeline builds once what it tests and deploys.</p>
 <p>This strategy cuts deployment time from 30 minutes to under 5 minutes.</p>

@@ -1,6 +1,18 @@
 <h2>Symfony and Docker: the perfect pair</h2>
 <p>Docker and Symfony make a powerful combination for development. At Keytchens, a food-tech platform for real-time order management, this stack made it possible to unify development environments across the whole team.</p>
+<p>This guide describes a complete development environment: PHP-FPM, Nginx, MySQL, Redis and RabbitMQ, driven by Docker Compose and a Makefile. The goal is simple: a new developer clones the repository, runs one command and gets a working application, identical to the one their colleagues use.</p>
+
+<h3>Why containerize the development environment</h3>
+<p>Without containers, every machine accumulates its own PHP version, its own extensions, its own MySQL server and its own settings. Those differences always end up producing the famous "works on my machine". Docker solves this by describing the environment as code, versioned alongside the application:</p>
+<ul>
+<li>the PHP version and the list of extensions are pinned in a Dockerfile;</li>
+<li>the MySQL, Redis and RabbitMQ versions match production, not whatever happens to be installed on the laptop;</li>
+<li>several projects with incompatible needs (PHP 7.4 and PHP 8.3, for example) live side by side without conflict;</li>
+<li>an environment change goes through a pull request and gets reviewed like any other code.</li>
+</ul>
+
 <h3>Docker Compose for Symfony</h3>
+<p>The <code>compose.yaml</code> file (or <code>docker-compose.yml</code>) declares all the services:</p>
 <pre><code>version: '3.8'
 services:
   php:
@@ -37,17 +49,86 @@ services:
 
 volumes:
   mysql-data:</code></pre>
-<h3>An optimized PHP Dockerfile</h3>
+<p>A few things worth understanding in this file:</p>
+<ul>
+<li><strong>The bind mount</strong> <code>.:/var/www/html</code> mounts the source code from your machine into the <code>php</code> and <code>nginx</code> containers: every change is visible immediately, without rebuilding the image.</li>
+<li><strong>The named volume</strong> <code>mysql-data</code> keeps the database data between two <code>docker compose down</code> runs. Only <code>docker compose down -v</code> removes it.</li>
+<li><strong>The network</strong> is created automatically: each service is reachable by its name (<code>mysql</code>, <code>redis</code>, <code>rabbitmq</code>). From Symfony, you therefore never use <code>localhost</code> to reach the database.</li>
+<li><strong>Port 15672</strong> exposes the RabbitMQ management UI at <code>http://localhost:15672</code> (default credentials <code>guest</code> / <code>guest</code>).</li>
+<li><strong>The <code>version</code> key</strong> is now ignored by Docker Compose v2: it only prints a warning and can safely be removed.</li>
+</ul>
+
+<h3>Waiting until the database is actually ready</h3>
+<p>In its short form, <code>depends_on</code> only guarantees start order, not availability: MySQL may still be initializing when PHP tries to connect. A <code>healthcheck</code> combined with the <code>service_healthy</code> condition fixes that:</p>
+<pre><code>services:
+  php:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  mysql:
+    image: mysql:8.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10</code></pre>
+
+<h3>Nginx configuration</h3>
+<p>The <code>.docker/nginx/default.conf</code> file follows the configuration recommended by the Symfony documentation. Nginx serves static files from the <code>public/</code> directory and forwards everything else to PHP-FPM, reachable as <code>php</code> on port 9000:</p>
+<pre><code>server {
+    listen 80;
+    server_name localhost;
+    root /var/www/html/public;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass php:9000;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}</code></pre>
+<p>The last block returns a 404 for any other PHP file: only the <code>index.php</code> front controller should ever be executable.</p>
+
+<h3>Optimized PHP Dockerfile</h3>
 <pre><code>FROM php:8.3-fpm
-RUN apt-get update && apt-get install -y \
+RUN apt-get update &amp;&amp; apt-get install -y \
     libicu-dev libzip-dev \
-    && docker-php-ext-install intl pdo_mysql zip opcache \
-    && pecl install redis xdebug \
-    && docker-php-ext-enable redis xdebug
+    &amp;&amp; docker-php-ext-install intl pdo_mysql zip opcache \
+    &amp;&amp; pecl install redis xdebug \
+    &amp;&amp; docker-php-ext-enable redis xdebug
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html</code></pre>
+<p>The official <code>php:8.3-fpm</code> image ships the <code>docker-php-ext-install</code> and <code>docker-php-ext-enable</code> scripts. System libraries (<code>libicu-dev</code> for <code>intl</code>, <code>libzip-dev</code> for <code>zip</code>) must be installed before the extensions are compiled. PECL extensions such as <code>redis</code> and <code>xdebug</code> are built with <code>pecl install</code> and then enabled. Finally, <code>COPY --from=composer:2</code> pulls the Composer binary from its official image, with no installer script.</p>
+<p>If you use Messenger's AMQP transport with RabbitMQ, you also need the <code>amqp</code> extension: add <code>librabbitmq-dev</code> to the packages and <code>amqp</code> to the <code>pecl install</code> line.</p>
+<p>Xdebug noticeably slows down every request. Turn it off by default and enable it only when you need it, with a <code>.docker/php/xdebug.ini</code> file copied into the image:</p>
+<pre><code>xdebug.mode=off
+xdebug.client_host=host.docker.internal
+xdebug.start_with_request=trigger</code></pre>
+<p>The <code>XDEBUG_MODE=debug</code> environment variable, passed to the container, overrides <code>xdebug.mode</code>: you enable debugging without rebuilding the image. On Linux, <code>host.docker.internal</code> does not exist by default: add <code>extra_hosts: ["host.docker.internal:host-gateway"]</code> to the <code>php</code> service.</p>
+
+<h3>Connecting Symfony to the services</h3>
+<p>In <code>.env.local</code> (not committed), the DSNs point to the Compose service names:</p>
+<pre><code>DATABASE_URL="mysql://root:root@mysql:3306/symfony?serverVersion=8.0&amp;charset=utf8mb4"
+REDIS_URL="redis://redis:6379"
+MESSENGER_TRANSPORT_DSN="amqp://guest:guest@rabbitmq:5672/%2f/messages"</code></pre>
+<p>Remember to set <code>serverVersion</code>: Doctrine uses it to pick the right SQL platform without querying the server at boot.</p>
+
 <h3>A Makefile to simplify commands</h3>
+<p>Docker commands are long and easy to forget. A Makefile at the project root gives the whole team the same vocabulary:</p>
 <pre><code>up:
 	docker compose up -d
 
@@ -62,8 +143,33 @@ test:
 
 migrate:
 	docker compose exec php php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>Usage: <code>make up</code>, then <code>make console cmd="cache:clear"</code> or <code>make migrate</code>. Note that Makefile recipes must be indented with a tab, not spaces. Also add a <code>.PHONY: up down console test migrate</code> line so that <code>make</code> does not confuse these targets with files of the same name.</p>
+
+<h3>Common pitfalls</h3>
 <ul>
-<li>The same environment for every developer</li>
-<li>Full isolation between services</li>
-<li>Easy onboarding for new developers</li>
+<li><strong>File permissions</strong>: PHP-FPM runs as <code>www-data</code> inside the container, while your files belong to your own user. If <code>var/cache</code> or <code>var/log</code> are not writable, align the container user's UID with yours (a <code>UID</code> build argument and <code>usermod</code>) rather than running <code>chmod 777</code>.</li>
+<li><strong>Slowness on macOS</strong>: bind mounts are slower there than on Linux. Enable VirtioFS in Docker Desktop and avoid mounting unnecessary directories.</li>
+<li><strong>Composer outside the container</strong>: run <code>composer install</code> inside the container, otherwise dependencies are resolved for your laptop's PHP version, not the image's.</li>
+<li><strong>Plain-text passwords</strong>: <code>root</code> / <code>root</code> is acceptable locally only. Never reuse this Compose file as-is in production.</li>
+<li><strong>Production image</strong>: this image ships Xdebug and mounts the code as a volume. For production, build a separate image (multi-stage build) with the code copied in, <code>composer install --no-dev</code> and OPcache configured without timestamp validation.</li>
 </ul>
+
+<h3>Day-to-day benefits</h3>
+<ul>
+<li>Identical environment for every developer</li>
+<li>Full isolation of services</li>
+<li>Easy onboarding for new developers</li>
+<li>Service versions aligned with production</li>
+<li>Environment changes reviewed and versioned like code</li>
+</ul>
+
+<h3>Getting-started checklist</h3>
+<ol>
+<li>Write the <code>compose.yaml</code>, the PHP Dockerfile and the Nginx configuration.</li>
+<li>Add a <code>healthcheck</code> on MySQL and make PHP's startup depend on it.</li>
+<li>Turn Xdebug off by default and enable it on demand.</li>
+<li>Set the DSNs in <code>.env.local</code> using the service names.</li>
+<li>Document the commands in a Makefile and in the README.</li>
+<li>Check that a <code>git clone</code> followed by <code>make up</code> is enough to start the project on a fresh machine.</li>
+</ol>
+<p>With this foundation, the development environment becomes a first-class part of the project: reproducible, documented and easy to evolve.</p>

@@ -1,50 +1,130 @@
 <h2>Zapier لأتمتة العمليات التجارية</h2>
 <p>في بيئة مؤسسية مثل ORPI، تُعدّ أتمتة العمليات التجارية عبر واجهات API أمراً أساسياً لرفع الكفاءة.</p>
+<p>Zapier منصة أتمتة بلا شيفرة (no-code) تربط آلاف تطبيقات SaaS ببعضها. وتكمن قيمتها لدى الفريق التقني في أمرين: تبني فرق الأعمال عمليات الأتمتة بنفسها، ولا يحتاج المطوّرون إلا إلى توفير بضع نقاط دخول نظيفة وآمنة في تطبيقاتهم. يبيّن هذا المقال كيف تُهيّئ تطبيق Symfony للتواصل مع Zapier في الاتجاهين.</p>
+
+<h3>المفاهيم الأساسية</h3>
+<ul>
+<li><strong>Zap</strong>: سيناريو أتمتة يتكوّن من مُشغّل واحد وإجراء واحد أو أكثر.</li>
+<li><strong>Trigger</strong> (المُشغّل): الحدث الذي يطلق الـ Zap، مثل عميل محتمل جديد أو نموذج مُرسَل.</li>
+<li><strong>Action</strong> (الإجراء): ما يفعله الـ Zap بعد ذلك، مثل إضافة سطر في جدول بيانات، أو إرسال رسالة Slack، أو استدعاء واجهة API الخاصة بك.</li>
+<li><strong>Task</strong> (المهمة): يُحتسب كل إجراء نُفّذ بنجاح مهمةً، وعلى هذا الحجم تقوم الفوترة.</li>
+</ul>
+<p>يعمل المُشغّل بإحدى طريقتين: <em>الاستطلاع الدوري (polling)</em>، حيث يستعلم Zapier بانتظام عن عنوان URL لاكتشاف العناصر الجديدة، أو <em>الفوري (instant)</em>، حيث يُبلغ تطبيقك Zapier عبر webhook فور وقوع الحدث.</p>
+
 <h3>حالات استخدام شائعة</h3>
 <ul>
-<li>مزامنة CRM مع قاعدة بيانات داخلية</li>
+<li>مزامنة نظام CRM مع قاعدة البيانات الداخلية</li>
 <li>إشعارات Slack عند وقوع أحداث تجارية</li>
 <li>توليد التقارير تلقائياً</li>
 <li>ربط نماذج الويب بنظام المعلومات</li>
 </ul>
-<h3>إنشاء webhook مخصص</h3>
-<pre><code>// Symfony endpoint receiving Zapier webhooks
+<p>القاسم المشترك بين هذه الحالات: تدفّقات بسيطة بحجم معتدل تربط أدوات قائمة. وهنا يكون Zapier أكثر جدوى، لأنه يُغني عن تطوير موصِّل (connector) لكل أداة وصيانته.</p>
+
+<h3>إنشاء webhook مخصّص</h3>
+<p>الاتجاه الأول: يرسل Zapier البيانات إلى تطبيقك. داخل الـ Zap، يرسل الإجراء «Webhooks by Zapier» في وضع POST بيانات JSON إلى نقطة النهاية (endpoint) الخاصة بك، مع ترويسات (headers) تحدّدها أنت، ومنها رمز سرّي:</p>
+<pre><code>// Symfony endpoint to receive Zapier webhooks
 #[Route('/api/webhook/zapier', methods: ['POST'])]
 class ZapierWebhookController extends AbstractController
 {
+    public function __construct(
+        #[Autowire(env: 'ZAPIER_TOKEN')]
+        private readonly string $zapierToken,
+    ) {}
+
     public function __invoke(
         Request $request,
         MessageBusInterface $bus,
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
-
         // Validate the token
-        if ($request->headers->get('X-Zapier-Token') !== $this->zapierToken) {
-            return $this->json(['error' => 'Unauthorized'], 401);
+        $token = (string) $request-&gt;headers-&gt;get('X-Zapier-Token', '');
+        if (!hash_equals($this-&gt;zapierToken, $token)) {
+            return $this-&gt;json(['error' =&gt; 'Unauthorized'], 401);
+        }
+
+        $data = json_decode($request-&gt;getContent(), true);
+        if (!is_array($data)) {
+            return $this-&gt;json(['error' =&gt; 'Invalid JSON'], 400);
         }
 
         // Dispatch the processing
-        $bus->dispatch(new ProcessZapierDataMessage($data));
+        $bus-&gt;dispatch(new ProcessZapierDataMessage($data));
 
-        return $this->json(['status' => 'received']);
+        return $this-&gt;json(['status' =&gt; 'received']);
     }
 }</code></pre>
-<h3>واجهة API لمشغّلات Zapier (Triggers)</h3>
+<p>عدة تفاصيل مهمة في هذا المتحكّم:</p>
+<ul>
+<li>يُقرأ الرمز من متغيّر بيئة بفضل السمة <code>#[Autowire(env: ...)]</code> (Symfony 6.3 وما بعده)، ولا يُكتب أبداً مباشرة في الشيفرة؛</li>
+<li>تقارن <code>hash_equals()</code> السلاسل النصية في زمن ثابت، ما يمنع تخمين الرمز حرفاً بحرف؛</li>
+<li>يجري التحقق من الرمز قبل أي قراءة للمحتوى، ويُرفض أي JSON غير صالح بخطأ 400؛</li>
+<li>تنتقل المعالجة الفعلية إلى Messenger: يستجيب المتحكّم في بضع مللي ثوانٍ، ما يتجنّب انتهاء المهلة (timeout) من جهة Zapier.</li>
+</ul>
+<p>يُخزَّن السرّ كبقية أسرار التطبيق، مثلاً باستخدام خزنة الأسرار (secrets vault) في Symfony:</p>
+<pre><code>php bin/console secrets:set ZAPIER_TOKEN
+# Generate a strong value
+openssl rand -hex 32</code></pre>
+
+<h3>واجهة API لمُشغّلات Zapier</h3>
+<p>الاتجاه الثاني: يزوّد تطبيقك Zapier بالبيانات. لمُشغّل يعمل بالاستطلاع الدوري، يُبنى ضمن تكامل خاص على منصة المطوّرين في Zapier، يكفي توفير نقطة نهاية تُعيد أحدث العناصر:</p>
 <pre><code>#[Route('/api/zapier/new-leads', methods: ['GET'])]
 public function newLeads(LeadRepository $repo): JsonResponse
 {
-    $leads = $repo->findRecent(limit: 50);
-    return $this->json(array_map(fn(Lead $l) => [
-        'id' => $l->getId(),
-        'name' => $l->getName(),
-        'email' => $l->getEmail(),
-        'created_at' => $l->getCreatedAt()->format('c'),
+    $leads = $repo-&gt;findRecent(limit: 50);
+    return $this-&gt;json(array_map(fn(Lead $l) =&gt; [
+        'id' =&gt; $l-&gt;getId(),
+        'name' =&gt; $l-&gt;getName(),
+        'email' =&gt; $l-&gt;getEmail(),
+        'created_at' =&gt; $l-&gt;getCreatedAt()-&gt;format('c'),
     ], $leads));
 }</code></pre>
+<p>ينتظر Zapier مصفوفة JSON من الكائنات، من الأحدث إلى الأقدم، لكل منها حقل <code>id</code> فريد. ويحفظ المعرّفات التي رآها سابقاً ولا يُطلق الـ Zap إلا للعناصر الجديدة: هذا هو إلغاء التكرار (deduplication). ولذلك نتيجتان عمليتان: يجب ألا يتغيّر <code>id</code> العنصر أبداً، ويجب أن ترتّب <code>findRecent()</code> النتائج حسب تاريخ الإنشاء تنازلياً. احمِ هذه النقطة أيضاً، مثلاً بمفتاح API يُرسَل في ترويسة ويتحقق منه مكوّن Security.</p>
+
+<h3>المُشغّلات الفورية</h3>
+<p>يُحدث الاستطلاع الدوري تأخيراً يتوقف على اشتراك Zapier. ولرد فعل فوري، يمكن للتطبيق دفع الحدث إلى عنوان URL الذي يوفّره المُشغّل «Catch Hook» في Webhooks by Zapier. نفّذ ذلك من معالِج Messenger، حتى لا يؤدي تعطّل Zapier أبداً إلى إبطاء مستخدميك:</p>
+<pre><code>#[AsMessageHandler]
+final class NotifyZapierHandler
+{
+    public function __construct(
+        private readonly HttpClientInterface $httpClient,
+        #[Autowire(env: 'ZAPIER_HOOK_URL')]
+        private readonly string $zapierHookUrl,
+    ) {}
+
+    public function __invoke(LeadCreatedMessage $message): void
+    {
+        $response = $this-&gt;httpClient-&gt;request('POST', $this-&gt;zapierHookUrl, [
+            'json' =&gt; [
+                'id' =&gt; $message-&gt;leadId,
+                'name' =&gt; $message-&gt;name,
+                'email' =&gt; $message-&gt;email,
+            ],
+            'timeout' =&gt; 10,
+        ]);
+
+        // Throws an exception if the status is not 2xx: Messenger will retry
+        $response-&gt;getContent();
+    }
+}</code></pre>
+<p>إذا كان Zapier غير متاح مؤقتاً، يُطلق الاستثناء استراتيجية إعادة المحاولة في Messenger، ثم وسيلة نقل الإخفاقات: لا يضيع أي حدث. وللتكاملات العامة، يوفّر Zapier أيضاً <em>REST Hooks</em>: يسجّل Zapier بنفسه عنوانه لدى واجهة API الخاصة بك عند تفعيل Zap، ويحذفه عند تعطيله.</p>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong>التكرار</strong>: قد يُعاد إرسال webhook، من Zapier أو من مستخدم يعيد تشغيل تنفيذ ما. اجعل المعالجة متساوية الأثر (idempotent)، مثلاً بتخزين معرّف الحدث المستلَم.</li>
+<li><strong>البيانات الشخصية</strong>: يمرّ كل حقل تُرسله عبر خوادم Zapier. لا ترسل إلا ما هو ضروري فعلاً، وتحقّق من امتثال التدفّق للائحة RGPD (GDPR) مع مسؤول حماية البيانات (DPO) لديك.</li>
+<li><strong>المنطق التجاري داخل Zapier</strong>: تصبح المرشّحات والمسارات المعقّدة داخل الـ Zap سريعاً مستحيلة الاختبار والإدارة بالإصدارات. أبقِ قواعد العمل داخل التطبيق.</li>
+<li><strong>التكلفة</strong>: قد ترتفع الفوترة بحسب المهام بسرعة في التدفّقات ذات الحجم الكبير.</li>
+</ul>
+
+<h3>متى لا تستخدم Zapier</h3>
+<p>لآلاف الأحداث في الساعة، أو لتدفّق حاسم لرقم المعاملات، أو لتحويل بيانات معقّد، يبقى التكامل المطوَّر مباشرة بين واجهتي API أكثر موثوقية وأقل تكلفة وأسهل مراقبة. يتألّق Zapier في الأتمتة الداخلية والنماذج الأولية والتدفّقات التي يجب أن تتمكن فرق الأعمال من تطويرها بنفسها.</p>
+
 <h3>أفضل الممارسات</h3>
 <ul>
-<li>تأمين الـ webhooks باستخدام tokens</li>
-<li>تسجيل جميع التفاعلات لتسهيل تصحيح الأخطاء</li>
-<li>استخدام طوابير الانتظار (queues) للمعالجة غير المتزامنة</li>
-<li>توثيق واجهات API باستخدام OpenAPI لتسهيل التكامل مع Zapier</li>
+<li>تأمين webhooks بالرموز (tokens)</li>
+<li>تسجيل كل التفاعلات لتسهيل تصحيح الأخطاء</li>
+<li>استخدام طوابير الانتظار للمعالجة غير المتزامنة</li>
+<li>توثيق واجهات API بمعيار OpenAPI لتسهيل التكامل مع Zapier</li>
+<li>تحديد معدّل الطلبات على نقاط النهاية العامة بمكوّن RateLimiter في Symfony</li>
+<li>الاستجابة بسرعة برمز 2xx، ثم المعالجة لاحقاً</li>
 </ul>
+<p>ببضع نقاط نهاية مصمَّمة جيداً وآمنة وغير متزامنة، يصبح تطبيقك لبنة تستطيع فرق الأعمال ربطها بأدواتها دون اللجوء إلى المطوّرين عند كل حاجة جديدة.</p>

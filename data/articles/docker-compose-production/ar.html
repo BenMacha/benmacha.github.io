@@ -1,5 +1,8 @@
 <h2>Docker Compose ما بعد بيئة التطوير</h2>
-<p>لا يقتصر Docker Compose على بيئة التطوير. فمع الممارسات الصحيحة، يصبح أداة قوية لتنسيق التطبيقات في بيئة الإنتاج.</p>
+<p>ليس Docker Compose حكراً على التطوير. فمع الممارسات الصحيحة، يصبح أداة قوية لتنسيق التطبيقات في بيئة الإنتاج.</p>
+<p>بالنسبة لتطبيق مستضاف على <strong>خادم واحد</strong> (VPS أو جهاز مخصص)، يقدّم Compose توازناً ممتازاً: تُوصَف البنية التحتية كاملةً في بضعة ملفات خاضعة لإدارة الإصدارات، ويتم النشر بأمرين فقط، ولا توجد طبقة تحكّم يجب صيانتها ولا عنقود (cluster) تجب مراقبته. يصبح Kubernetes أو Docker Swarm مناسبين عندما تحتاج إلى توزيع الحمل على عدة أجهزة أو ضمان توافرية عالية على مستوى المضيف، وهذا ليس ما تحتاجه أغلب تطبيقات الأعمال.</p>
+<p>يعرض هذا المقال تنظيماً للملفات، وإعدادات إنتاج مشروحة، وإدارة السجلات والأسرار والبيانات، ثم إجراء للنشر وأكثر الأخطاء شيوعاً.</p>
+
 <h3>بنية الملفات الموصى بها</h3>
 <pre><code>├── docker-compose.yml          # Base configuration
 ├── docker-compose.prod.yml     # Production overrides
@@ -7,6 +10,19 @@
 ├── .env.production             # Environment variables
 └── nginx/
     └── default.conf            # Nginx configuration</code></pre>
+<p>المبدأ هو <strong>التجاوز</strong> (override): يصف الملف الأساسي ما هو مشترك بين جميع البيئات (الخدمات وشبكاتها ووحدات التخزين الخاصة بها)، ولا يضيف ملف كل بيئة إلا اختلافاته. في التطوير نركّب الشيفرة المصدرية كوحدة تخزين ونفعّل Xdebug؛ وفي الإنتاج نستخدم الصورة المبنية، ونحدّ من الموارد، ونفعّل إعادة التشغيل التلقائي.</p>
+<p>يدمج Compose الملفات بالترتيب الذي تُمرَّر به عبر الخيار <code>-f</code>: القيم البسيطة في الملف الأخير هي التي تسري، بينما تُجمَع القوائم مثل <code>ports</code> أو <code>volumes</code>. ولتجنّب تكرار الخيارات في كل أمر، يمكن تعريف المتغير <code>COMPOSE_FILE</code> على الخادم:</p>
+<pre><code># Explicit file merge
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Or once and for all in the server environment
+export COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
+docker compose up -d
+
+# Check the final configuration after merging
+docker compose config</code></pre>
+<p>يعرض الأمر <code>docker compose config</code> الإعدادات المطبّقة فعلياً، بما فيها المتغيرات بعد استبدال قيمها. إنه أول ما يجب تنفيذه عندما لا تتصرف خدمة ما كما هو متوقع.</p>
+
 <h3>إعدادات الإنتاج</h3>
 <pre><code>version: '3.8'
 services:
@@ -41,18 +57,88 @@ services:
     image: redis:7-alpine
     restart: always
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru</code></pre>
-<h3>إدارة السجلات (logs)</h3>
-<p>اضبط مُشغّل تسجيل (logging driver) مركزياً لتسهيل المراقبة:</p>
+<p>لكل كتلة في هذه الإعدادات دور محدد:</p>
+<ul>
+<li><strong><code>build.target: production</code></strong>: يبني مرحلة الإنتاج فقط من Dockerfile متعدد المراحل، دون أدوات التطوير. راجع مقال <a href="/blog/docker-multi-stage-builds">البناء متعدد المراحل في Docker</a>.</li>
+<li><strong><code>restart: always</code></strong>: تُعاد تشغيل الحاوية بعد أي تعطّل وعند إعادة تشغيل خدمة Docker. يتصرف البديل <code>unless-stopped</code> بالطريقة نفسها، إلا أن الحاوية التي أُوقفت يدوياً تبقى متوقفة بعد إعادة تشغيل الخادم.</li>
+<li><strong><code>deploy.resources.limits</code></strong>: مع Docker Compose v2 تُطبَّق هذه الحدود حتى خارج Swarm. الحاوية التي تتجاوز حدّ الذاكرة المخصص لها يُنهيها النواة (OOM) بدلاً من أن تُسقط الخادم بأكمله.</li>
+<li><strong><code>healthcheck</code></strong>: <code>php-fpm-healthcheck</code> سكربت صغير مفتوح المصدر يُثبَّت داخل الصورة؛ يستعلم صفحة حالة PHP-FPM، والتي يجب إذن تفعيلها عبر <code>pm.status_path</code> في إعدادات الـ pool.</li>
+<li><strong><code>depends_on</code> مع <code>condition: service_healthy</code></strong>: لا يبدأ Nginx إلا بعد أن يُعلَن PHP-FPM سليماً، مما يتجنّب أخطاء 502 عند الإقلاع.</li>
+<li><strong>Redis</strong> محدود بـ 256 ميغابايت مع سياسة <code>allkeys-lru</code>: عند بلوغ الحد، تُحذف المفاتيح الأقل استخداماً مؤخراً. هذا مناسب لذاكرة cache، لا لتخزين جلسات يجب ألا تختفي.</li>
+</ul>
+<p>أصبح المفتاح <code>version</code> في رأس الملف متقادماً اليوم: يتجاهله Docker Compose v2 ويعرض تحذيراً. يمكنك حذفه دون أي خطر. لاحظ أيضاً أن خدمة <code>nginx</code> ليست لها سياسة إعادة تشغيل في هذا المثال: أضف إليها <code>restart: always</code> كبقية الخدمات.</p>
+
+<h3>متغيرات البيئة والأسرار</h3>
+<p>يجب ألا يُرفع الملف <code>.env.production</code> إلى المستودع أبداً: فهو يعيش على الخادم فقط، بصلاحيات مقيّدة (<code>chmod 600</code>). ويتيح Compose أيضاً جعل متغير ما إلزامياً، بحيث يؤدي نسيانه إلى فشل النشر بدلاً من تشغيل تطبيق بإعدادات خاطئة:</p>
+<pre><code>services:
+  app:
+    env_file: .env.production
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}</code></pre>
+<p>بالنسبة للبيانات الأكثر حساسية (كلمات مرور قواعد البيانات، مفاتيح API)، فضّل <strong>أسرار Compose</strong> (secrets)، التي تُركَّب كملفات داخل <code>/run/secrets/</code> بدلاً من كشفها في بيئة العملية. هذا الموضوع مفصّل في مقال <a href="/blog/docker-security-best-practices">تأمين حاويات Docker</a>.</p>
+
+<h3>إدارة السجلات</h3>
+<p>اضبط مشغّل تسجيل (logging driver) مركزياً لتسهيل المراقبة:</p>
 <pre><code>logging:
   driver: json-file
   options:
     max-size: "10m"
     max-file: "3"</code></pre>
-<h3>نقاط أساسية</h3>
+<p>من دون هذه الخيارات، يحتفظ المشغّل <code>json-file</code> بالسجلات إلى ما لا نهاية، وينتهي الأمر بحاوية كثيرة الكتابة إلى ملء القرص. هنا تحتفظ كل حاوية بثلاثة ملفات كحد أقصى، حجم كل منها 10 ميغابايت. وبدلاً من تكرار هذه الكتلة في كل خدمة، استخدم امتداد YAML ومرساة (anchor):</p>
+<pre><code>x-logging: &amp;default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    logging: *default-logging
+  nginx:
+    logging: *default-logging</code></pre>
+<p>يمكنك أيضاً تعريف هذه القيم الافتراضية للمضيف كله في <code>/etc/docker/daemon.json</code>، ثم إعادة تشغيل Docker. ولا تنطبق إلا على الحاويات المُنشأة بعد التغيير:</p>
+<pre><code>{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}</code></pre>
+<p>أما للتجميع (Loki أو Elasticsearch أو خدمة SaaS)، فاجعل التطبيق يكتب على المخرج القياسي ودع وكيلاً يجمع سجلات الحاويات: هذا أمتن من الكتابة في ملفات داخل الحاوية.</p>
+
+<h3>وحدات التخزين والبيانات الدائمة</h3>
+<p>الحاوية قابلة للاستبدال، أما بياناتها فلا. كل ما يجب أن يصمد بعد <code>docker compose down</code> (قاعدة البيانات، الملفات التي يرفعها المستخدمون) يجب أن يعيش في <strong>وحدة تخزين مسمّاة</strong> (named volume) أو في مجلد واضح التحديد على المضيف. انتبه: الأمر <code>docker compose down -v</code> يحذف وحدات التخزين المسمّاة الخاصة بالمشروع، وبالتالي البيانات.</p>
+<p>وحدة التخزين ليست نسخة احتياطية. بالنسبة لقاعدة البيانات، نفّذ تصديراً منطقياً منتظماً بدلاً من نسخ الملفات الخام لمحرّك قيد التشغيل:</p>
+<pre><code># MySQL export from the container, compressed on the host
+docker compose exec -T db sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --single-transaction app' \
+  | gzip &gt; backup-$(date +%F).sql.gz</code></pre>
+<p>تذكّر بعد ذلك نسخ هذه الملفات إلى خارج الخادم واختبار استعادتها بانتظام.</p>
+
+<h3>نشر إصدار جديد</h3>
+<p>مع صور تُبنى في CI وتُنشر في سجلّ (registry)، يقتصر التحديث على جلب الصور الجديدة وإعادة إنشاء الحاويات التي تغيّرت:</p>
+<pre><code>docker compose pull
+docker compose up -d --remove-orphans --wait
+docker image prune -f</code></pre>
+<p>ينتظر الخيار <code>--wait</code> أن تكون الخدمات قيد التشغيل وسليمة قبل أن يعيد التحكم، مما يسمح لسكربت النشر بالفشل بشكل نظيف إذا لم ينجح أحد فحوص السلامة. ويحذف <code>--remove-orphans</code> حاويات الخدمات المحذوفة من الملف. ضع في اعتبارك أن Compose يعيد إنشاء الحاوية بإيقاف القديمة قبل تشغيل الجديدة، لذا يحدث انقطاع قصير. إذا لم يكن ذلك مقبولاً، فأنت بحاجة إلى وكيل عكسي قادر على التبديل بين نسختين، أو إلى أداة تنسيق (orchestrator).</p>
+
+<h3>أخطاء شائعة</h3>
 <ul>
-<li>عرّف دائماً <code>restart: always</code> لضمان المرونة</li>
-<li>حدّد الموارد باستخدام <code>deploy.resources</code></li>
-<li>استخدم فحوصات الصحة (healthchecks) لتحقيق التوافر العالي</li>
-<li>افصل وحدات تخزين (volumes) البيانات الدائمة</li>
-<li>لا تكشف المنافذ الداخلية أبداً دون داعٍ</li>
+<li><strong>الوسم <code>latest</code> في الإنتاج</strong>: يستحيل معرفة الإصدار الذي يعمل أو العودة إلى إصدار سابق. استخدم وسماً لكل إصدار أو لكل commit.</li>
+<li><strong>منافذ منشورة على جميع الواجهات</strong>: <code>"3306:3306"</code> يكشف قاعدة البيانات على الإنترنت، وكثيراً ما تتجاوز قواعد Docker جدار الحماية UFW. لا تنشر أي منفذ للخدمات الداخلية، أو اربطها بـ <code>127.0.0.1</code>.</li>
+<li><strong>فحص سلامة غائب أو متساهل جداً</strong>: لا فائدة من <code>condition: service_healthy</code> إذا كان الاختبار يتحقق فقط من وجود العملية.</li>
+<li><strong>بناء الصور على خادم الإنتاج</strong>: يستهلك ذلك موارده ويجعل عمليات النشر غير قابلة لإعادة الإنتاج. ابنِ في CI، وانشر صوراً.</li>
 </ul>
+
+<h3>النقاط الأساسية</h3>
+<ul>
+<li>عرّف دائماً <code>restart: always</code> من أجل المرونة</li>
+<li>حدّ من الموارد باستخدام <code>deploy.resources</code></li>
+<li>استخدم فحوص السلامة (healthchecks) من أجل التوافرية العالية</li>
+<li>افصل وحدات تخزين البيانات الدائمة</li>
+<li>لا تكشف المنافذ الداخلية أبداً دون داعٍ</li>
+<li>دوّر السجلات وانسخ البيانات احتياطياً خارج الخادم</li>
+</ul>
+
+<h3>عندما لا يعود Compose كافياً</h3>
+<p>يبقى Compose محدوداً بمضيف واحد: لا توزيع تلقائي بين عدة أجهزة، ولا تحديث تدريجي دون انقطاع، ولا استئناف إذا تعطّل الخادم نفسه. إذا كان تطبيقك يحتاج إلى هذه الضمانات، فتلك إشارة للانتقال إلى أداة تنسيق. وحتى ذلك الحين، يبقى خادم بموارد مناسبة يديره Compose حلاً بسيطاً وواضحاً وموثوقاً.</p>

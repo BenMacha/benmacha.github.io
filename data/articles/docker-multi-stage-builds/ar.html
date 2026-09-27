@@ -1,7 +1,11 @@
-<h2>لماذا نستخدم البناء متعدد المراحل (multi-stage builds)؟</h2>
-<p>يتيح البناء متعدد المراحل فصل بيئة البناء عن بيئة التشغيل. والنتيجة: صور أخف وزناً وأكثر أماناً.</p>
+<h2>لماذا نستخدم البناء متعدد المراحل؟</h2>
+<p>يتيح البناء متعدد المراحل (multi-stage builds) فصل بيئة البناء عن بيئة التشغيل. والنتيجة: صور أخف وزناً وأكثر أماناً.</p>
+<p>المبدأ بسيط: يحتوي ملف Dockerfile واحد على عدة تعليمات <code>FROM</code>. تبدأ كل واحدة منها <strong>مرحلة</strong> (stage) جديدة بصورة أساسية خاصة بها. تثبّت المراحل الوسيطة أدوات البناء، أو تحمّل الاعتماديات، أو تُجمّع ملفات الواجهة (assets)؛ ولا تأخذ المرحلة النهائية، عبر <code>COPY --from</code>، إلا النتيجة. وكل ما لم يُنسخ صراحةً (المترجمات، وذاكرة الحزم المؤقتة، والمصادر غير الضرورية) يختفي من الصورة المُسلَّمة.</p>
+
 <h3>مشكلة الصور الأحادية</h3>
-<p>يمكن لصورة PHP تقليدية تضم جميع اعتماديات التطوير أن تتجاوز بسهولة 1 غيغابايت. أما في بيئة الإنتاج، فلا حاجة لك بـ Composer ولا بأدوات الاختبار ولا بملفات المصدر غير المُترجَمة.</p>
+<p>يمكن لصورة PHP تقليدية بكل اعتماديات التطوير أن تتجاوز بسهولة 1 غيغابايت. في الإنتاج، لا تحتاج إلى Composer ولا إلى أدوات الاختبار ولا إلى ملفات المصدر غير المُجمَّعة.</p>
+<p>لهذا الحجم عواقب ملموسة: عمليات نشر أبطأ لأن كل خادم يجب أن يحمّل الصورة، وسجلّ صور (registry) يمتلئ بسرعة أكبر، والأهم من ذلك <strong>سطح هجوم</strong> أوسع. فكل ملف تنفيذي موجود في الصورة (مترجم، عميل Git، مدير حزم) أداة إضافية في متناول المهاجم، ومصدر إضافي للتنبيهات في أدوات فحص الثغرات.</p>
+
 <h3>مثال على Dockerfile متعدد المراحل</h3>
 <pre><code># Stage 1: Build
 FROM composer:2 AS builder
@@ -16,16 +20,90 @@ COPY --from=builder /app /var/www/html
 RUN docker-php-ext-install pdo pdo_mysql opcache
 EXPOSE 9000
 CMD ["php-fpm"]</code></pre>
-<h3>مزايا ملموسة</h3>
+<p>تنطلق المرحلة الأولى، المسمّاة <code>builder</code>، من صورة Composer الرسمية. تنسخ أولاً الملفين <code>composer.json</code> و<code>composer.lock</code> فقط، ثم تثبّت الاعتماديات: ما دام هذان الملفان لم يتغيرا، يعيد Docker استخدام الطبقة المخزّنة في الـ cache ولا يُعاد التثبيت، حتى لو تغيّرت شيفرة التطبيق. بعد ذلك تُنسخ الشيفرة. أما المرحلة الثانية فتنطلق من صورة PHP-FPM مبنية على Alpine، وتأخذ المجلد <code>/app</code> كاملاً وتثبّت الإضافات اللازمة.</p>
+
+<h3>نسخة أكثر اكتمالاً</h3>
+<p>يعمل المثال أعلاه، لكن يمكن تحسينه في أربع نقاط. يُولَّد الـ autoloader المُحسَّن قبل نسخ الشيفرة، لذا لا يتضمن أصناف التطبيق. وتُثبَّت إضافات PHP بعد نسخ الشيفرة، فيؤدي أي تعديل في الشيفرة إلى إبطال هذه الطبقة المكلفة أيضاً. وتعمل العملية بصلاحيات root. وأخيراً، كثيراً ما يحتوي تطبيق Symfony على ملفات واجهة أمامية يجب تجميعها. إليك نسخة تعالج هذه النقاط:</p>
+<pre><code># syntax=docker/dockerfile:1
+
+# Stage 1: PHP dependencies
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN --mount=type=cache,target=/tmp/cache \
+    composer install --no-dev --no-scripts --no-autoloader --prefer-dist --ignore-platform-reqs
+COPY . .
+RUN composer dump-autoload --no-dev --classmap-authoritative
+
+# Stage 2: front-end assets
+FROM node:22-alpine AS assets
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY assets/ assets/
+COPY webpack.config.js ./
+RUN npm run build
+
+# Stage 3: production
+FROM php:8.3-fpm-alpine AS production
+RUN apk add --no-cache icu-libs \
+    &amp;&amp; apk add --no-cache --virtual .build-deps icu-dev $PHPIZE_DEPS \
+    &amp;&amp; docker-php-ext-install intl pdo_mysql opcache \
+    &amp;&amp; apk del .build-deps
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+WORKDIR /var/www/html
+COPY --from=vendor --chown=www-data:www-data /app ./
+COPY --from=assets /app/public/build ./public/build
+USER www-data</code></pre>
+<p>بعض التوضيحات:</p>
 <ul>
-<li><strong>حجم أصغر</strong>: الانتقال من 800 ميغابايت إلى أقل من 150 ميغابايت</li>
-<li><strong>الأمان</strong>: لا أدوات تطوير في بيئة الإنتاج</li>
-<li><strong>ذاكرة Docker المؤقتة (cache)</strong>: تُخزَّن كل مرحلة مؤقتاً بشكل مستقل</li>
-<li><strong>قابلية إعادة الإنتاج</strong>: النتيجة نفسها في جميع البيئات</li>
+<li><strong><code>--mount=type=cache</code></strong> يحتفظ بذاكرة Composer المؤقتة بين عمليتي بناء على الجهاز نفسه، دون أن يكتبها أبداً في الصورة.</li>
+<li><strong><code>--ignore-platform-reqs</code></strong> ضروري لأن صورة Composer لا تملك إصدار PHP نفسه ولا الإضافات نفسها الموجودة في الصورة النهائية. يولّد Composer ملف <code>platform_check.php</code> الذي يتحقق من إصدار PHP عند الإقلاع: وبالتالي يُكتشف أي عدم توافق فوراً.</li>
+<li><strong><code>--classmap-authoritative</code></strong> ينتج classmap كاملة، تُولَّد بعد نسخ الشيفرة، ويتجنّب أي بحث عن الملفات على القرص عند تحميل صنف ما.</li>
+<li>تُثبَّت <strong>اعتماديات التجميع</strong> (<code>icu-dev</code>، <code>$PHPIZE_DEPS</code>) وتُحذف في تعليمة <code>RUN</code> نفسها: لا تبقى في الصورة سوى مكتبات التشغيل مثل <code>icu-libs</code>.</li>
+<li>تجلب المرحلة <code>assets</code> بيئة Node.js التي لا مكان لها في الإنتاج: لا يُنسخ إلا المجلد <code>public/build</code>.</li>
 </ul>
-<h3>أفضل الممارسات</h3>
-<p>استخدم Alpine كصورة أساسية لتقليص سطح الهجوم. ثبّت فقط امتدادات PHP الضرورية. واضبط OPcache لبيئة الإنتاج بالإعدادات المثلى.</p>
-<pre><code>RUN echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini</code></pre>
+<p>لا تنسَ أيضاً ملف <code>.dockerignore</code>. من دونه، يرسل <code>COPY . .</code> إلى عملية البناء مجلد <code>vendor/</code> المحلي، الذي سيستبدل المجلد الذي ثبّتته المرحلة للتو، إضافة إلى <code>.git</code> وملفات البيئة المحلية:</p>
+<pre><code>.git
+vendor/
+node_modules/
+var/
+.env.local
+docker-compose*.yml</code></pre>
+
+<h3>بناء مرحلة محددة</h3>
+<p>يوقف الخيار <code>--target</code> البناء عند المرحلة المحددة. وهذا مفيد لتصحيح مرحلة وسيطة، أو لإعادة استخدام ملف Dockerfile نفسه مع مرحلة للتطوير:</p>
+<pre><code>docker build --target production -t myapp:1.4.2 .
+docker build --target vendor -t myapp:vendor .
+
+# Compare sizes and inspect layers
+docker image ls myapp
+docker history myapp:1.4.2</code></pre>
+<p>مع BuildKit، المفعّل افتراضياً في الإصدارات الحديثة من Docker، لا تُبنى إلا المراحل اللازمة للهدف، وتُبنى المراحل المستقلة (هنا <code>vendor</code> و<code>assets</code>) بالتوازي.</p>
+<p>تتيح الآلية نفسها وصف مرحلة تطوير تنطلق من صورة الإنتاج ولا تضيف إليها سوى Xdebug وأدوات الاختبار. وبذلك يتشارك التطوير والإنتاج الأساس نفسه، ويختار Docker Compose المرحلة التي يبنيها عبر المفتاح <code>build.target</code>.</p>
+
+<h3>فوائد ملموسة</h3>
+<ul>
+<li><strong>حجم أصغر</strong>: من 800 ميغابايت إلى أقل من 150 ميغابايت</li>
+<li><strong>الأمان</strong>: لا أدوات تطوير في الإنتاج</li>
+<li><strong>ذاكرة Docker المؤقتة</strong>: تُخزَّن كل مرحلة في الـ cache بشكل مستقل</li>
+<li><strong>قابلية إعادة الإنتاج</strong>: النتيجة نفسها في كل البيئات</li>
+</ul>
+
+<h3>ممارسات جيدة</h3>
+<p>استخدم Alpine كصورة أساسية لتقليص سطح الهجوم. ثبّت فقط إضافات PHP الضرورية. واضبط OPcache للإنتاج بالمعاملات المثلى.</p>
+<pre><code>RUN echo "opcache.memory_consumption=256" &gt;&gt; /usr/local/etc/php/conf.d/opcache.ini \
+    &amp;&amp; echo "opcache.max_accelerated_files=20000" &gt;&gt; /usr/local/etc/php/conf.d/opcache.ini \
+    &amp;&amp; echo "opcache.validate_timestamps=0" &gt;&gt; /usr/local/etc/php/conf.d/opcache.ini</code></pre>
+<p>بدلاً من سلسلة من أوامر <code>echo</code>، يكون ملف <code>docker/php/opcache.ini</code> خاضع لإدارة الإصدارات ومنسوخ داخل الصورة (كما في النسخة المكتملة أعلاه) أسهل قراءة. ويمكنه أيضاً تفعيل التحميل المسبق (preloading) الذي يوفّره Symfony وضبط ذاكرة <code>realpath</code> المؤقتة:</p>
+<pre><code>opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+opcache.preload=/var/www/html/config/preload.php
+opcache.preload_user=www-data
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+<p>مع <code>validate_timestamps=0</code> لم يعد PHP يتحقق مما إذا كانت الملفات قد تغيّرت: هذا بالضبط ما نريده في صورة ثابتة، لكنه يعني أنه يجب ألا تعدّل أبداً شيفرة حاوية قيد التشغيل. يتم النشر باستبدال الحاوية.</p>
+<p>وأخيراً، رتّب تعليمات Dockerfile من الأقل تغيّراً إلى الأكثر تغيّراً (حزم النظام، ثم الإضافات، ثم الاعتماديات، ثم الشيفرة)، وثبّت إصدارات الصور الأساسية حتى تُنتج عمليتا بناء للـ commit نفسه النتيجة نفسها.</p>
 <p>يُستخدم هذا النهج بنجاح على منصات مثل Keytchens لنشر تطبيقات Symfony مع تقليص زمن البناء بنسبة 60%.</p>

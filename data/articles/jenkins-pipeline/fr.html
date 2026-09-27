@@ -1,6 +1,12 @@
 <h2>Jenkins Pipeline : automatisation avancée</h2>
-<p>Jenkins reste une solution CI/CD populaire pour les organisations qui nécessitent un contrôle total sur leur infrastructure de build.</p>
+<p>Jenkins reste une solution CI/CD populaire pour les organisations qui nécessitent un contrôle total sur leur infrastructure de build. Là où GitHub Actions ou GitLab CI imposent leur plateforme, Jenkins s'installe sur vos propres serveurs, se connecte à n'importe quel dépôt Git et s'étend grâce à un écosystème de plugins très large. Cette liberté a un prix : c'est à vous de maintenir le contrôleur, les agents et les plugins à jour.</p>
+<p>Depuis Jenkins 2, la bonne façon de décrire un build n'est plus de cliquer dans l'interface, mais d'écrire un <strong>Jenkinsfile</strong> versionné à la racine du projet. Le pipeline évolue alors avec le code : une branche peut modifier sa propre chaîne de build, et chaque changement passe en revue comme n'importe quelle autre modification.</p>
+
+<h3>Déclaratif ou scripté ?</h3>
+<p>Jenkins propose deux syntaxes. Le pipeline <strong>scripté</strong> est du Groovy libre : puissant, mais difficile à relire et à valider. Le pipeline <strong>déclaratif</strong> impose une structure (<code>pipeline</code>, <code>agent</code>, <code>stages</code>, <code>post</code>) qui est vérifiée avant l'exécution. Pour une application PHP classique, le déclaratif couvre tous les besoins ; quand une logique complexe devient nécessaire, un bloc <code>script { }</code> ou une bibliothèque partagée permet d'en sortir ponctuellement.</p>
+
 <h3>Pipeline déclaratif</h3>
+<p>Voici un pipeline complet pour un projet Symfony : installation des dépendances, analyse statique et tests en parallèle, puis déploiement depuis la branche principale.</p>
 <pre><code>pipeline {
     agent {
         docker {
@@ -62,6 +68,116 @@
         }
     }
 }</code></pre>
+
+<h3>Lecture du pipeline, bloc par bloc</h3>
+<ul>
+<li><strong><code>agent { docker { … } }</code></strong> : chaque build s'exécute dans un conteneur jetable créé à partir de l'image indiquée. Le plugin <em>Docker Pipeline</em> est requis, et l'agent doit disposer de Docker.</li>
+<li><strong><code>environment</code></strong> : définit les variables visibles par toutes les étapes. <code>credentials('database-url')</code> récupère un secret stocké dans Jenkins ; pour un identifiant de type « Secret text », la variable contient directement la valeur, et Jenkins la masque dans les logs.</li>
+<li><strong><code>parallel</code></strong> : PHPStan et PHP-CS-Fixer ne dépendent pas l'un de l'autre, ils tournent donc en même temps. Le stage parent échoue si l'un des deux échoue.</li>
+<li><strong><code>junit</code></strong> : placé dans un <code>post { always { } }</code>, il publie le rapport de tests même quand des tests échouent. Jenkins affiche alors l'historique et les tests instables.</li>
+<li><strong><code>when { branch 'main' }</code></strong> : cette condition ne fonctionne que dans un job <em>Multibranch Pipeline</em>, où Jenkins connaît le nom de la branche. Dans un job Pipeline simple, le stage serait toujours ignoré.</li>
+<li><strong><code>post { failure { } }</code></strong> : la notification Slack ne part qu'en cas d'échec. <code>slackSend</code> est fourni par le plugin <em>Slack Notification</em>.</li>
+</ul>
+
+<h3>Une image de build qui contient vraiment Composer</h3>
+<p>Un piège classique : l'image officielle <code>php:8.3-cli</code> ne contient ni Composer, ni <code>git</code>, ni l'extension <code>zip</code>. La commande <code>composer install</code> du pipeline ci-dessus échouera donc tant que l'image n'est pas enrichie. La solution la plus propre est un <code>Dockerfile.ci</code> versionné avec le projet :</p>
+<pre><code>FROM php:8.3-cli
+
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends git unzip libzip-dev libicu-dev openssh-client \
+    &amp;&amp; docker-php-ext-install zip intl pdo_mysql \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer</code></pre>
+<p>Il suffit ensuite de remplacer le bloc <code>docker</code> par <code>dockerfile { filename 'Dockerfile.ci' }</code> : Jenkins construit l'image, la met en cache sur l'agent et lance le build dedans. L'environnement de CI est alors décrit dans le dépôt, et non plus dans la configuration d'une machine.</p>
+
+<h3>Un pipeline plus robuste</h3>
+<p>Le premier exemple fonctionne, mais il manque plusieurs garde-fous qu'on ajoute systématiquement en production : une durée maximale, l'interdiction des builds concurrents sur la même branche, la rotation de l'historique, l'archivage des artefacts et une validation humaine avant la mise en production.</p>
+<pre><code>pipeline {
+    agent {
+        dockerfile {
+            filename 'Dockerfile.ci'
+        }
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timestamps()
+    }
+
+    environment {
+        APP_ENV = 'test'
+        COMPOSER_HOME = "${env.WORKSPACE}/.composer"
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'composer install --prefer-dist --no-progress --no-interaction'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mkdir -p dist &amp;&amp; tar --exclude=./dist --exclude=./.git -czf dist/app.tar.gz .'
+                archiveArtifacts artifacts: 'dist/app.tar.gz', fingerprint: true
+            }
+        }
+
+        stage('Deploy production') {
+            when {
+                branch 'main'
+                beforeInput true
+            }
+            input {
+                message 'Déployer en production ?'
+                ok 'Déployer'
+                submitter 'release-managers'
+            }
+            steps {
+                sshagent(credentials: ['deploy-ssh-key']) {
+                    sh './deploy.sh production'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}</code></pre>
+<p>Quelques explications :</p>
+<ul>
+<li><strong><code>timeout</code></strong> interrompt un build bloqué (test qui attend un service indisponible, par exemple) au lieu de monopoliser un exécuteur pendant des heures.</li>
+<li><strong><code>disableConcurrentBuilds()</code></strong> évite que deux déploiements de la même branche se chevauchent.</li>
+<li><strong><code>COMPOSER_HOME</code></strong> pointe vers le workspace : Jenkins lance le conteneur avec l'UID de l'agent, dont le répertoire personnel n'est souvent pas accessible en écriture dans l'image.</li>
+<li><strong><code>input</code></strong> met le pipeline en pause jusqu'à validation par un membre du groupe <code>release-managers</code>. Avec <code>beforeInput true</code>, la condition de branche est évaluée avant la demande : les autres branches ne sont jamais bloquées.</li>
+<li><strong><code>sshagent</code></strong> (plugin <em>SSH Agent</em>) charge la clé de déploiement uniquement le temps de l'étape, sans jamais l'écrire dans le workspace.</li>
+<li><strong><code>cleanWs()</code></strong> (plugin <em>Workspace Cleanup</em>) supprime le workspace à la fin, pour que le build suivant reparte d'un état propre.</li>
+</ul>
+
+<h3>Pièges fréquents</h3>
+<ul>
+<li><strong>Interpolation des secrets</strong> : écrire <code>sh "mysql -p${DB_PASSWORD}"</code> avec des guillemets doubles fait interpoler le secret par Groovy avant l'exécution, et Jenkins affiche un avertissement de sécurité. Utilisez des guillemets simples, <code>sh 'mysql -p"$DB_PASSWORD"'</code>, pour laisser le shell lire la variable d'environnement.</li>
+<li><strong>Agent bloqué pendant un <code>input</code></strong> : avec un agent global, l'exécuteur reste réservé pendant l'attente de validation, et le <code>timeout</code> global continue de s'écouler. Pour de longues attentes, déclarez <code>agent none</code> au niveau du pipeline et un agent par stage.</li>
+<li><strong>Plugins non maintenus</strong> : chaque plugin est une dépendance. Limitez-vous à ceux dont vous avez besoin et mettez-les à jour régulièrement, car ils sont une source fréquente de vulnérabilités.</li>
+<li><strong>Builds sur le contrôleur</strong> : configurez zéro exécuteur sur le nœud principal et faites tourner les builds sur des agents dédiés, pour protéger le contrôleur et ses secrets.</li>
+</ul>
+
+<h3>Valider le Jenkinsfile avant de pousser</h3>
+<p>Une faute de syntaxe dans un Jenkinsfile ne se découvre souvent qu'après le push. Jenkins expose un linter pour les pipelines déclaratifs, utilisable avec un jeton d'API :</p>
+<pre><code>curl -X POST --user "$JENKINS_USER:$JENKINS_TOKEN" \
+  -F "jenkinsfile=&lt;Jenkinsfile" \
+  "$JENKINS_URL/pipeline-model-converter/validate"</code></pre>
+<p>La réponse indique si le fichier est valide ou détaille la ligne en erreur. Cette commande s'intègre facilement dans un hook Git ou dans l'éditeur.</p>
+
+<h3>Mutualiser avec les Shared Libraries</h3>
+<p>Quand plusieurs projets partagent les mêmes étapes (notification, déploiement, publication d'image), dupliquer le Jenkinsfile devient vite ingérable. Les <strong>Shared Libraries</strong> permettent de placer ce code commun dans un dépôt Git séparé, chargé avec <code>@Library('nom-de-la-lib') _</code> en tête du Jenkinsfile. Chaque projet garde alors un pipeline court et lisible.</p>
+
 <h3>Bonnes pratiques Jenkins</h3>
 <ul>
 <li>Utiliser des agents Docker pour l'isolation</li>
@@ -69,4 +185,9 @@
 <li>Stocker les credentials dans Jenkins Credentials</li>
 <li>Configurer les notifications pour les échecs</li>
 <li>Archiver les artefacts de build</li>
+<li>Versionner le Jenkinsfile et l'image de build avec le code</li>
+<li>Toujours définir un <code>timeout</code> et une rotation de l'historique</li>
 </ul>
+
+<h3>Quand ne pas choisir Jenkins</h3>
+<p>Si votre code est hébergé sur GitHub ou GitLab et que vous n'avez pas de contrainte d'hébergement particulière, les outils intégrés à ces plateformes demandent beaucoup moins de maintenance. Jenkins prend tout son sens lorsque les builds doivent rester sur votre réseau, accéder à des ressources internes, ou lorsque vous avez déjà une équipe capable d'administrer la plateforme dans la durée.</p>

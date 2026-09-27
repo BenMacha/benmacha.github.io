@@ -1,18 +1,46 @@
 <h2>Les modes réseau Docker</h2>
 <p>Docker propose plusieurs drivers réseau, chacun adapté à des cas d'usage spécifiques.</p>
+<p>Comprendre ces drivers évite la plupart des problèmes de connectivité que l'on rencontre avec les conteneurs : une application qui ne trouve pas sa base de données, un port inaccessible depuis l'extérieur, ou au contraire une base exposée sur Internet sans qu'on l'ait voulu. Les drivers les plus utilisés sont <strong>bridge</strong>, <strong>host</strong> et <strong>overlay</strong> ; il existe aussi <code>none</code>, qui coupe tout accès réseau, et <code>macvlan</code>, plus rare. Les commandes de base pour explorer l'existant :</p>
+<pre><code>docker network ls
+docker network inspect bridge
+docker network inspect mon-reseau --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'</code></pre>
+
 <h3>Bridge (par défaut)</h3>
 <p>Le mode bridge crée un réseau isolé pour les conteneurs sur un même hôte :</p>
 <pre><code>docker network create --driver bridge mon-reseau
 docker run --network mon-reseau --name app myapp
 docker run --network mon-reseau --name db mysql</code></pre>
 <p>Les conteneurs sur le même réseau bridge peuvent communiquer via leur nom de conteneur comme hostname.</p>
+<p>Une nuance importante : cette résolution par nom ne fonctionne que sur les réseaux bridge <strong>créés par l'utilisateur</strong>. Le réseau <code>bridge</code> par défaut, auquel sont rattachés les conteneurs lancés sans option <code>--network</code>, ne fournit pas de DNS entre conteneurs. C'est une raison suffisante pour toujours créer ses propres réseaux, ce que Docker Compose fait automatiquement : chaque projet reçoit un réseau nommé <code>&lt;projet&gt;_default</code>.</p>
+<p>Sur un réseau bridge, les conteneurs ont des adresses privées et ne sont pas joignables depuis l'extérieur. Pour rendre un service accessible, on <strong>publie</strong> un port : Docker ajoute alors une règle de NAT de l'hôte vers le conteneur. Par défaut, le port est ouvert sur toutes les interfaces de l'hôte ; précisez une adresse pour le limiter :</p>
+<pre><code># Accessible depuis l'extérieur sur le port 8080 de l'hôte
+docker run -d -p 8080:80 --name web nginx:alpine
+
+# Accessible uniquement depuis l'hôte lui-même
+docker run -d -p 127.0.0.1:8081:80 --name admin nginx:alpine
+
+# Rattacher un conteneur existant à un second réseau
+docker network connect mon-reseau web</code></pre>
+<p>Attention : les règles iptables créées par Docker pour les ports publiés s'appliquent avant celles d'un pare-feu comme UFW. Un port publié sur <code>0.0.0.0</code> est donc joignable même si UFW semble le bloquer.</p>
+
 <h3>Host</h3>
 <p>Le mode host supprime l'isolation réseau. Le conteneur utilise directement le réseau de l'hôte :</p>
 <pre><code>docker run --network host nginx</code></pre>
 <p>Utile pour les performances maximales mais sans isolation.</p>
+<p>Il n'y a ni NAT ni port à publier : Nginx écoute directement sur le port 80 de l'hôte, et les options <code>-p</code> sont ignorées. En contrepartie, deux conteneurs ne peuvent pas utiliser le même port, et le conteneur voit toutes les interfaces réseau de la machine. Ce mode se justifie pour des outils qui doivent observer le réseau de l'hôte (agents de monitoring, certains outils VPN) ou pour des charges où la moindre latence compte. Il est pleinement pris en charge sur Linux ; avec Docker Desktop sur macOS et Windows, les conteneurs tournent dans une VM et le comportement n'est pas le même.</p>
+
+<h3>None</h3>
+<p>Avec <code>--network none</code>, le conteneur n'a qu'une interface loopback. C'est utile pour un traitement qui n'a besoin d'aucun accès réseau, par exemple la conversion de fichiers non fiables : même compromis, le processus ne peut rien exfiltrer.</p>
+<pre><code>docker run --rm --network none -v "$PWD/input:/data:ro" alpine ls -l /data</code></pre>
+
 <h3>Overlay</h3>
 <p>Pour les clusters Docker Swarm, le réseau overlay permet la communication entre conteneurs sur différents nœuds :</p>
 <pre><code>docker network create --driver overlay --attachable mon-overlay</code></pre>
+<p>Un réseau overlay nécessite que l'hôte soit un nœud Swarm (<code>docker swarm init</code>). Le trafic entre nœuds est encapsulé en VXLAN : les ports 2377/tcp (gestion du cluster), 7946/tcp et udp (découverte entre nœuds) et 4789/udp (données) doivent être ouverts entre les machines. L'option <code>--attachable</code> permet à des conteneurs lancés avec <code>docker run</code>, et pas seulement aux services Swarm, de rejoindre le réseau. Le trafic de gestion est chiffré par défaut ; pour chiffrer aussi le trafic applicatif entre nœuds, ajoutez <code>--opt encrypted</code>.</p>
+
+<h3>Macvlan</h3>
+<p>Le driver <code>macvlan</code> donne au conteneur sa propre adresse MAC et une adresse IP sur le réseau physique, comme s'il s'agissait d'une machine à part entière. Il sert surtout à intégrer des applications historiques qui attendent une IP dédiée. Particularité à connaître : par défaut, l'hôte lui-même ne peut pas communiquer avec ses conteneurs macvlan.</p>
+
 <h3>DNS interne</h3>
 <p>Docker intègre un serveur DNS permettant la résolution par nom de service :</p>
 <pre><code>services:
@@ -30,10 +58,49 @@ docker run --network mon-reseau --name db mysql</code></pre>
 networks:
   frontend:
   backend:</code></pre>
+<p>Dans chaque conteneur, ce DNS est joignable à l'adresse <code>127.0.0.11</code>. Il résout les noms de service, les noms de conteneur et les éventuels alias déclarés, mais uniquement pour les conteneurs qui partagent un réseau. Dans l'exemple ci-dessus, <code>app</code> peut joindre <code>nginx</code> et <code>db</code>, tandis que <code>nginx</code> ne peut pas résoudre <code>db</code> : un Nginx compromis n'a aucun chemin direct vers la base. Si un service est mis à l'échelle sur plusieurs conteneurs, son nom renvoie plusieurs adresses.</p>
+<p>Pour aller plus loin, déclarez le réseau backend comme <strong>interne</strong> (sans accès vers l'extérieur) et partagez un réseau créé en dehors du projet avec un reverse proxy :</p>
+<pre><code>networks:
+  frontend:
+  backend:
+    internal: true
+  proxy:
+    external: true</code></pre>
+<p>Pour diagnostiquer un problème de résolution ou de connectivité, lancez un conteneur d'outils sur le même réseau plutôt que d'installer des paquets dans vos images :</p>
+<pre><code>docker run --rm -it --network mon-reseau nicolaka/netshoot
+# Puis, dans le conteneur :
+dig db
+nc -zv db 3306</code></pre>
+
+<h3>Conflits de sous-réseaux</h3>
+<p>Docker attribue à chaque réseau un sous-réseau privé, souvent en <code>172.17.0.0/16</code> et au-delà. Si votre réseau d'entreprise ou votre VPN utilise déjà ces plages, certaines destinations deviennent injoignables depuis l'hôte. La solution consiste à définir des plages dédiées dans <code>/etc/docker/daemon.json</code>, puis à redémarrer Docker et recréer les réseaux :</p>
+<pre><code>{
+  "default-address-pools": [
+    { "base": "10.200.0.0/16", "size": 24 }
+  ]
+}</code></pre>
+
+<h3>Récapitulatif des drivers</h3>
+<table>
+<thead>
+<tr><th>Driver</th><th>Portée</th><th>Cas d'usage</th></tr>
+</thead>
+<tbody>
+<tr><td>bridge</td><td>Un hôte</td><td>Cas général, applications Compose</td></tr>
+<tr><td>host</td><td>Un hôte</td><td>Performance maximale, outils réseau</td></tr>
+<tr><td>none</td><td>Un conteneur</td><td>Traitements sans accès réseau</td></tr>
+<tr><td>overlay</td><td>Plusieurs hôtes</td><td>Clusters Docker Swarm</td></tr>
+<tr><td>macvlan</td><td>Réseau physique</td><td>Applications qui exigent une IP dédiée</td></tr>
+</tbody>
+</table>
+
 <h3>Bonnes pratiques réseau</h3>
 <ul>
 <li>Isolez les services par réseau (frontend, backend, monitoring)</li>
 <li>Utilisez des réseaux internes pour les services non exposés</li>
 <li>Documentez vos topologies réseau</li>
 <li>Limitez les ports exposés au strict minimum</li>
+<li>Utilisez les noms de service plutôt que les adresses IP, qui changent à chaque recréation</li>
+<li>Liez à <code>127.0.0.1</code> les ports qui ne doivent servir qu'en local</li>
 </ul>
+<p>Pour la sécurité des conteneurs au-delà du réseau, voir l'article <a href="/blog/docker-security-best-practices">Sécuriser vos conteneurs Docker</a>.</p>

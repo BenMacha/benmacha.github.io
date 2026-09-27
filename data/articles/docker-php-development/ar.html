@@ -1,6 +1,9 @@
-<h2>بيئة تطوير واحدة متطابقة للفريق بأكمله</h2>
-<p>انتهى زمن عبارة "يعمل على جهازي". يضمن Docker أن يعمل كل مطوّر في بيئة متطابقة، ما يقضي على مشكلات التوافق.</p>
-<h3>حزمة تطوير متكاملة</h3>
+<h2>بيئة تطوير متطابقة للفريق بأكمله</h2>
+<p>وداعاً لعبارة "إنه يعمل على جهازي". يضمن Docker أن يعمل كل مطوّر في بيئة متطابقة، مما يقضي على مشاكل التوافق.</p>
+<p>من دون حاويات، ينتهي الأمر بكل جهاز عمل إلى امتلاك إصداره الخاص من PHP، وإضافاته الخاصة، وإصدار من MySQL مختلف عن إصدار الإنتاج، وإعدادات <code>php.ini</code> موروثة من مشاريع قديمة. والأخطاء الناتجة عن ذلك هي الأكثر كلفة في التشخيص، لأنها لا تتكرر في أي مكان آخر. مع Docker، تُوصَف البيئة في ملفات خاضعة لإدارة الإصدارات إلى جانب الشيفرة: يصبح تحديث PHP تغييراً يُراجَع في code review، ويحصل عليه كل عضو في الفريق بمجرد <code>git pull</code>.</p>
+<p>يبني هذا المقال بيئة تطوير PHP كاملة: PHP مع Xdebug، وMySQL، وخادم بريد للاختبار، ثم يتناول تصحيح الأخطاء، وأداء وحدات التخزين على macOS وWindows، والأخطاء الكلاسيكية.</p>
+
+<h3>بيئة تطوير كاملة</h3>
 <pre><code>version: '3.8'
 services:
   php:
@@ -32,18 +35,85 @@ services:
 volumes:
   composer-cache:
   mysql-data:</code></pre>
+<p>لنفصّل الخيارات في هذا الملف:</p>
+<ul>
+<li><strong>الشيفرة مركّبة</strong> (<code>.:/var/www/html</code>): كل تعديل في الـ IDE يظهر فوراً داخل الحاوية، دون إعادة بناء الصورة.</li>
+<li><strong>ذاكرة Composer المؤقتة</strong> (cache) تعيش في وحدة تخزين مسمّاة: تُحفظ الحزم المحمّلة حتى لو أُعيد إنشاء الحاوية.</li>
+<li><strong>MySQL</strong> ينشر المنفذ 3306 ليتمكن عميل رسومي على الجهاز من الاتصال به. وتصمد البيانات بعد إعادة التشغيل بفضل وحدة التخزين <code>mysql-data</code>. استخدم الإصدار الرئيسي نفسه المستخدم في الإنتاج.</li>
+<li><strong>MailHog</strong> يعترض كل رسائل البريد الإلكتروني التي يرسلها التطبيق ويعرضها على <code>http://localhost:8025</code>: لا خطر من مراسلة عملاء حقيقيين من جهاز تطوير. في مشروع Symfony، وجّه <code>MAILER_DSN</code> إلى <code>smtp://mailhog:1025</code>. وبما أن MailHog لم يعد يُصان، فإن <strong>Mailpit</strong> (الصورة <code>axllent/mailpit</code>، بالمنافذ نفسها) بديل نشط ومتوافق اليوم.</li>
+</ul>
+<p>كلمات المرور غير المشفّرة مقبولة هنا لأن هذه البيئة لا تغادر جهاز المطوّر أبداً. وكما في الأمثلة الأخرى، المفتاح <code>version</code> متقادم مع Docker Compose v2 ويمكن حذفه.</p>
+
+<h3>ملف Dockerfile الخاص بالتطوير</h3>
+<p>ينطلق الملف <code>Dockerfile.dev</code> من صورة PHP الرسمية ويضيف الإضافات الشائعة وComposer وXdebug. ويبقى عمداً منفصلاً عن Dockerfile الخاص بالإنتاج، الذي يجب ألا يحتوي أبداً على Xdebug:</p>
+<pre><code>FROM php:8.3-fpm
+
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends git unzip libicu-dev libzip-dev \
+    &amp;&amp; docker-php-ext-install intl pdo_mysql zip opcache \
+    &amp;&amp; pecl install xdebug \
+    &amp;&amp; docker-php-ext-enable xdebug \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/php/xdebug.ini /usr/local/etc/php/conf.d/zz-xdebug.ini
+
+WORKDIR /var/www/html</code></pre>
+<p>يجلب السطر <code>COPY --from=composer:2</code> الملف التنفيذي لـ Composer من الصورة الرسمية، دون أي سكربت تثبيت. ويبدأ اسم ملف إعدادات Xdebug بالبادئة <code>zz-</code> ليُحمَّل بعد الملفات التي يولّدها <code>docker-php-ext-enable</code>.</p>
+
 <h3>إعداد Xdebug</h3>
-<p>التنقيح (debugging) أمر أساسي أثناء التطوير. إليك الإعداد الأمثل لـ Xdebug:</p>
+<p>تصحيح الأخطاء أساسي في مرحلة التطوير. إليك الإعداد الأمثل لـ Xdebug:</p>
 <pre><code>[xdebug]
 xdebug.mode=debug
 xdebug.start_with_request=yes
 xdebug.client_host=host.docker.internal
 xdebug.client_port=9003</code></pre>
-<h3>إعادة التحميل الفوري (Hot reload) والأداء</h3>
-<p>على macOS وWindows قد تكون المجلدات المركّبة (volumes) بطيئة. استخدم استراتيجيات للمزامنة:</p>
+<p>لكل سطر أهميته. يفعّل <code>xdebug.mode=debug</code> التصحيح خطوة بخطوة؛ ولمتغير البيئة <code>XDEBUG_MODE</code> في ملف Compose الأولوية على هذه القيمة، مما يسمح بالانتقال إلى <code>XDEBUG_MODE=off</code> دون إعادة بناء الصورة حين لا تحتاج إليه. ويبدأ <code>start_with_request=yes</code> جلسة مع كل طلب؛ وإذا أبطأ ذلك تطبيقك كثيراً، فاستخدم بدلاً منه <code>trigger</code> مع إضافة للمتصفح تضيف المُشغِّل عند الطلب. المنفذ <code>9003</code> هو الافتراضي منذ Xdebug 3 (المنفذ القديم 9000 كان يتعارض مع PHP-FPM).</p>
+<p>يشير الاسم <code>host.docker.internal</code> إلى الجهاز المضيف، حيث يعمل الـ IDE. يوفّره Docker Desktop تلقائياً على macOS وWindows؛ أما على Linux فيجب التصريح به. ولـ PhpStorm، أضف أيضاً اسم خادم يُستخدم للعثور على مطابقة المسارات، بما في ذلك لأوامر CLI:</p>
+<pre><code>services:
+  php:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - PHP_IDE_CONFIG=serverName=docker</code></pre>
+<p>في PhpStorm، أنشئ بعد ذلك خادماً باسم <code>docker</code> واربط جذر المشروع بـ <code>/var/www/html</code>. من دون هذه المطابقة، يتلقى الـ IDE الاتصال فعلاً لكنه لا يتوقف عند أي نقطة توقف.</p>
+
+<h3>إعادة التحميل الفوري والأداء</h3>
+<p>على macOS وWindows، قد تكون وحدات التخزين المركّبة بطيئة. استخدم استراتيجيات للمزامنة:</p>
 <ul>
 <li>Mutagen لمزامنة الملفات بسرعة</li>
 <li>استثناء <code>vendor/</code> و<code>node_modules/</code> من التركيب</li>
-<li>استخدام volumes مسمّاة للاعتماديات</li>
+<li>استخدام وحدات تخزين مسمّاة للاعتماديات</li>
+</ul>
+<p>يأتي البطء من كون Docker يعمل داخل آلة افتراضية على هذه الأنظمة: كل وصول إلى ملف مركّب يعبر الحد بين المضيف والآلة الافتراضية. تستخدم الإصدارات الحديثة من Docker Desktop تقنية VirtioFS، وهي أسرع بكثير من ذي قبل، لكن مشروع Symfony يقرأ آلاف الملفات في <code>vendor/</code> مع كل طلب. وضع هذه المجلدات في وحدات تخزين مسمّاة يُبقيها داخل الآلة الافتراضية:</p>
+<pre><code>services:
+  php:
+    volumes:
+      - .:/var/www/html
+      - vendor:/var/www/html/vendor
+      - composer-cache:/root/.composer
+
+volumes:
+  vendor:
+  composer-cache:</code></pre>
+<p>المقابل: لم يعد المجلد <code>vendor/</code> مرئياً من المضيف، ويفقد الـ IDE الإكمال التلقائي للاعتماديات. لذلك تشغّل فرق كثيرة أيضاً <code>composer install</code> محلياً من أجل الـ IDE، أو تستخدم المفسّر البعيد في PhpStorm. ويمكن التعامل مع cache الخاص بـ Symfony (<code>var/</code>) بالطريقة نفسها. على Linux، التركيب أصلي وسريع: لا حاجة لهذه التحسينات.</p>
+
+<h3>أوامر الاستخدام اليومي</h3>
+<p>تُنفَّذ كل أوامر PHP داخل الحاوية، وليس أبداً باستخدام PHP المثبّت على المضيف:</p>
+<pre><code>docker compose up -d --build
+docker compose exec php composer install
+docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec php bin/console cache:clear
+
+# On Linux, so that created files belong to your user
+docker compose exec -u "$(id -u):$(id -g)" php composer require symfony/uid</code></pre>
+<p>اجمع هذه الأوامر في <code>Makefile</code> أو في سكربت موثّق في ملف README: يجب ألا يضطر المطوّر الجديد إلى تذكّر أكثر من أمر أو أمرين.</p>
+
+<h3>أخطاء متكررة</h3>
+<ul>
+<li><strong>ملفات مملوكة لـ root</strong> على Linux: الأوامر المنفّذة بصلاحيات root داخل الحاوية تنشئ ملفات لم يعد بإمكان مستخدم المضيف تعديلها. نفّذها بمعرّف المستخدم (UID) الخاص بك، كما في المثال أعلاه.</li>
+<li><strong>استخدام <code>localhost</code> للوصول إلى قاعدة البيانات</strong>: داخل الحاوية، يشير <code>localhost</code> إلى الحاوية نفسها. مضيف قاعدة البيانات هو اسم الخدمة، أي <code>mysql</code> هنا.</li>
+<li><strong>ترك Xdebug مفعّلاً باستمرار</strong>: يبطئ بشكل ملحوظ كل طلب وكل أمر Composer. عطّله عندما لا تكون بصدد تصحيح الأخطاء.</li>
+<li><strong>بيئة تطوير بعيدة جداً عن الإنتاج</strong>: الإصدار نفسه من PHP، والإضافات نفسها، ومحرّك قاعدة البيانات نفسه، وإلا تلاشت فائدة Docker.</li>
 </ul>
 <p>يتيح هذا النهج لأي مطوّر جديد ينضم إلى الفريق الحصول على بيئة تطوير جاهزة للعمل في أقل من 5 دقائق.</p>

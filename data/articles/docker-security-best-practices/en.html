@@ -1,12 +1,34 @@
 <h2>Securing your Docker containers</h2>
 <p>Container security is a critical topic. Here are the essential practices to protect your containerized applications.</p>
+<p>A container is not a virtual machine: all containers on a host share the <strong>same Linux kernel</strong>. Isolation relies on namespaces, cgroups, capabilities and seccomp profiles. It is effective, but every overly permissive setting (root process, unnecessary capabilities, mounted Docker socket, open port) widens what an attacker can do after compromising an application. The goal is therefore to reduce the attack surface layer by layer: the image, the user, runtime privileges, the network and secrets.</p>
+
 <h3>Principle of least privilege</h3>
 <pre><code># NEVER run as root
 FROM php:8.3-fpm-alpine
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
 USER appuser
 WORKDIR /app
 COPY --chown=appuser:appgroup . .</code></pre>
+<p>By default, a process inside a container runs as <strong>root</strong>. If the application is compromised (command injection, vulnerable dependency), the attacker is root inside the container, can modify the code, install tools, and is in a better position to attempt an escape to the host. With <code>USER</code>, the main process runs as an unprivileged system user, created here with Alpine's <code>-S</code> options.</p>
+<p>Two details for PHP-FPM: since the master process is no longer root, it cannot switch users, and the pool's <code>user</code>/<code>group</code> directives are ignored (with just a warning in the logs). It must also listen on a port above 1024, which is the case for the default port 9000. Finally, <code>COPY --chown</code> gives ownership of the files to the application user; if the code does not need to be writable, it is even better to leave it owned by root and only open the cache and log directories for writing.</p>
+<p>Least privilege also applies at runtime. By default, Docker grants a set of Linux capabilities that a web application almost never needs. Drop them all, forbid privilege escalation and make the filesystem read-only:</p>
+<pre><code>services:
+  app:
+    image: registry.example.com/myapp:1.4.2
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/var
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true</code></pre>
+<p>The <code>no-new-privileges</code> option prevents a setuid binary from raising the process's privileges. <code>read_only</code> mode blocks writes everywhere except in the declared <code>tmpfs</code> mounts: here <code>/tmp</code> and Symfony's <code>var/</code> directory (cache and logs). If your application writes anywhere else, it will fail at startup, which is an excellent way to discover what it actually does. Never run a container with <code>--privileged</code> in production: that option disables most of the isolation.</p>
+
+<h3>Protecting the Docker socket</h3>
+<p>Mounting <code>/var/run/docker.sock</code> into a container amounts to giving it full control of the host: it can start a privileged container that mounts the root filesystem. Reserve it for the rare tools that really need it (reverse proxy, monitoring agent), read-only and ideally behind a socket proxy that filters the allowed calls. For the same reason, adding a user to the <code>docker</code> group is equivalent to giving them root. Docker's <strong>rootless</strong> mode, where the daemon itself runs without privileges, greatly reduces this impact.</p>
+
 <h3>Scanning for vulnerabilities</h3>
 <p>Integrate a vulnerability scanner into your pipeline:</p>
 <pre><code># With Trivy
@@ -15,13 +37,38 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 
 # With Docker Scout
 docker scout cves myapp:latest</code></pre>
-<h3>Networking and isolation</h3>
+<p>These tools compare system packages and application dependencies (including <code>composer.lock</code>) against databases of known CVEs. For a scan to be useful, it must <strong>block</strong> the pipeline when it finds a serious flaw. With Trivy, the exit code is configurable:</p>
+<pre><code>trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+  registry.example.com/myapp:1.4.2</code></pre>
+<p><code>--ignore-unfixed</code> skips vulnerabilities for which no fix exists yet, so the pipeline is not blocked by alerts that cannot be acted on. Also scan images already in production periodically: new CVEs are published every day for packages that were clean at build time. And rebuild your images regularly to pick up fixes from the base image.</p>
+
+<h3>Network and isolation</h3>
 <ul>
 <li>Create dedicated networks to isolate services</li>
 <li>Never expose database ports</li>
 <li>Use Docker secrets rather than environment variables for sensitive data</li>
 <li>Enable read-only mode for stateless containers</li>
 </ul>
+<p>A network declared with <code>internal: true</code> has no access to the outside: the database can talk to the application on it, but can neither be reached from the Internet nor open outbound connections. Only the reverse proxy is published on the host:</p>
+<pre><code>services:
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "443:443"
+    networks: [frontend]
+  app:
+    image: registry.example.com/myapp:1.4.2
+    networks: [frontend, backend]
+  db:
+    image: mysql:8.4
+    networks: [backend]
+
+networks:
+  frontend:
+  backend:
+    internal: true</code></pre>
+<p>Remember that ports published by Docker are opened through iptables rules that are often evaluated before UFW's: a published port is reachable even if the firewall seems to block it. If a service must only be reachable from the host, publish it on <code>127.0.0.1</code>. How networks work is covered in the <a href="/blog/docker-networking-guide">Docker networking guide</a>.</p>
+
 <h3>Secrets management</h3>
 <pre><code>services:
   app:
@@ -34,5 +81,48 @@ secrets:
     file: ./secrets/db_password.txt
   api_key:
     external: true</code></pre>
+<p>Environment variables leak easily: they show up in <code>docker inspect</code>, are inherited by every child process and sometimes end up in error reports. A secret is mounted as a file at <code>/run/secrets/&lt;name&gt;</code>, readable only in the containers that declare it. A <code>file</code> secret is read from the host (the file must obviously not be committed); an <code>external</code> secret must already exist in the cluster (<code>docker secret create</code>), which requires Docker Swarm.</p>
+<p>Many official images accept variables suffixed with <code>_FILE</code> (for example <code>MYSQL_PASSWORD_FILE</code>). On the Symfony side, the <code>file</code> and <code>trim</code> environment variable processors read the file directly:</p>
+<pre><code># config/packages/doctrine.yaml
+parameters:
+    env(DB_PASSWORD_FILE): '/run/secrets/db_password'
+
+doctrine:
+    dbal:
+        driver: pdo_mysql
+        host: db
+        dbname: app
+        user: app
+        password: '%env(trim:file:DB_PASSWORD_FILE)%'</code></pre>
+<p>Also watch out for secrets needed during the build (an access token for a private Composer repository, for example). An <code>ARG</code> or <code>ENV</code> remains visible in the image history. Use a BuildKit secret mount instead, which is never written to a layer:</p>
+<pre><code># syntax=docker/dockerfile:1
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN --mount=type=secret,id=composer_auth,target=/app/auth.json \
+    composer install --no-dev --no-scripts --prefer-dist
+
+# Build: docker build --secret id=composer_auth,src=$HOME/.composer/auth.json .</code></pre>
+
 <h3>Trusted images</h3>
-<p>Use only official or verified images. Pin exact versions rather than using <code>latest</code>. Sign your images with Docker Content Trust.</p>
+<p>Only use official or verified images. Pin exact versions rather than using <code>latest</code>. Sign your images with Docker Content Trust.</p>
+<p>A tag such as <code>php:8.3-fpm-alpine</code> moves: it points to a new image with every update. For full reproducibility, pin the <strong>digest</strong> (<code>FROM php:8.3-fpm-alpine@sha256:…</code>) and let a tool such as Renovate or Dependabot propose updates. As for signing, Docker Content Trust relies on Notary v1, which Docker is phasing out; to sign your own images, <strong>Sigstore Cosign</strong> is today the most widely used option:</p>
+<pre><code># Find out an image's digest
+docker buildx imagetools inspect php:8.3-fpm-alpine
+
+# Sign then verify an image with Cosign
+cosign sign --key cosign.key registry.example.com/myapp:1.4.2
+cosign verify --key cosign.pub registry.example.com/myapp:1.4.2</code></pre>
+<p>Finally, choose minimal base images (Alpine, <code>slim</code> variants or distroless images): every package that is absent is one less potential vulnerability.</p>
+
+<h3>Checklist</h3>
+<ul>
+<li>Minimal, versioned base image, rebuilt regularly</li>
+<li>Non-root process, capabilities dropped, <code>no-new-privileges</code></li>
+<li>Read-only filesystem for stateless containers</li>
+<li>Blocking vulnerability scan in CI</li>
+<li>Separate networks, databases not published</li>
+<li>Secrets as files, never in the image or the repository</li>
+<li>Docker socket never mounted into an application container</li>
+</ul>
+<p>None of these measures is enough on its own, but together they turn the compromise of an application into a contained incident rather than a takeover of the server.</p>

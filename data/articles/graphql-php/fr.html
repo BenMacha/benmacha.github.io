@@ -1,9 +1,29 @@
 <h2>GraphQL : une alternative puissante au REST</h2>
 <p>GraphQL permet aux clients de demander exactement les données dont ils ont besoin. Dans des projets comme ceux de Matalto et Manymore, cette flexibilité a permis de réduire considérablement le nombre de requêtes API.</p>
+<p>Avec une API REST classique, chaque ressource a son URL et le serveur décide de la forme de la réponse. Un écran qui affiche un produit, sa catégorie et ses avis déclenche souvent trois appels, et chacun renvoie des champs dont l'interface n'a pas besoin. GraphQL inverse la logique : le serveur publie un <strong>schéma typé</strong> qui décrit tout ce qui est disponible, et le client envoie une requête qui décrit précisément la forme des données attendues. Il n'y a en général qu'un seul point d'entrée, appelé en <code>POST</code>, et la réponse JSON reproduit exactement la structure de la requête.</p>
+<p>En PHP, la référence est la bibliothèque <code>webonyx/graphql-php</code>, qui implémente la spécification. Dans une application Symfony, on l'utilise rarement directement : <code>overblog/graphql-bundle</code> l'intègre au framework (configuration YAML ou attributs, conteneur de services, sécurité), et API Platform peut aussi exposer un point d'entrée GraphQL à partir des mêmes ressources que l'API REST. Cet article utilise OverblogGraphQLBundle.</p>
+
 <h3>Installation avec Symfony</h3>
 <pre><code>composer require overblog/graphql-bundle
 composer require overblog/graphiql-bundle --dev</code></pre>
+<p>Le premier paquet fournit le point d'entrée GraphQL et le moteur d'exécution. Le second ajoute GraphiQL, un IDE dans le navigateur qui propose l'autocomplétion à partir du schéma : très pratique en développement, mais à ne jamais déployer en production, d'où l'option <code>--dev</code>. La configuration du bundle indique où trouver les types et quel type sert de racine aux requêtes :</p>
+<pre><code># config/packages/graphql.yaml
+overblog_graphql:
+    definitions:
+        schema:
+            query: Query
+        mappings:
+            types:
+                - type: yaml
+                  dir: "%kernel.project_dir%/config/graphql/types"
+    security:
+        query_max_depth: 10
+        query_max_complexity: 1000
+        enable_introspection: '%kernel.debug%'</code></pre>
+<p>La section <code>security</code> est importante et souvent oubliée ; nous y reviendrons plus bas.</p>
+
 <h3>Définir un schéma</h3>
+<p>Le schéma est le contrat entre le serveur et ses clients. Chaque type objet déclare ses champs, leur type et, si nécessaire, la façon de les résoudre. Le point d'exclamation signifie « non nul » : <code>String!</code> garantit au client que le champ aura toujours une valeur.</p>
 <pre><code># config/graphql/types/Product.types.yaml
 Product:
     type: object
@@ -18,19 +38,40 @@ Product:
             category:
                 type: "Category"
                 resolve: "@=resolver('product_category', [value])"</code></pre>
+<p>Les champs simples (<code>id</code>, <code>name</code>, <code>price</code>) sont lus automatiquement sur l'objet PHP via ses getters ou ses propriétés publiques. Le champ <code>category</code>, lui, délègue à un resolver nommé, en lui passant l'objet parent (<code>value</code>). Il faut ensuite un type racine <code>Query</code>, qui définit les points d'entrée des lectures et leurs arguments :</p>
+<pre><code># config/graphql/types/Query.types.yaml
+Query:
+    type: object
+    config:
+        fields:
+            product:
+                type: "Product"
+                args:
+                    id:
+                        type: "ID!"
+                resolve: "@=resolver('products', [args])"
+            products:
+                type: "[Product!]!"
+                args:
+                    first:
+                        type: "Int"
+                        defaultValue: 10
+                resolve: "@=resolver('products', [args])"</code></pre>
+
 <h3>Resolver</h3>
+<p>Un resolver est un service Symfony classique : il reçoit les arguments de la requête (ou l'objet parent) et renvoie les données. Comme tout service, il bénéficie de l'injection de dépendances :</p>
 <pre><code>class ProductResolver implements ResolverInterface
 {
     public function __construct(
         private ProductRepository $repository,
     ) {}
 
-    public function resolve(Argument $args): array
+    public function resolve(Argument $args): Product|array|null
     {
         if (isset($args['id'])) {
-            return $this->repository->find($args['id']);
+            return $this-&gt;repository-&gt;find($args['id']);
         }
-        return $this->repository->findAll();
+        return $this-&gt;repository-&gt;findBy([], ['id' =&gt; 'ASC'], $args['first'] ?? 10);
     }
 }
 
@@ -38,9 +79,12 @@ class ProductCategoryResolver implements ResolverInterface
 {
     public function resolve(Product $product): Category
     {
-        return $product->getCategory();
+        return $product-&gt;getCategory();
     }
 }</code></pre>
+<p>Pour que les noms <code>products</code> et <code>product_category</code> utilisés dans le schéma pointent vers ces classes, déclarez-les comme alias, par exemple en implémentant <code>AliasedInterface</code> et sa méthode statique <code>getAliases()</code>. Notez aussi que ces exemples utilisent la nomenclature historique du bundle : dans les versions récentes, <code>ResolverInterface</code> et la fonction d'expression <code>resolver()</code> ont été renommées <code>QueryInterface</code> et <code>query()</code>. Vérifiez la documentation de la version installée. Pour les écritures, le principe est identique avec un type racine <code>Mutation</code> et des classes qui implémentent <code>MutationInterface</code>.</p>
+<p>Plafonnez toujours le nombre d'éléments renvoyés (ici avec <code>first</code>), et passez à la pagination par curseur (le modèle « Connection » de Relay, pris en charge par le bundle) dès que les listes deviennent longues.</p>
+
 <h3>Requête GraphQL</h3>
 <pre><code>query {
   products(first: 10) {
@@ -52,6 +96,42 @@ class ProductCategoryResolver implements ResolverInterface
     }
   }
 }</code></pre>
+<p>La réponse contient exactement ces champs, imbriqués de la même façon, sous une clé <code>data</code>. En pratique, les clients utilisent des requêtes nommées avec des variables plutôt que des valeurs écrites en dur. Cela facilite le cache côté client et évite toute concaténation de chaînes :</p>
+<pre><code>query ProductDetail($id: ID!) {
+  product(id: $id) {
+    id
+    name
+    price
+    category {
+      name
+    }
+  }
+}</code></pre>
+<p>Côté HTTP, la requête et ses variables partent en JSON dans le corps d'un <code>POST</code> (l'URL exacte dépend de la configuration des routes du bundle) :</p>
+<pre><code>curl -X POST https://api.example.com/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "query ProductDetail($id: ID!) { product(id: $id) { name price } }", "variables": {"id": "42"}}'</code></pre>
+
+<h3>Le piège du N+1</h3>
+<p>La souplesse de GraphQL a un coût caché. Pour la requête <code>products(first: 10)</code> ci-dessus, le resolver de catégorie est appelé une fois par produit : une requête SQL pour la liste, puis dix requêtes pour les catégories si la relation est chargée paresseusement. Sur des listes imbriquées, cela explose rapidement. Deux solutions complémentaires existent :</p>
+<ul>
+<li>Charger les relations les plus demandées directement dans le repository, avec une jointure et un <code>addSelect</code>.</li>
+<li>Utiliser le pattern <strong>DataLoader</strong> (via <code>overblog/dataloader-bundle</code>) : les identifiants demandés pendant l'exécution sont collectés, puis chargés en une seule requête groupée.</li>
+</ul>
+<p>Surveillez le nombre de requêtes SQL par opération GraphQL dans le profiler Symfony : c'est l'indicateur le plus fiable.</p>
+
+<h3>Sécuriser une API GraphQL</h3>
+<p>Un point d'entrée qui accepte des requêtes arbitraires doit se protéger contre les abus. Un client malveillant peut envoyer une requête très profonde ou très large qui épuise le serveur. Les réglages <code>query_max_depth</code> et <code>query_max_complexity</code> de la configuration rejettent ces requêtes avant exécution. L'introspection, qui permet à n'importe qui de télécharger le schéma complet, est ici limitée au mode debug. Enfin, l'autorisation se déclare champ par champ :</p>
+<pre><code># Extrait d'un type : champ réservé aux administrateurs
+Product:
+    type: object
+    config:
+        fields:
+            purchasePrice:
+                type: "Float"
+                access: "@=hasRole('ROLE_ADMIN')"</code></pre>
+<p>Autre différence avec REST : une requête GraphQL renvoie généralement un statut HTTP 200 même en cas d'erreur, les erreurs étant listées dans la clé <code>errors</code> de la réponse. Votre monitoring doit donc analyser le contenu des réponses, pas seulement les codes HTTP.</p>
+
 <h3>Avantages vs REST</h3>
 <ul>
 <li><strong>Pas de sur-fetching</strong> : le client choisit les champs</li>
@@ -59,3 +139,8 @@ class ProductCategoryResolver implements ResolverInterface
 <li><strong>Typage fort</strong> : schéma auto-documenté</li>
 <li><strong>Évolution facile</strong> : ajout de champs sans casser les clients existants</li>
 </ul>
+<p>Pour faire évoluer le schéma sans versionner l'API, ajoutez des champs plutôt que d'en modifier, et marquez les anciens avec <code>deprecationReason</code> avant de les supprimer une fois que plus aucun client ne les utilise.</p>
+
+<h3>Quand rester sur REST</h3>
+<p>GraphQL n'est pas un remplaçant universel. Le cache HTTP standard (CDN, reverse proxy) fonctionne mal avec des requêtes <code>POST</code> toutes adressées à la même URL. Les téléversements de fichiers demandent une extension de la spécification. Et pour une API publique simple, consommée par des tiers, une API REST documentée en OpenAPI reste plus familière. GraphQL brille surtout quand plusieurs clients (web, mobile) ont des besoins différents sur un modèle de données riche et fortement relié.</p>
+<p>En résumé : définissez un schéma clair, plafonnez les listes, traquez le N+1 dès les premières requêtes, limitez la profondeur et la complexité, et désactivez l'introspection et GraphiQL en production.</p>

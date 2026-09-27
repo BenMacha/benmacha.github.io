@@ -1,20 +1,49 @@
 <h2>PHP 8: ثورة في اللغة</h2>
-<p>يأتي PHP 8 بتحسينات كبرى تُحدّث اللغة وترفع الأداء بفضل مُصرّف JIT.</p>
+<p>يجلب PHP 8 تحسينات كبرى تُحدِّث اللغة وترفع الأداء بفضل مُصرِّف JIT.</p>
+<p>صدر PHP 8.0 في نوفمبر 2020، وافتتح سلسلة إصدارات سنوية غيّرت بعمق طريقة كتابة PHP: أنواع أكثر تعبيراً، وصياغة أكثر إيجازاً، وكائنات غير قابلة للتعديل، وتعدادات (enums) أصلية. تعتمد شيفرة Symfony أو Laravel الحديثة كثيراً على هذه الميزات، وكثيراً ما تشترط المكتبات الحديثة PHP 8.2 أو أحدث. يستعرض هذا المقال الميزات الأكثر تأثيراً في العمل اليومي، إصداراً بعد إصدار، مع فائدة كل منها ومزالقها.</p>
+<p>ملاحظة قبل البدء: يحصل كل إصدار فرعي من PHP على سنتين من الدعم النشط ثم سنتين من إصلاحات الأمان. البقاء على إصدار منتهي الدعم لا يعني فقط الحرمان من الميزات، بل يعني قبل كل شيء التعرّض لثغرات لن تُصلَح. راجع صفحة <a href="https://www.php.net/supported-versions.php">الإصدارات المدعومة</a> لتخطيط الترقيات.</p>
+
 <h3>الوسائط المسمّاة (Named Arguments)</h3>
+<p>تتيح الوسائط المسمّاة تمرير معامل باسمه بدلاً من موضعه. لم يعد ضرورياً تكرار كل القيم الافتراضية لتغيير المعامل الأخير فقط، ويصبح الاستدعاء موثَّقاً بذاته:</p>
 <pre><code>// Before
 htmlspecialchars($string, ENT_COMPAT | ENT_HTML401, 'UTF-8', false);
 
 // PHP 8
 htmlspecialchars($string, double_encode: false);</code></pre>
-<h3>تعبير match (Match Expression)</h3>
+<p>الوجه الآخر: أصبحت أسماء المعاملات جزءاً من الواجهة العامة للدالة. إعادة تسمية معامل في مكتبة قد تكسر شيفرة مستخدميها. إن كنت تصون حزمة، فاعتبر هذه التسميات تغييرات غير متوافقة.</p>
+
+<h3>ترقية الخصائص، وأنواع الاتحاد، والمعامل nullsafe</h3>
+<p>قدّم PHP 8.0 أيضاً ثلاث ميزات نستخدمها في كل ملف تقريباً. ترقية الخصائص في المُنشئ تحذف شيفرة التصريح والإسناد المتكررة. أنواع الاتحاد (<code>int|string</code>) تصف بدقة القيم المقبولة. والمعامل nullsafe <code>?-&gt;</code> يوقف سلسلة الاستدعاءات بمجرد أن تكون إحدى حلقاتها <code>null</code>:</p>
+<pre><code>final class InvoiceService
+{
+    public function __construct(
+        private InvoiceRepository $invoices,
+        private ?LoggerInterface $logger = null,
+    ) {}
+
+    public function findReference(int|string $id): ?string
+    {
+        $invoice = $this-&gt;invoices-&gt;find($id);
+
+        // null if the invoice, customer or address does not exist
+        return $invoice?-&gt;getCustomer()?-&gt;getAddress()?-&gt;getCountryCode();
+    }
+}</code></pre>
+<p>يُضاف إلى ذلك دوال طال انتظارها (<code>str_contains()</code> و<code>str_starts_with()</code> و<code>str_ends_with()</code>)، والنوع <code>mixed</code>، وإمكانية استخدام <code>throw</code> كتعبير، مثل <code>$value ?? throw new InvalidArgumentException()</code>.</p>
+
+<h3>تعبير Match</h3>
+<p><code>match</code> نسخة أكثر أماناً من <code>switch</code>: فهو تعبير يُرجع قيمة، والمقارنة فيه <strong>صارمة</strong> (<code>===</code>)، ولا يوجد <code>break</code> قد يُنسى، وإن لم يطابق أي فرع ولم يوجد <code>default</code> يرمي PHP الخطأ <code>UnhandledMatchError</code> بدلاً من المتابعة بصمت.</p>
 <pre><code>$status = match($code) {
-    200 => 'OK',
-    301 => 'Redirect',
-    404 => 'Not Found',
-    500 => 'Server Error',
-    default => 'Unknown',
+    200 =&gt; 'OK',
+    301 =&gt; 'Redirect',
+    404 =&gt; 'Not Found',
+    500 =&gt; 'Server Error',
+    default =&gt; 'Unknown',
 };</code></pre>
+<p>انتبه إلى المقارنة الصارمة: إن كان <code>$code</code> قادماً من سلسلة نصية (<code>'200'</code>)، فلن يطابق أي فرع رقمي. حوِّل القيمة مسبقاً. يمكن لعدة قيم أن تتشارك فرعاً واحداً بفصلها بفواصل (<code>301, 302 =&gt; 'Redirect'</code>)، ويسمح <code>match(true)</code> بتقييم شروط عشوائية.</p>
+
 <h3>التعدادات Enums (PHP 8.1)</h3>
+<p>تحلّ التعدادات محلّ ثوابت الأصناف والسلاسل «السحرية». التعداد المدعوم (backed) يربط كل حالة بقيمة عددية أو نصية، ما يسهّل تخزينه في قاعدة البيانات أو تحويله إلى JSON. ويمكنه أن يحمل دوالاً وأن ينفّذ واجهات:</p>
 <pre><code>enum Status: string {
     case Active = 'active';
     case Inactive = 'inactive';
@@ -22,21 +51,45 @@ htmlspecialchars($string, double_encode: false);</code></pre>
 
     public function label(): string {
         return match($this) {
-            self::Active => 'Active',
-            self::Inactive => 'Inactive',
-            self::Pending => 'Pending',
+            self::Active =&gt; 'Active',
+            self::Inactive =&gt; 'Inactive',
+            self::Pending =&gt; 'Pending',
         };
     }
 }</code></pre>
-<h3>Fibers (PHP 8.1)</h3>
+<p>الدوال المولَّدة تلقائياً تغطي الاستخدامات الشائعة:</p>
+<pre><code>$status = Status::from('active');        // Status::Active
+$maybe  = Status::tryFrom('archived');   // null instead of an exception
+$all    = Status::cases();               // list of all cases
+
+function activate(User $user): void
+{
+    // the type guarantees a valid value, no manual validation
+    $user-&gt;setStatus(Status::Active);
+}</code></pre>
+<p>يتعامل Doctrine ORM (عبر <code>enumType</code> على العمود) والـ Serializer ونماذج Symfony (<code>EnumType</code>) مع التعدادات أصلاً. استخدم <code>from()</code> حين تكون القيمة غير الصالحة خطأً برمجياً، و<code>tryFrom()</code> لمدخلات المستخدم.</p>
+
+<h3>الألياف Fibers (PHP 8.1)</h3>
+<p>الـ Fibers دوال قابلة للمقاطعة: يمكنها تعليق تنفيذها واستئنافه لاحقاً مع الاحتفاظ بمكدّس الاستدعاءات. هي <strong>لا</strong> تُنشئ توازياً (كل شيء يعمل في خيط واحد)، لكنها تتيح كتابة شيفرة غير متزامنة تبدو كأنها متزامنة.</p>
 <pre><code>$fiber = new Fiber(function (): void {
     $value = Fiber::suspend('first pause');
     echo "Received: $value\n";
 });
 
-$result = $fiber->start(); // 'first pause'
-$fiber->resume('data');</code></pre>
-<h3>الخصائص للقراءة فقط (Readonly Properties) (PHP 8.2)</h3>
+$result = $fiber-&gt;start(); // 'first pause'
+$fiber-&gt;resume('data');</code></pre>
+<p>عملياً، نادراً ما نتعامل مع الـ Fibers مباشرة. إنها لبنات منخفضة المستوى تستخدمها مكتبات مثل AMPHP أو حلقة الأحداث Revolt، التي تنسّق التعليق والاستئناف أثناء عمليات الإدخال والإخراج الشبكية.</p>
+
+<h3>إضافات أخرى في PHP 8.1</h3>
+<ul>
+<li><strong>صياغة الاستدعاء من الدرجة الأولى</strong>: <code>$fn = strlen(...);</code> تُنشئ <code>Closure</code> من أي دالة أو طريقة.</li>
+<li><strong>نوع الإرجاع <code>never</code></strong> للدوال التي ترمي استثناءً دائماً أو تُنهي السكربت.</li>
+<li><strong><code>new</code> في المُهيِّئات</strong>: يمكن استخدام كائن كقيمة افتراضية لمعامل، كما في مثال <code>User</code> أدناه.</li>
+<li><strong><code>array_is_list()</code></strong> للتحقق من أن مفاتيح المصفوفة متتالية 0، 1، 2…</li>
+</ul>
+
+<h3>الخصائص Readonly (PHP 8.1) والأصناف readonly (PHP 8.2)</h3>
+<p>الخاصية <code>readonly</code> لا تُهيَّأ إلا مرة واحدة، ومن داخل نطاق الصنف. إنها مثالية لكائنات القيمة (value objects) وكائنات DTO والأحداث، التي يجب ألا تتغير بعد إنشائها:</p>
 <pre><code>class User {
     public function __construct(
         public readonly string $name,
@@ -44,7 +97,66 @@ $fiber->resume('data');</code></pre>
         public readonly DateTimeImmutable $createdAt = new DateTimeImmutable(),
     ) {}
 }</code></pre>
+<p>يسمح PHP 8.2 بالتصريح عن الصنف كله بأنه <code>readonly</code>، ما يغني عن تكرار الكلمة المفتاحية على كل خاصية. و«لتعديل» مثل هذا الكائن، نُنشئ نسخة منه بالقيمة الجديدة (دوال <code>with…()</code>):</p>
+<pre><code>final readonly class Money
+{
+    public function __construct(
+        public int $amount,
+        public string $currency,
+    ) {}
+
+    public function withAmount(int $amount): self
+    {
+        return new self($amount, $this-&gt;currency);
+    }
+}</code></pre>
+<p>حدود يجب معرفتها: يجب أن تكون خاصية readonly محدَّدة النوع، ولا تقبل قيمة افتراضية في تصريحها، وعدم قابلية التعديل سطحي. فإن احتوت الخاصية كائناً قابلاً للتعديل، فيمكن دائماً تعديل ذلك الكائن. ومن هنا فائدة <code>DateTimeImmutable</code> بدلاً من <code>DateTime</code>. جلب PHP 8.2 أيضاً أنواع DNF (<code>(Countable&amp;ArrayAccess)|null</code>) وأهمل (deprecated) إنشاء الخصائص الديناميكية.</p>
+
+<h3>PHP 8.3 و8.4: أحدث الإضافات</h3>
+<p>قدّم PHP 8.3 ثوابت الأصناف محدَّدة النوع، والسمة <code>#[\Override]</code> (يرمي PHP خطأً إن كانت الطريقة لا تعيد تعريف أي شيء فعلياً، مثلاً بعد إعادة تسمية في الصنف الأب)، والدالة <code>json_validate()</code>. وأضاف PHP 8.4 ميزتين مهمتين للنمذجة: <strong>خطافات الخصائص (property hooks)</strong> التي تربط منطق القراءة أو الكتابة بالخاصية مباشرة، و<strong>الرؤية غير المتماثلة</strong> التي تسمح مثلاً بقراءة عامة وكتابة خاصة:</p>
+<pre><code>final class Product
+{
+    public const string DEFAULT_CURRENCY = 'EUR'; // PHP 8.3
+
+    public private(set) string $status = 'draft'; // PHP 8.4
+
+    public int $priceInCents { // PHP 8.4
+        set(int $value) {
+            if ($value &lt; 0) {
+                throw new InvalidArgumentException('The price must be positive.');
+            }
+            $this-&gt;priceInCents = $value;
+        }
+    }
+
+    public string $formattedPrice {
+        get =&gt; number_format($this-&gt;priceInCents / 100, 2).' '.self::DEFAULT_CURRENCY;
+    }
+
+    public function __construct(int $priceInCents)
+    {
+        $this-&gt;priceInCents = $priceInCents;
+    }
+
+    public function publish(): void
+    {
+        $this-&gt;status = 'published';
+    }
+}</code></pre>
+<p>يسمح PHP 8.4 أيضاً بسَلسلة استدعاء مباشرة بعد <code>new</code> دون أقواس إضافية (<code>new Foo()-&gt;bar()</code>)، ويضيف دوالاً مثل <code>array_find()</code> و<code>array_any()</code>. ويواصل PHP 8.5، الصادر في نوفمبر 2025، في الاتجاه نفسه، ولا سيما بمعامل الأنبوب <code>|&gt;</code>.</p>
+
 <h3>أداء JIT</h3>
-<p>يحسّن مُصرّف JIT الأداء بمعدل 2 إلى 3 أضعاف في العمليات كثيفة الاستخدام للمعالج (CPU). فعّله في ملف php.ini:</p>
+<p>يحسّن مُصرِّف JIT الأداء بمقدار 2 إلى 3 أضعاف في العمليات كثيفة الاستخدام للمعالج. فعِّله في php.ini:</p>
 <pre><code>opcache.jit=1255
 opcache.jit_buffer_size=100M</code></pre>
+<p>لكن يجب التدقيق: يُصرِّف JIT الـ bytecode إلى شيفرة آلة، وهذا يفيد أساساً الحسابات البحتة (معالجة الصور، الخوارزميات الرياضية، المحلّلات). أما تطبيق الويب المعتاد فيقضي معظم وقته في انتظار قاعدة البيانات أو الشبكة أو نظام الملفات، والمكسب فيه ضئيل عادةً. في المقابل، يبقى OPcache ضرورياً في كل الحالات، ولا يعمل JIT إلا إن كان مفعَّلاً. القيمتان <code>tracing</code> و<code>function</code> اسمان مستعاران أوضح لـ <code>opcache.jit</code>، ومنذ PHP 8.4 أصبح JIT معطَّلاً افتراضياً (<code>opcache.jit=disable</code>). قِس بحِمل تطبيقك الفعلي قبل تفعيله في الإنتاج.</p>
+
+<h3>قائمة تحقق للانتقال إلى PHP 8.x</h3>
+<ol>
+<li>اقرأ أدلة الترحيل الرسمية لكل إصدار على php.net، وخاصة أقسام «التغييرات غير المتوافقة» و«الميزات المهمَلة».</li>
+<li>فعِّل عرض رسائل الإهمال في بيئة الاختبار (<code>error_reporting=E_ALL</code>) وأصلحها قبل تغيير الإصدار.</li>
+<li>شغّل تحليلاً ساكناً (PHPStan أو Psalm) وأتمِت إعادة الكتابة المتكررة باستخدام Rector.</li>
+<li>حدِّث اعتماديات Composer وتحقق من القيد <code>"php"</code> في <code>composer.json</code>.</li>
+<li>شغّل مجموعة الاختبارات كاملة على الإصدار الجديد في CI قبل تحويل بيئة الإنتاج.</li>
+</ol>
+<p>اعتماد هذه الميزات تدريجياً، ملفاً بعد ملف، يكفي لجعل قاعدة الشيفرة أكثر أماناً ووضوحاً: الأنواع تكشف الأخطاء مبكراً، والتعدادات والكائنات readonly تقضي على فئات كاملة من الأخطاء، و<code>match</code> يجعل التفرعات الشاملة صريحة.</p>

@@ -1,6 +1,18 @@
 <h2>Symfony وDocker: الثنائي المثالي</h2>
 <p>يشكّل Docker وSymfony مزيجاً قوياً للتطوير. في Keytchens، منصة food-tech لإدارة الطلبات في الوقت الحقيقي، أتاحت هذه الحزمة التقنية (stack) توحيد بيئات التطوير لدى الفريق بأكمله.</p>
+<p>يصف هذا الدليل بيئة تطوير متكاملة: PHP-FPM وNginx وMySQL وRedis وRabbitMQ، تُدار عبر Docker Compose وملف Makefile. الهدف بسيط: يستنسخ المطوّر الجديد المستودع، ويشغّل أمراً واحداً، فيحصل على تطبيق يعمل ومطابق تماماً لما لدى زملائه.</p>
+
+<h3>لماذا نضع بيئة التطوير في حاويات</h3>
+<p>من دون حاويات، يراكم كل جهاز نسخته الخاصة من PHP وإضافاته وخادم MySQL وإعداداته. وتنتهي هذه الفوارق دائماً بالعبارة الشهيرة «يعمل على جهازي». يحلّ Docker هذه المشكلة بوصف البيئة على شكل شيفرة تُدار بنظام الإصدارات مع التطبيق نفسه:</p>
+<ul>
+<li>إصدار PHP وقائمة الإضافات مثبّتة في ملف Dockerfile؛</li>
+<li>إصدارات MySQL وRedis وRabbitMQ هي نفسها المستخدمة في الإنتاج، لا ما صادف تثبيته على الجهاز؛</li>
+<li>تتعايش مشاريع ذات احتياجات متعارضة (PHP 7.4 وPHP 8.3 مثلاً) دون أي تعارض؛</li>
+<li>يمرّ أي تعديل على البيئة عبر pull request ويُراجَع كأي شيفرة أخرى.</li>
+</ul>
+
 <h3>Docker Compose لـ Symfony</h3>
+<p>يُعرّف الملف <code>compose.yaml</code> (أو <code>docker-compose.yml</code>) مجموع الخدمات:</p>
 <pre><code>version: '3.8'
 services:
   php:
@@ -37,17 +49,86 @@ services:
 
 volumes:
   mysql-data:</code></pre>
-<h3>ملف Dockerfile محسّن لـ PHP</h3>
+<p>بعض النقاط التي ينبغي فهمها في هذا الملف:</p>
+<ul>
+<li><strong>الربط المباشر (bind mount)</strong> <code>.:/var/www/html</code> يُركّب الشيفرة المصدرية من جهازك داخل الحاويتين <code>php</code> و<code>nginx</code>: يظهر كل تعديل فوراً دون إعادة بناء الصورة.</li>
+<li><strong>الوحدة المسمّاة (named volume)</strong> <code>mysql-data</code> تحفظ بيانات قاعدة البيانات بين تنفيذين للأمر <code>docker compose down</code>. وحده الأمر <code>docker compose down -v</code> يحذفها.</li>
+<li><strong>الشبكة</strong> تُنشأ تلقائياً: يمكن الوصول إلى كل خدمة باسمها (<code>mysql</code>، <code>redis</code>، <code>rabbitmq</code>). لذلك لا نستخدم أبداً <code>localhost</code> من داخل Symfony للوصول إلى قاعدة البيانات.</li>
+<li><strong>المنفذ 15672</strong> يعرض واجهة إدارة RabbitMQ على <code>http://localhost:15672</code> (بيانات الدخول الافتراضية <code>guest</code> / <code>guest</code>).</li>
+<li><strong>المفتاح <code>version</code></strong> أصبح مُتجاهَلاً في Docker Compose v2: لا يفعل سوى إظهار تحذير، ويمكن حذفه دون أي خطر.</li>
+</ul>
+
+<h3>انتظار جاهزية قاعدة البيانات فعلياً</h3>
+<p>لا يضمن <code>depends_on</code> في صيغته المختصرة سوى ترتيب التشغيل، لا الجاهزية: فقد يكون MySQL ما زال قيد التهيئة حين يحاول PHP الاتصال به. يحلّ فحص <code>healthcheck</code> مع الشرط <code>service_healthy</code> هذه المشكلة:</p>
+<pre><code>services:
+  php:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  mysql:
+    image: mysql:8.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10</code></pre>
+
+<h3>إعداد Nginx</h3>
+<p>يعتمد الملف <code>.docker/nginx/default.conf</code> الإعداد الذي توصي به وثائق Symfony. يقدّم Nginx الملفات الثابتة من المجلد <code>public/</code> ويمرّر كل ما عداها إلى PHP-FPM، الذي يمكن الوصول إليه بالاسم <code>php</code> على المنفذ 9000:</p>
+<pre><code>server {
+    listen 80;
+    server_name localhost;
+    root /var/www/html/public;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass php:9000;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}</code></pre>
+<p>تُعيد الكتلة الأخيرة خطأ 404 لأي ملف PHP آخر: وحدها وحدة التحكم الأمامية <code>index.php</code> يجب أن تكون قابلة للتنفيذ.</p>
+
+<h3>ملف Dockerfile محسَّن لـ PHP</h3>
 <pre><code>FROM php:8.3-fpm
-RUN apt-get update && apt-get install -y \
+RUN apt-get update &amp;&amp; apt-get install -y \
     libicu-dev libzip-dev \
-    && docker-php-ext-install intl pdo_mysql zip opcache \
-    && pecl install redis xdebug \
-    && docker-php-ext-enable redis xdebug
+    &amp;&amp; docker-php-ext-install intl pdo_mysql zip opcache \
+    &amp;&amp; pecl install redis xdebug \
+    &amp;&amp; docker-php-ext-enable redis xdebug
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html</code></pre>
+<p>توفّر الصورة الرسمية <code>php:8.3-fpm</code> السكربتين <code>docker-php-ext-install</code> و<code>docker-php-ext-enable</code>. يجب تثبيت مكتبات النظام (<code>libicu-dev</code> لـ <code>intl</code>، و<code>libzip-dev</code> لـ <code>zip</code>) قبل ترجمة الإضافات. أما إضافات PECL مثل <code>redis</code> و<code>xdebug</code> فتُبنى بالأمر <code>pecl install</code> ثم تُفعَّل. وأخيراً، يجلب <code>COPY --from=composer:2</code> الملف التنفيذي لـ Composer من صورته الرسمية، دون أي سكربت تثبيت.</p>
+<p>إذا كنت تستخدم ناقل AMQP في Messenger مع RabbitMQ، فستحتاج أيضاً إلى الإضافة <code>amqp</code>: أضف <code>librabbitmq-dev</code> إلى الحزم و<code>amqp</code> إلى سطر <code>pecl install</code>.</p>
+<p>يُبطئ Xdebug كل طلب بشكل ملحوظ. عطّله افتراضياً ولا تفعّله إلا عند الحاجة، عبر ملف <code>.docker/php/xdebug.ini</code> يُنسخ إلى الصورة:</p>
+<pre><code>xdebug.mode=off
+xdebug.client_host=host.docker.internal
+xdebug.start_with_request=trigger</code></pre>
+<p>متغير البيئة <code>XDEBUG_MODE=debug</code>، حين يُمرَّر إلى الحاوية، يتقدّم على <code>xdebug.mode</code>: فتفعّل التصحيح دون إعادة بناء الصورة. على Linux، لا يوجد <code>host.docker.internal</code> افتراضياً: أضف <code>extra_hosts: ["host.docker.internal:host-gateway"]</code> إلى الخدمة <code>php</code>.</p>
+
+<h3>ربط Symfony بالخدمات</h3>
+<p>في الملف <code>.env.local</code> (غير المُضاف إلى المستودع)، تشير سلاسل DSN إلى أسماء خدمات Compose:</p>
+<pre><code>DATABASE_URL="mysql://root:root@mysql:3306/symfony?serverVersion=8.0&amp;charset=utf8mb4"
+REDIS_URL="redis://redis:6379"
+MESSENGER_TRANSPORT_DSN="amqp://guest:guest@rabbitmq:5672/%2f/messages"</code></pre>
+<p>لا تنسَ تحديد <code>serverVersion</code>: يستخدمه Doctrine لاختيار منصة SQL المناسبة دون استعلام الخادم عند الإقلاع.</p>
+
 <h3>ملف Makefile لتبسيط الأوامر</h3>
+<p>أوامر Docker طويلة ويسهل نسيانها. يمنح ملف Makefile في جذر المشروع الفريقَ بأكمله المفردات نفسها:</p>
 <pre><code>up:
 	docker compose up -d
 
@@ -62,8 +143,33 @@ test:
 
 migrate:
 	docker compose exec php php bin/console doctrine:migrations:migrate -n</code></pre>
+<p>طريقة الاستخدام: <code>make up</code>، ثم <code>make console cmd="cache:clear"</code> أو <code>make migrate</code>. انتبه: يجب أن تُزاح أوامر Makefile بمحرف جدولة (tab) لا بمسافات. أضف أيضاً السطر <code>.PHONY: up down console test migrate</code> حتى لا يخلط <code>make</code> بين هذه الأهداف وملفات تحمل الاسم نفسه.</p>
+
+<h3>أخطاء شائعة</h3>
 <ul>
-<li>بيئة متطابقة لجميع المطورين</li>
-<li>عزل تام بين الخدمات</li>
-<li>سهولة إدماج (onboarding) المطورين الجدد</li>
+<li><strong>صلاحيات الملفات</strong>: يعمل PHP-FPM بالمستخدم <code>www-data</code> داخل الحاوية، بينما تعود ملفاتك إلى مستخدمك أنت. إذا لم يكن <code>var/cache</code> أو <code>var/log</code> قابلين للكتابة، فطابِق UID مستخدم الحاوية مع UID الخاص بك (وسيط بناء <code>UID</code> والأمر <code>usermod</code>) بدلاً من تنفيذ <code>chmod 777</code>.</li>
+<li><strong>البطء على macOS</strong>: الربط المباشر أبطأ هناك منه على Linux. فعّل VirtioFS في Docker Desktop وتجنّب تركيب مجلدات لا حاجة إليها.</li>
+<li><strong>Composer خارج الحاوية</strong>: شغّل <code>composer install</code> داخل الحاوية، وإلا حُلّت الاعتماديات وفق إصدار PHP على جهازك لا وفق إصدار الصورة.</li>
+<li><strong>كلمات مرور بنص صريح</strong>: <code>root</code> / <code>root</code> مقبولة محلياً فقط. لا تُعِد استخدام ملف Compose هذا كما هو في الإنتاج أبداً.</li>
+<li><strong>صورة الإنتاج</strong>: تتضمّن هذه الصورة Xdebug وتركّب الشيفرة كوحدة تخزين. للإنتاج، ابنِ صورة منفصلة (بناء متعدد المراحل multi-stage) تُنسخ فيها الشيفرة، مع <code>composer install --no-dev</code> وOPcache مضبوط دون التحقق من الطوابع الزمنية.</li>
 </ul>
+
+<h3>الفوائد اليومية</h3>
+<ul>
+<li>بيئة متطابقة لجميع المطوّرين</li>
+<li>عزل تام للخدمات</li>
+<li>سهولة إدماج المطوّرين الجدد</li>
+<li>إصدارات الخدمات متوافقة مع الإنتاج</li>
+<li>تعديلات البيئة تُراجَع وتُدار بالإصدارات مثل الشيفرة</li>
+</ul>
+
+<h3>قائمة التحقق للبدء</h3>
+<ol>
+<li>كتابة <code>compose.yaml</code> وملف Dockerfile لـ PHP وإعداد Nginx.</li>
+<li>إضافة <code>healthcheck</code> على MySQL وجعل تشغيل PHP مشروطاً به.</li>
+<li>تعطيل Xdebug افتراضياً وتفعيله عند الطلب.</li>
+<li>تحديد سلاسل DSN في <code>.env.local</code> بأسماء الخدمات.</li>
+<li>توثيق الأوامر في ملف Makefile وفي ملف README.</li>
+<li>التحقق من أن <code>git clone</code> متبوعاً بـ <code>make up</code> يكفي لتشغيل المشروع على جهاز جديد.</li>
+</ol>
+<p>بهذا الأساس، تصبح بيئة التطوير جزءاً أصيلاً من المشروع: قابلة لإعادة الإنتاج، وموثّقة، وسهلة التطوير.</p>

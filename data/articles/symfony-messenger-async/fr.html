@@ -1,5 +1,17 @@
 <h2>Symfony Messenger : le traitement asynchrone simplifié</h2>
 <p>Le composant Messenger de Symfony permet de décorréler les traitements longs de vos requêtes HTTP pour une meilleure expérience utilisateur.</p>
+<p>Envoyer un e-mail, générer un PDF, appeler une API tierce lente ou redimensionner une image : aucune de ces tâches n'a besoin de bloquer la réponse envoyée à l'utilisateur. Avec Messenger, le contrôleur enregistre l'essentiel, publie un message dans une file d'attente et répond immédiatement. Un processus séparé, le <em>worker</em>, traite ensuite le message en arrière-plan.</p>
+
+<h3>Les briques de Messenger</h3>
+<ul>
+<li><strong>Le message</strong> : un simple objet PHP qui transporte les données nécessaires au traitement. Il ne contient aucune logique.</li>
+<li><strong>Le handler</strong> : la classe qui sait traiter un type de message.</li>
+<li><strong>Le bus</strong> : le point d'entrée, <code>MessageBusInterface</code>, auquel on confie les messages avec <code>dispatch()</code>.</li>
+<li><strong>Le transport</strong> : la file d'attente où les messages patientent (RabbitMQ, Redis, table Doctrine, Amazon SQS…).</li>
+<li><strong>Le worker</strong> : la commande <code>messenger:consume</code>, qui lit le transport et appelle les handlers.</li>
+</ul>
+<p>Sans configuration de routage, un message est traité de façon synchrone, dans la requête. C'est le routage vers un transport qui rend le traitement asynchrone, sans toucher au code du message ni du handler.</p>
+
 <h3>Architecture Message/Handler</h3>
 <pre><code>// Message
 class SendNotificationMessage
@@ -20,16 +32,20 @@ class SendNotificationHandler
 
     public function __invoke(SendNotificationMessage $message): void
     {
-        $this->notificationService->send(
-            $message->userId,
-            $message->content,
+        $this-&gt;notificationService-&gt;send(
+            $message-&gt;userId,
+            $message-&gt;content,
         );
     }
 }</code></pre>
+<p>Le message est immuable (<code>readonly</code>) et ne contient que des scalaires : il sera sérialisé pour être stocké dans la file, puis désérialisé par le worker, parfois plusieurs minutes plus tard. Passez un identifiant plutôt qu'une entité Doctrine : le handler rechargera une version fraîche depuis la base. L'attribut <code>#[AsMessageHandler]</code> suffit pour que Symfony associe le handler au message grâce au type de l'argument de <code>__invoke()</code>.</p>
+
 <h3>Configuration des transports</h3>
 <pre><code># config/packages/messenger.yaml
 framework:
     messenger:
+        failure_transport: failed
+
         transports:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
@@ -43,30 +59,92 @@ framework:
         routing:
             App\Message\SendNotificationMessage: async
             App\Message\ProcessOrderMessage: async</code></pre>
+<p>La stratégie de réessai est exprimée en millisecondes : en cas d'exception, le message est retenté après 1 seconde, puis 2, puis 4. Après le troisième échec, il part dans le transport désigné par <code>failure_transport</code>, ici une table Doctrine. Sans cette clé, un message qui a épuisé ses tentatives est simplement perdu.</p>
+<p>Le DSN du transport principal dépend de votre infrastructure :</p>
+<pre><code># .env
+# RabbitMQ (nécessite l'extension PHP amqp)
+MESSENGER_TRANSPORT_DSN=amqp://guest:guest@localhost:5672/%2f/messages
+# Redis
+# MESSENGER_TRANSPORT_DSN=redis://localhost:6379/messages
+# Base de données, sans infrastructure supplémentaire
+# MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0</code></pre>
+<p>Le transport Doctrine est un bon point de départ : il ne demande rien de plus que la base existante. RabbitMQ ou Redis deviennent intéressants quand le volume de messages augmente ou quand plusieurs applications partagent les files.</p>
+
 <h3>Dispatch des messages</h3>
 <pre><code>class OrderController extends AbstractController
 {
+    public function __construct(
+        private OrderService $orderService,
+    ) {}
+
     #[Route('/order', methods: ['POST'])]
     public function create(
         MessageBusInterface $bus,
         Request $request,
     ): JsonResponse {
         // Traitement synchrone rapide
-        $order = $this->orderService->create($request);
+        $order = $this-&gt;orderService-&gt;create($request);
 
         // Traitement asynchrone
-        $bus->dispatch(new SendNotificationMessage(
-            $order->getUserId(),
-            "Commande #{$order->getId()} confirmée"
+        $bus-&gt;dispatch(new SendNotificationMessage(
+            $order-&gt;getUserId(),
+            "Commande #{$order-&gt;getId()} confirmée"
         ));
 
-        return $this->json($order, 201);
+        return $this-&gt;json($order, 201);
     }
 }</code></pre>
+<p>La création de la commande reste synchrone : l'utilisateur doit savoir tout de suite si elle a réussi. Seule la notification part en file d'attente. Dispatchez le message <strong>après</strong> l'enregistrement en base : si le worker le traite avant la fin de la transaction, il ne trouvera pas la commande.</p>
+
+<h3>Lancer et superviser les workers</h3>
+<p>En développement, un terminal suffit :</p>
+<pre><code>php bin/console messenger:consume async -vv
+
+# En production : redémarrer régulièrement le worker
+php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M</code></pre>
+<p>Un worker PHP est un processus long : il ne relit pas le code après un déploiement et sa mémoire peut grossir. Les options <code>--time-limit</code> et <code>--memory-limit</code> l'arrêtent proprement, après le message en cours, et le gestionnaire de processus le relance aussitôt. Avec systemd, une unité modèle permet de lancer plusieurs workers :</p>
+<pre><code># /etc/systemd/system/messenger-worker@.service
+[Unit]
+Description=Symfony Messenger worker %i
+After=network.target
+
+[Service]
+User=app
+WorkingDirectory=/var/www/app
+ExecStart=/usr/bin/php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now messenger-worker@1 messenger-worker@2</code></pre>
+<p>À chaque déploiement, lancez <code>php bin/console messenger:stop-workers</code> : les workers terminent leur message en cours, s'arrêtent, et systemd les relance avec le nouveau code.</p>
+
+<h3>Gérer les messages en échec</h3>
+<pre><code>php bin/console messenger:failed:show
+php bin/console messenger:failed:retry
+php bin/console messenger:failed:remove 42</code></pre>
+<p>Après avoir corrigé un bug, <code>messenger:failed:retry</code> rejoue les messages bloqués. Si une erreur est définitive (utilisateur supprimé, données invalides), levez une <code>UnrecoverableMessageHandlingException</code> dans le handler : le message ne sera pas retenté inutilement.</p>
+
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Handlers non idempotents</strong> : Messenger garantit une livraison « au moins une fois ». Un message peut être traité deux fois après un plantage ; le handler doit le supporter sans envoyer deux paiements ou deux e-mails.</li>
+<li><strong>Connexion base perdue</strong> : un worker inactif longtemps peut voir sa connexion MySQL fermée par le serveur. Le middleware <code>doctrine_ping_connection</code> la vérifie avant chaque message.</li>
+<li><strong>Messages trop lourds</strong> : n'y mettez ni entité, ni fichier, ni service. Des identifiants et des scalaires suffisent.</li>
+<li><strong>Tests</strong> : en environnement de test, routez vers le transport <code>in-memory://</code> pour vérifier qu'un message a été dispatché, ou <code>sync://</code> pour l'exécuter immédiatement.</li>
+</ul>
+
 <h3>Supervision des workers</h3>
 <ul>
 <li>Utilisez systemd pour gérer les workers en production</li>
 <li>Configurez <code>--time-limit</code> pour éviter les fuites mémoire</li>
 <li>Surveillez la file <code>failed</code> pour les messages en erreur</li>
 <li>Utilisez le middleware de logging pour le débogage</li>
+<li>Arrêtez proprement les workers à chaque déploiement avec <code>messenger:stop-workers</code></li>
+<li>Suivez la taille des files avec <code>messenger:stats</code> pour détecter un worker bloqué</li>
 </ul>
+
+<h3>Quand ne pas utiliser l'asynchrone</h3>
+<p>Si l'utilisateur a besoin du résultat pour la suite de son parcours (un paiement à valider, un stock à réserver), le traitement doit rester synchrone ou s'accompagner d'un mécanisme de suivi, comme un statut interrogé par le front. L'asynchrone ajoute aussi une infrastructure à surveiller : pour un traitement de quelques millisecondes, il n'apporte rien. Réservez-le aux tâches lentes, fragiles ou non essentielles à la réponse.</p>
+<p>En résumé : des messages petits et immuables, des handlers idempotents, un transport d'échec configuré, des workers redémarrés régulièrement et arrêtés proprement à chaque déploiement. Avec ces quelques règles, Messenger devient une base fiable pour absorber les pics de charge et garder des temps de réponse courts.</p>

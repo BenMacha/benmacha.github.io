@@ -1,7 +1,19 @@
 <h2>Sentry: never miss an error again</h2>
 <p>Sentry is an error monitoring tool that captures, aggregates and alerts on your application's exceptions in real time.</p>
+<p>Without a tool like this, a production error is discovered in one of two ways: a user reports it, or someone eventually reads the logs. Either way, most of the context is missing. Sentry changes that: every exception is sent with its full stack trace, the HTTP request, the affected user, the deployed version and the environment. Identical occurrences are grouped into a single <strong>issue</strong>, so you can immediately see that an error has affected hundreds of users since the last deployment, instead of receiving hundreds of emails.</p>
+<p>Sentry is available as SaaS and as a self-hosted version. The SDK and configuration shown here are identical in both cases; only the DSN changes.</p>
+
 <h3>Symfony installation</h3>
 <pre><code>composer require sentry/sentry-symfony</code></pre>
+<p>The package installs the PHP SDK and the Symfony bundle. With Symfony Flex, the recipe creates the configuration file and adds the <code>SENTRY_DSN</code> variable to the <code>.env</code> file. The DSN is the address the SDK sends events to; you will find it in the Sentry project settings. Leave it empty in development: without a DSN, no events are sent.</p>
+<pre><code># .env
+SENTRY_DSN=
+APP_VERSION=dev
+
+# .env.local on the production server (or environment variables)
+SENTRY_DSN=https://publicKey@o0.ingest.sentry.io/0
+APP_VERSION=1.4.2</code></pre>
+
 <h3>Configuration</h3>
 <pre><code># config/packages/sentry.yaml
 sentry:
@@ -11,7 +23,23 @@ sentry:
         release: '%env(APP_VERSION)%'
         traces_sample_rate: 0.2
         profiles_sample_rate: 0.1</code></pre>
+<p>Each option has a specific role:</p>
+<ul>
+<li><strong><code>environment</code></strong> separates production, staging and test errors in the interface, so you can filter easily and alert on production only.</li>
+<li><strong><code>release</code></strong> ties each error to the deployed version. This is what allows Sentry to report that an error appeared with a given release, or that an error marked as resolved has come back.</li>
+<li><strong><code>traces_sample_rate</code></strong> sets the proportion of requests for which a performance trace is recorded: <code>0.2</code> means 20%. Errors, on the other hand, are always all sent. On a high-traffic site, a low value is enough and preserves your quota.</li>
+<li><strong><code>profiles_sample_rate</code></strong> enables profiling for a share of traced requests. It requires the <code>excimer</code> PHP extension on the server; without it, the option has no effect.</li>
+</ul>
+<p>Some exceptions do not deserve an alert: a page not found or an access denied are part of normal operation. It is better to ignore them explicitly, in production only:</p>
+<pre><code># config/packages/prod/sentry.yaml
+sentry:
+    options:
+        ignore_exceptions:
+            - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+            - Symfony\Component\Security\Core\Exception\AccessDeniedException</code></pre>
+
 <h3>User context</h3>
+<p>Knowing that an error occurred is useful; knowing who it affects is even more so. This listener adds the logged-in user to the Sentry scope on every request:</p>
 <pre><code>use Sentry\State\Scope;
 
 class SentryUserListener
@@ -19,31 +47,101 @@ class SentryUserListener
     #[AsEventListener(event: KernelEvents::REQUEST)]
     public function onRequest(RequestEvent $event): void
     {
-        $user = $this->security->getUser();
+        $user = $this-&gt;security-&gt;getUser();
         if ($user) {
             \Sentry\configureScope(function (Scope $scope) use ($user): void {
-                $scope->setUser([
-                    'id' => $user->getId(),
-                    'email' => $user->getEmail(),
+                $scope-&gt;setUser([
+                    'id' =&gt; $user-&gt;getId(),
+                    'email' =&gt; $user-&gt;getEmail(),
                 ]);
             });
         }
     }
 }</code></pre>
+<p>Mind the GDPR: the email address is personal data that will be stored by Sentry. If the ID is enough to find the account in your back office, send only that. Also check the <code>send_default_pii</code> option, disabled by default, which controls the automatic sending of information such as the IP address.</p>
+
+<h3>Enriching a manually captured error</h3>
+<p>Not every error surfaces as an unhandled exception. When you catch an exception to show a clean message to the user, still send it to Sentry, along with the business context useful for diagnosis:</p>
+<pre><code>use Sentry\State\Scope;
+
+try {
+    $this-&gt;paymentGateway-&gt;charge($order);
+} catch (PaymentException $e) {
+    \Sentry\withScope(function (Scope $scope) use ($e, $order): void {
+        $scope-&gt;setTag('payment.provider', $order-&gt;getProvider());
+        $scope-&gt;setContext('order', [
+            'id' =&gt; $order-&gt;getId(),
+            'amount' =&gt; $order-&gt;getAmount(),
+        ]);
+        \Sentry\captureException($e);
+    });
+
+    throw new OrderNotPaidException($order, previous: $e);
+}</code></pre>
+<p><code>withScope</code> creates a temporary scope: the tag and context only apply to this event, without polluting subsequent errors. <strong>Tags</strong> are indexed and used to filter or group issues; <strong>context</strong> is simply displayed in the event details.</p>
+
 <h3>Alerts and notifications</h3>
 <ul>
 <li>Set up Slack alerts for new errors</li>
 <li>Define error volume thresholds</li>
-<li>Use performance traces to pinpoint bottlenecks</li>
+<li>Use performance traces to identify bottlenecks</li>
 <li>Integrate with your GitHub workflow to track fixes</li>
 </ul>
+<p>The classic trap is alert fatigue: if every error triggers a notification, the team ends up ignoring them all. I recommend alerting on <strong>new</strong> issues and <strong>regressions</strong> in production, and reserving volume alerts for critical flows such as payment or authentication.</p>
+
 <h3>Performance Monitoring</h3>
+<p>Beyond errors, Sentry measures the duration of requests and their steps. The Symfony bundle automatically traces HTTP requests and, depending on configuration, Doctrine queries, cache and outgoing HTTP calls. For a specific business operation, you can create your own transactions and spans:</p>
 <pre><code>// Measure a specific operation
-$transaction = \Sentry\startTransaction(['name' => 'process-order']);
-\Sentry\configureScope(fn(Scope $scope) => $scope->setSpan($transaction));
+$transaction = \Sentry\startTransaction(['name' =&gt; 'process-order']);
+\Sentry\configureScope(fn(Scope $scope) =&gt; $scope-&gt;setSpan($transaction));
 
-$span = $transaction->startChild(['op' => 'db.query']);
+$span = $transaction-&gt;startChild(['op' =&gt; 'db.query']);
 // ... database query
-$span->finish();
+$span-&gt;finish();
 
-$transaction->finish();</code></pre>
+$transaction-&gt;finish();</code></pre>
+<p>This code shows the principle. With version 4 of the PHP SDK, <code>startTransaction()</code> and <code>startChild()</code> expect context objects rather than arrays, and the <code>\Sentry\trace()</code> function makes it easy to create a span around a block of code:</p>
+<pre><code>use Sentry\SentrySdk;
+use Sentry\Tracing\SpanContext;
+use Sentry\Tracing\TransactionContext;
+
+$transaction = \Sentry\startTransaction(
+    TransactionContext::make()
+        -&gt;setName('process-order')
+        -&gt;setOp('task')
+);
+SentrySdk::getCurrentHub()-&gt;setSpan($transaction);
+
+try {
+    $orders = \Sentry\trace(
+        fn () =&gt; $this-&gt;orderRepository-&gt;findPending(),
+        SpanContext::make()-&gt;setOp('db.query')-&gt;setDescription('Pending orders'),
+    );
+    // ... process the orders
+} finally {
+    $transaction-&gt;finish();
+}</code></pre>
+<p>The <code>finally</code> block guarantees the transaction is closed even if an exception occurs: a transaction that is never finished is never sent.</p>
+
+<h3>Linking errors to deployments</h3>
+<p>The <code>release</code> option shows its full value when the release is also declared in Sentry with its commits. Sentry can then suggest the commit most likely responsible for an error. With <code>sentry-cli</code>, in the deployment pipeline:</p>
+<pre><code>export SENTRY_AUTH_TOKEN=...   # API token, stored in the CI secrets
+export SENTRY_ORG=my-organization
+export SENTRY_PROJECT=my-project
+VERSION="$(git rev-parse --short HEAD)"
+
+sentry-cli releases new "$VERSION"
+sentry-cli releases set-commits "$VERSION" --auto
+sentry-cli releases finalize "$VERSION"</code></pre>
+<p>The same value must be passed to the application through <code>APP_VERSION</code>, otherwise errors will not be attached to the right release.</p>
+
+<h3>Production checklist</h3>
+<ul>
+<li>DSN set only in the environments that should report errors</li>
+<li><code>environment</code> and <code>release</code> filled in on every deployment</li>
+<li>Expected exceptions (404, 403) ignored</li>
+<li>Personal data limited to the strict minimum</li>
+<li>Trace sampling rate adapted to traffic and quota</li>
+<li>Alerts focused on new errors and regressions</li>
+</ul>
+<p>Sentry replaces neither logs nor infrastructure monitoring: it will not tell you the disk is full or the server has stopped responding. It does remain the most effective tool for knowing, before your users do, that a line of code is causing trouble in production.</p>

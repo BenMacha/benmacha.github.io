@@ -1,5 +1,8 @@
 <h2>Docker Compose au-delà du développement</h2>
 <p>Docker Compose n'est pas uniquement réservé au développement. Avec les bonnes pratiques, il devient un outil puissant pour orchestrer des applications en production.</p>
+<p>Pour une application hébergée sur <strong>un seul serveur</strong> (un VPS ou une machine dédiée), Compose offre un excellent compromis : toute l'infrastructure est décrite dans quelques fichiers versionnés, le déploiement tient en deux commandes, et il n'y a ni plan de contrôle à maintenir ni cluster à superviser. Kubernetes ou Docker Swarm deviennent pertinents lorsqu'il faut répartir la charge sur plusieurs machines ou garantir une haute disponibilité au niveau de l'hôte, ce qui n'est pas le besoin de la majorité des applications métier.</p>
+<p>Cet article détaille une organisation de fichiers, une configuration de production commentée, la gestion des logs, des secrets et des données, puis une procédure de déploiement et les pièges les plus fréquents.</p>
+
 <h3>Structure de fichiers recommandée</h3>
 <pre><code>├── docker-compose.yml          # Configuration de base
 ├── docker-compose.prod.yml     # Overrides production
@@ -7,6 +10,19 @@
 ├── .env.production             # Variables d'environnement
 └── nginx/
     └── default.conf            # Configuration Nginx</code></pre>
+<p>Le principe est celui de la <strong>surcharge</strong> : le fichier de base décrit ce qui est commun à tous les environnements (les services, leurs réseaux, leurs volumes), et chaque fichier d'environnement n'ajoute que ses différences. En développement, on monte le code source en volume et on active Xdebug ; en production, on utilise l'image construite, on limite les ressources et on active les redémarrages automatiques.</p>
+<p>Compose fusionne les fichiers dans l'ordre où ils sont passés avec l'option <code>-f</code> : les valeurs scalaires du dernier fichier l'emportent, tandis que les listes comme <code>ports</code> ou <code>volumes</code> sont combinées. Pour éviter de répéter les options à chaque commande, la variable <code>COMPOSE_FILE</code> peut être définie sur le serveur :</p>
+<pre><code># Fusion explicite des fichiers
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Ou une fois pour toutes dans l'environnement du serveur
+export COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
+docker compose up -d
+
+# Vérifier la configuration finale après fusion
+docker compose config</code></pre>
+<p>La commande <code>docker compose config</code> affiche la configuration réellement appliquée, variables interpolées comprises. C'est le premier réflexe à avoir lorsqu'un service ne se comporte pas comme prévu.</p>
+
 <h3>Configuration de production</h3>
 <pre><code>version: '3.8'
 services:
@@ -41,6 +57,27 @@ services:
     image: redis:7-alpine
     restart: always
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru</code></pre>
+<p>Chaque bloc de cette configuration a un rôle précis :</p>
+<ul>
+<li><strong><code>build.target: production</code></strong> : construit uniquement l'étape de production d'un Dockerfile multi-stage, sans les outils de développement. Voir l'article <a href="/blog/docker-multi-stage-builds">Builds multi-stage Docker</a>.</li>
+<li><strong><code>restart: always</code></strong> : le conteneur redémarre après un crash et au redémarrage du démon Docker. La variante <code>unless-stopped</code> se comporte de la même façon, sauf qu'un conteneur arrêté manuellement reste arrêté après un redémarrage du serveur.</li>
+<li><strong><code>deploy.resources.limits</code></strong> : avec Docker Compose v2, ces limites sont appliquées même hors Swarm. Un conteneur qui dépasse sa limite mémoire est tué par le noyau (OOM) au lieu de faire tomber tout le serveur.</li>
+<li><strong><code>healthcheck</code></strong> : <code>php-fpm-healthcheck</code> est un petit script open source à installer dans l'image ; il interroge la page de statut de PHP-FPM, qui doit donc être activée avec <code>pm.status_path</code> dans la configuration du pool.</li>
+<li><strong><code>depends_on</code> avec <code>condition: service_healthy</code></strong> : Nginx ne démarre qu'une fois PHP-FPM déclaré sain, ce qui évite les erreurs 502 au démarrage.</li>
+<li><strong>Redis</strong> est borné à 256 Mo avec la politique <code>allkeys-lru</code> : une fois la limite atteinte, les clés les moins récemment utilisées sont évincées. C'est adapté à un cache, pas à un stockage de sessions qui ne doivent pas disparaître.</li>
+</ul>
+<p>La clé <code>version</code> en tête de fichier est aujourd'hui obsolète : Docker Compose v2 l'ignore et affiche un avertissement. Vous pouvez la supprimer sans risque. Notez aussi que le service <code>nginx</code> n'a pas de politique de redémarrage dans cet exemple : ajoutez-lui <code>restart: always</code> comme aux autres.</p>
+
+<h3>Variables d'environnement et secrets</h3>
+<p>Le fichier <code>.env.production</code> ne doit jamais être commité : il vit uniquement sur le serveur, avec des droits restreints (<code>chmod 600</code>). Compose permet aussi de rendre une variable obligatoire, afin qu'un oubli fasse échouer le déploiement au lieu de démarrer une application mal configurée :</p>
+<pre><code>services:
+  app:
+    env_file: .env.production
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL doit être définie}</code></pre>
+<p>Pour les données les plus sensibles (mots de passe de base de données, clés d'API), préférez les <strong>secrets Compose</strong>, montés sous forme de fichiers dans <code>/run/secrets/</code> plutôt qu'exposés dans l'environnement du processus. Le sujet est détaillé dans l'article <a href="/blog/docker-security-best-practices">Sécuriser vos conteneurs Docker</a>.</p>
+
 <h3>Gestion des logs</h3>
 <p>Configurez un driver de logging centralisé pour faciliter le monitoring :</p>
 <pre><code>logging:
@@ -48,6 +85,51 @@ services:
   options:
     max-size: "10m"
     max-file: "3"</code></pre>
+<p>Sans ces options, le driver <code>json-file</code> conserve les logs indéfiniment et un conteneur bavard finit par remplir le disque. Ici, chaque conteneur garde au maximum trois fichiers de 10 Mo. Plutôt que de répéter ce bloc dans chaque service, utilisez une extension YAML et une ancre :</p>
+<pre><code>x-logging: &amp;default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    logging: *default-logging
+  nginx:
+    logging: *default-logging</code></pre>
+<p>Vous pouvez aussi définir ces valeurs par défaut pour tout l'hôte dans <code>/etc/docker/daemon.json</code>, puis redémarrer Docker. Elles ne s'appliquent qu'aux conteneurs créés après le changement :</p>
+<pre><code>{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}</code></pre>
+<p>Pour l'agrégation (Loki, Elasticsearch, un service SaaS), faites écrire l'application sur la sortie standard et laissez un agent collecter les logs des conteneurs : c'est plus robuste que d'écrire dans des fichiers à l'intérieur du conteneur.</p>
+
+<h3>Volumes et données persistantes</h3>
+<p>Un conteneur est jetable, ses données ne le sont pas. Tout ce qui doit survivre à un <code>docker compose down</code> (base de données, fichiers envoyés par les utilisateurs) doit vivre dans un <strong>volume nommé</strong> ou un répertoire de l'hôte clairement identifié. Attention : <code>docker compose down -v</code> supprime les volumes nommés du projet, et donc les données.</p>
+<p>Un volume n'est pas une sauvegarde. Pour une base de données, effectuez un export logique régulier plutôt que de copier les fichiers bruts d'un moteur en cours d'exécution :</p>
+<pre><code># Export MySQL depuis le conteneur, compressé sur l'hôte
+docker compose exec -T db sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --single-transaction app' \
+  | gzip &gt; backup-$(date +%F).sql.gz</code></pre>
+<p>Pensez ensuite à copier ces fichiers hors du serveur et à tester régulièrement leur restauration.</p>
+
+<h3>Déployer une nouvelle version</h3>
+<p>Avec des images construites en CI et publiées dans un registre, une mise à jour se résume à récupérer les nouvelles images et à recréer les conteneurs qui ont changé :</p>
+<pre><code>docker compose pull
+docker compose up -d --remove-orphans --wait
+docker image prune -f</code></pre>
+<p>L'option <code>--wait</code> attend que les services soient en cours d'exécution et sains avant de rendre la main, ce qui permet à un script de déploiement d'échouer proprement si un healthcheck ne passe pas. <code>--remove-orphans</code> supprime les conteneurs de services retirés du fichier. Gardez en tête que Compose recrée un conteneur en arrêtant l'ancien avant de démarrer le nouveau : il y a donc une courte interruption. Si elle n'est pas acceptable, il faut un reverse proxy capable de basculer entre deux instances, ou un orchestrateur.</p>
+
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Tag <code>latest</code> en production</strong> : impossible de savoir quelle version tourne ni de revenir en arrière. Utilisez un tag par version ou par commit.</li>
+<li><strong>Ports publiés sur toutes les interfaces</strong> : <code>"3306:3306"</code> expose la base sur Internet, et les règles de Docker contournent souvent le pare-feu UFW. Ne publiez rien pour les services internes, ou liez-les à <code>127.0.0.1</code>.</li>
+<li><strong>Healthcheck absent ou trop laxiste</strong> : <code>condition: service_healthy</code> ne sert à rien si le test vérifie seulement que le processus existe.</li>
+<li><strong>Construire les images sur le serveur de production</strong> : cela consomme ses ressources et rend les déploiements non reproductibles. Construisez en CI, déployez des images.</li>
+</ul>
+
 <h3>Points essentiels</h3>
 <ul>
 <li>Toujours définir <code>restart: always</code> pour la résilience</li>
@@ -55,4 +137,8 @@ services:
 <li>Utiliser des healthchecks pour la haute disponibilité</li>
 <li>Séparer les volumes de données persistantes</li>
 <li>Ne jamais exposer les ports internes inutilement</li>
+<li>Faire tourner les logs et sauvegarder les données hors du serveur</li>
 </ul>
+
+<h3>Quand Compose ne suffit plus</h3>
+<p>Compose reste limité à un seul hôte : pas de répartition automatique entre plusieurs machines, pas de mise à jour progressive sans interruption, pas de reprise si le serveur lui-même tombe. Si votre application a besoin de ces garanties, c'est le signal pour passer à un orchestrateur. D'ici là, un serveur bien dimensionné piloté par Compose reste une solution simple, lisible et fiable.</p>

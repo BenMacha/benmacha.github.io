@@ -1,9 +1,29 @@
 <h2>GraphQL: a powerful alternative to REST</h2>
-<p>GraphQL lets clients request exactly the data they need. In projects such as those at Matalto and Manymore, this flexibility significantly reduced the number of API requests.</p>
+<p>GraphQL lets clients request exactly the data they need. In projects such as those of Matalto and Manymore, this flexibility made it possible to significantly reduce the number of API requests.</p>
+<p>With a classic REST API, each resource has its own URL and the server decides the shape of the response. A screen that displays a product, its category and its reviews often triggers three calls, each returning fields the interface does not need. GraphQL reverses the logic: the server publishes a <strong>typed schema</strong> describing everything that is available, and the client sends a query that describes precisely the shape of the expected data. There is usually a single endpoint, called with <code>POST</code>, and the JSON response mirrors the structure of the query exactly.</p>
+<p>In PHP, the reference is the <code>webonyx/graphql-php</code> library, which implements the specification. In a Symfony application, it is rarely used directly: <code>overblog/graphql-bundle</code> integrates it into the framework (YAML or attribute configuration, service container, security), and API Platform can also expose a GraphQL endpoint from the same resources as the REST API. This article uses OverblogGraphQLBundle.</p>
+
 <h3>Installation with Symfony</h3>
 <pre><code>composer require overblog/graphql-bundle
 composer require overblog/graphiql-bundle --dev</code></pre>
+<p>The first package provides the GraphQL endpoint and the execution engine. The second adds GraphiQL, an in-browser IDE with schema-based autocompletion: very handy in development, but never to be deployed to production, hence the <code>--dev</code> option. The bundle configuration states where to find the types and which type is the root for queries:</p>
+<pre><code># config/packages/graphql.yaml
+overblog_graphql:
+    definitions:
+        schema:
+            query: Query
+        mappings:
+            types:
+                - type: yaml
+                  dir: "%kernel.project_dir%/config/graphql/types"
+    security:
+        query_max_depth: 10
+        query_max_complexity: 1000
+        enable_introspection: '%kernel.debug%'</code></pre>
+<p>The <code>security</code> section is important and often forgotten; we will come back to it below.</p>
+
 <h3>Defining a schema</h3>
+<p>The schema is the contract between the server and its clients. Each object type declares its fields, their type and, when needed, how to resolve them. The exclamation mark means "non-null": <code>String!</code> guarantees the client that the field will always have a value.</p>
 <pre><code># config/graphql/types/Product.types.yaml
 Product:
     type: object
@@ -18,19 +38,40 @@ Product:
             category:
                 type: "Category"
                 resolve: "@=resolver('product_category', [value])"</code></pre>
+<p>Simple fields (<code>id</code>, <code>name</code>, <code>price</code>) are read automatically from the PHP object through its getters or public properties. The <code>category</code> field, however, delegates to a named resolver, passing it the parent object (<code>value</code>). You then need a <code>Query</code> root type, which defines the entry points for reads and their arguments:</p>
+<pre><code># config/graphql/types/Query.types.yaml
+Query:
+    type: object
+    config:
+        fields:
+            product:
+                type: "Product"
+                args:
+                    id:
+                        type: "ID!"
+                resolve: "@=resolver('products', [args])"
+            products:
+                type: "[Product!]!"
+                args:
+                    first:
+                        type: "Int"
+                        defaultValue: 10
+                resolve: "@=resolver('products', [args])"</code></pre>
+
 <h3>Resolver</h3>
+<p>A resolver is a regular Symfony service: it receives the query arguments (or the parent object) and returns the data. Like any service, it benefits from dependency injection:</p>
 <pre><code>class ProductResolver implements ResolverInterface
 {
     public function __construct(
         private ProductRepository $repository,
     ) {}
 
-    public function resolve(Argument $args): array
+    public function resolve(Argument $args): Product|array|null
     {
         if (isset($args['id'])) {
-            return $this->repository->find($args['id']);
+            return $this-&gt;repository-&gt;find($args['id']);
         }
-        return $this->repository->findAll();
+        return $this-&gt;repository-&gt;findBy([], ['id' =&gt; 'ASC'], $args['first'] ?? 10);
     }
 }
 
@@ -38,9 +79,12 @@ class ProductCategoryResolver implements ResolverInterface
 {
     public function resolve(Product $product): Category
     {
-        return $product->getCategory();
+        return $product-&gt;getCategory();
     }
 }</code></pre>
+<p>For the names <code>products</code> and <code>product_category</code> used in the schema to point to these classes, declare them as aliases, for example by implementing <code>AliasedInterface</code> and its static <code>getAliases()</code> method. Also note that these examples use the bundle's historical naming: in recent versions, <code>ResolverInterface</code> and the <code>resolver()</code> expression function have been renamed <code>QueryInterface</code> and <code>query()</code>. Check the documentation of the installed version. For writes, the principle is the same with a <code>Mutation</code> root type and classes implementing <code>MutationInterface</code>.</p>
+<p>Always cap the number of items returned (here with <code>first</code>), and switch to cursor-based pagination (Relay's "Connection" model, supported by the bundle) as soon as lists get long.</p>
+
 <h3>GraphQL query</h3>
 <pre><code>query {
   products(first: 10) {
@@ -52,10 +96,51 @@ class ProductCategoryResolver implements ResolverInterface
     }
   }
 }</code></pre>
+<p>The response contains exactly these fields, nested the same way, under a <code>data</code> key. In practice, clients use named queries with variables rather than hard-coded values. This makes client-side caching easier and avoids any string concatenation:</p>
+<pre><code>query ProductDetail($id: ID!) {
+  product(id: $id) {
+    id
+    name
+    price
+    category {
+      name
+    }
+  }
+}</code></pre>
+<p>Over HTTP, the query and its variables are sent as JSON in the body of a <code>POST</code> (the exact URL depends on the bundle's route configuration):</p>
+<pre><code>curl -X POST https://api.example.com/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "query ProductDetail($id: ID!) { product(id: $id) { name price } }", "variables": {"id": "42"}}'</code></pre>
+
+<h3>The N+1 trap</h3>
+<p>GraphQL's flexibility has a hidden cost. For the <code>products(first: 10)</code> query above, the category resolver is called once per product: one SQL query for the list, then ten queries for the categories if the relation is lazy-loaded. With nested lists, this quickly explodes. Two complementary solutions exist:</p>
+<ul>
+<li>Load the most requested relations directly in the repository, with a join and an <code>addSelect</code>.</li>
+<li>Use the <strong>DataLoader</strong> pattern (via <code>overblog/dataloader-bundle</code>): the identifiers requested during execution are collected, then loaded in a single batched query.</li>
+</ul>
+<p>Monitor the number of SQL queries per GraphQL operation in the Symfony profiler: it is the most reliable indicator.</p>
+
+<h3>Securing a GraphQL API</h3>
+<p>An endpoint that accepts arbitrary queries must protect itself against abuse. A malicious client can send a very deep or very wide query that exhausts the server. The <code>query_max_depth</code> and <code>query_max_complexity</code> settings in the configuration reject such queries before execution. Introspection, which lets anyone download the full schema, is limited to debug mode here. Finally, authorization is declared field by field:</p>
+<pre><code># Type excerpt: field restricted to administrators
+Product:
+    type: object
+    config:
+        fields:
+            purchasePrice:
+                type: "Float"
+                access: "@=hasRole('ROLE_ADMIN')"</code></pre>
+<p>Another difference from REST: a GraphQL request usually returns HTTP status 200 even when something goes wrong, with errors listed under the <code>errors</code> key of the response. Your monitoring must therefore inspect response bodies, not just HTTP codes.</p>
+
 <h3>Advantages over REST</h3>
 <ul>
-<li><strong>No over-fetching</strong>: the client picks the fields</li>
+<li><strong>No over-fetching</strong>: the client chooses the fields</li>
 <li><strong>No under-fetching</strong>: a single request for related data</li>
 <li><strong>Strong typing</strong>: a self-documenting schema</li>
 <li><strong>Easy evolution</strong>: add fields without breaking existing clients</li>
 </ul>
+<p>To evolve the schema without versioning the API, add fields rather than changing them, and mark old ones with <code>deprecationReason</code> before removing them once no client uses them any more.</p>
+
+<h3>When to stick with REST</h3>
+<p>GraphQL is not a universal replacement. Standard HTTP caching (CDN, reverse proxy) works poorly with <code>POST</code> requests all sent to the same URL. File uploads require an extension to the specification. And for a simple public API consumed by third parties, a REST API documented with OpenAPI remains more familiar. GraphQL shines mostly when several clients (web, mobile) have different needs over a rich, highly connected data model.</p>
+<p>In short: define a clear schema, cap lists, hunt down N+1 from the very first queries, limit depth and complexity, and disable introspection and GraphiQL in production.</p>

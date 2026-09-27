@@ -1,14 +1,26 @@
 <h2>Nginx أم Apache: أي خادم ويب تختار؟</h2>
-<p>يعتمد الاختيار بين Nginx وApache على حالة الاستخدام لديك. إليك مقارنة موضوعية.</p>
+<p>يعتمد الاختيار بين Nginx وApache على حالة الاستخدام لديك. إليك مقارنة موضوعية. كلاهما مشروع مفتوح المصدر ناضج ومُصان بنشاط، ويخدمان معاً حصة كبيرة جداً من مواقع الويب. لا أحد منهما «أفضل» بشكل مطلق: فقد صُمّما في حقبتين مختلفتين وبأولويات مختلفة، ولا تزال تلك الخيارات الأصلية تفسّر نقاط قوة كل منهما حتى اليوم.</p>
+
 <h3>البنية</h3>
-<p>يعتمد <strong>Apache</strong> نموذجاً قائماً على العمليات/الخيوط (prefork أو worker)، إذ يُعالَج كل اتصال بواسطة عملية أو خيط مخصص له.</p>
-<p>يعتمد <strong>Nginx</strong> بنية غير متزامنة قائمة على الأحداث (event-driven)، إذ تستطيع عملية worker واحدة معالجة آلاف الاتصالات المتزامنة.</p>
+<p>يستخدم <strong>Apache</strong> نموذجاً قائماً على العمليات/الخيوط (prefork أو worker). تُعالَج كل عملية اتصال بواسطة عملية أو خيط مخصص.</p>
+<p>يستخدم <strong>Nginx</strong> بنية غير متزامنة قائمة على الأحداث. يمكن لعملية worker واحدة أن تعالج آلاف الاتصالات المتزامنة.</p>
+<p>عملياً، يفوّض Apache هذا السلوك إلى وحدة تُسمى <strong>MPM</strong> (Multi-Processing Module):</p>
+<ul>
+<li><strong><code>prefork</code></strong>: عملية لكل اتصال، دون خيوط. هو الأكثر استهلاكاً للذاكرة، لكنه الوحيد المتوافق مع <code>mod_php</code>، لأن PHP لم يكن تاريخياً مضموناً للعمل الآمن مع الخيوط (thread-safe).</li>
+<li><strong><code>worker</code></strong>: عدة عمليات، لكل منها عدة خيوط. أكثر اقتصاداً في الذاكرة.</li>
+<li><strong><code>event</code></strong>: تطوير لـ <code>worker</code> يُسند اتصالات keep-alive الخاملة إلى خيط مخصص، بدلاً من حجز خيط لكل عميل. وهو الـ MPM الافتراضي في التوزيعات الحديثة عندما لا يكون <code>mod_php</code> مثبتاً.</li>
+</ul>
+<p>أما Nginx فيطلق عدداً قليلاً من عمليات الـ worker (غالباً واحدة لكل نواة، عبر <code>worker_processes auto;</code>). تعالج كل منها آلاف الاتصالات في حلقة أحداث، بالاعتماد على <code>epoll</code> في Linux. لا يكلّف الاتصال الخامل سوى بضعة كيلوبايتات من الذاكرة، وهذا ما يفسر ثباته أمام عدد كبير من العملاء البطيئين أو اتصالات keep-alive.</p>
+
 <h3>الأداء</h3>
 <pre><code># Benchmark with ab (Apache Bench)
 ab -n 10000 -c 100 http://localhost/
 
 # Nginx: ~15000 req/s for static content
 # Apache: ~5000 req/s for static content</code></pre>
+<p>هذه الأرقام مجرد مراتب تقريبية ويجب التعامل معها بحذر: فهي تتفاوت كثيراً بحسب العتاد، وحجم الملفات، وإعدادات الـ MPM، وعدد الاتصالات المتزامنة. وApache المُعَدّ مع MPM <code>event</code> يقلّص الفارق بشكل ملحوظ. قِس دائماً على بنيتك التحتية الخاصة، ويُفضَّل من جهاز غير الخادم المختبَر، وبأداة مثل <code>wrk</code> تولّد حملاً أكثر واقعية من <code>ab</code>.</p>
+<p>والأهم من ذلك أن خادم الويب نادراً ما يكون عنق الزجاجة في تطبيق PHP. فزمن الاستجابة يهيمن عليه تنفيذ كود PHP واستعلامات SQL والاستدعاءات الشبكية. ويظهر الفرق بين Nginx وApache أساساً في الملفات الثابتة وتحت التزامن العالي.</p>
+
 <h3>إعداد PHP</h3>
 <p><strong>Apache مع mod_php:</strong></p>
 <pre><code>&lt;VirtualHost *:80&gt;
@@ -17,6 +29,7 @@ ab -n 10000 -c 100 http://localhost/
         AllowOverride All
     &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</code></pre>
+<p>مع <code>mod_php</code>، يُحمَّل مفسّر PHP في كل عملية Apache، بما فيها تلك التي لا تخدم سوى صورة أو ملف CSS. ويفعّل <code>AllowOverride All</code> ملفات <code>.htaccess</code>: وهذا عملي، لكن Apache يضطر حينها إلى البحث عن هذه الملفات في كل مجلد على المسار، مع كل طلب.</p>
 <p><strong>Nginx مع PHP-FPM:</strong></p>
 <pre><code>server {
     root /var/www/html/public;
@@ -26,10 +39,98 @@ ab -n 10000 -c 100 http://localhost/
         include fastcgi_params;
     }
 }</code></pre>
+<p>لا ينفّذ Nginx كود PHP: بل يمرّر طلبات <code>.php</code> إلى PHP-FPM عبر FastCGI، هنا من خلال socket من نوع Unix. لكل من الخدمتين مجمّع عمليات (pool) مستقل يُضبط حجمه بشكل منفصل. واستخدام <code>$realpath_root</code> بدلاً من <code>$document_root</code> يحلّ الروابط الرمزية، وهذا مهم مع عمليات النشر الذرّية حيث يشير <code>current</code> إلى إصدار جديد.</p>
+<p>بالنسبة لتطبيق Symfony، يذهب الإعداد الموصى به أبعد من ذلك: كل طلب لا يطابق ملفاً موجوداً يمرّ عبر <code>index.php</code>، ولا يمكن تنفيذ أي ملف PHP آخر:</p>
+<pre><code>server {
+    listen 80;
+    server_name example.com;
+    root /var/www/html/public;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}</code></pre>
+<p>يمنع التوجيه <code>internal</code> استدعاء <code>/index.php</code> مباشرة في عنوان URL، ويعيد الكتلة الأخيرة رمز 404 لأي ملف PHP آخر: فلا يمكن تنفيذ سكربت منسيّ داخل <code>public/</code>.</p>
+
+<h3>Apache الحديث: event وPHP-FPM</h3>
+<p>ليس Apache محكوماً بالثنائي <code>prefork</code> + <code>mod_php</code>. فهو أيضاً قادر على تفويض PHP إلى PHP-FPM عبر <code>mod_proxy_fcgi</code>، واستخدام MPM <code>event</code>. على Debian أو Ubuntu:</p>
+<pre><code>sudo apt install php8.3-fpm
+sudo a2dismod php8.3 mpm_prefork
+sudo a2enmod mpm_event proxy_fcgi setenvif
+sudo a2enconf php8.3-fpm
+sudo apachectl configtest &amp;&amp; sudo systemctl restart apache2</code></pre>
+<p>عندها يمرّر المضيف الافتراضي (virtual host) ملفات PHP إلى socket الخاص بـ PHP-FPM. وإذا لم تكن بحاجة إلى <code>.htaccess</code>، فعطّلها وضع القواعد مباشرة في الإعدادات:</p>
+<pre><code>&lt;VirtualHost *:80&gt;
+    ServerName example.com
+    DocumentRoot /var/www/html/public
+
+    &lt;Directory /var/www/html/public&gt;
+        AllowOverride None
+        Require all granted
+        FallbackResource /index.php
+    &lt;/Directory&gt;
+
+    &lt;FilesMatch \.php$&gt;
+        SetHandler "proxy:unix:/run/php/php8.3-fpm.sock|fcgi://localhost"
+    &lt;/FilesMatch&gt;
+&lt;/VirtualHost&gt;</code></pre>
+<p>يؤدي <code>FallbackResource</code> الدور نفسه الذي يؤديه <code>try_files</code> في Nginx: أي عنوان URL لا يطابق ملفاً يُخدَم عبر <code>index.php</code>. بهذا الإعداد، يستهلك Apache ذاكرة أقل بكثير ويقترب من Nginx في إدارة الاتصالات.</p>
+
+<h3>مقارنة سريعة</h3>
+<table>
+<thead>
+<tr><th>المعيار</th><th>Nginx</th><th>Apache</th></tr>
+</thead>
+<tbody>
+<tr><td>النموذج</td><td>قائم على الأحداث، غير متزامن</td><td>عمليات/خيوط عبر MPM (prefork، worker، event)</td></tr>
+<tr><td>PHP</td><td>عبر PHP-FPM فقط</td><td>mod_php أو PHP-FPM</td></tr>
+<tr><td>الإعداد على مستوى المجلد</td><td>لا (إعداد مركزي)</td><td>نعم، عبر <code>.htaccess</code></td></tr>
+<tr><td>المحتوى الثابت</td><td>فعّال جداً</td><td>مقبول، خاصة مع event</td></tr>
+<tr><td>الوكيل العكسي وموازنة الحمل</td><td>استخدام أصيل وواسع الانتشار</td><td>ممكن عبر mod_proxy</td></tr>
+<tr><td>اختبار الإعدادات</td><td><code>nginx -t</code></td><td><code>apachectl configtest</code></td></tr>
+</tbody>
+</table>
+
 <h3>متى تختار هذا أو ذاك؟</h3>
 <ul>
-<li><strong>Nginx</strong>: المحتوى الثابت، الـ reverse proxy، التزامن العالي، الخدمات المصغّرة (microservices)</li>
-<li><strong>Apache</strong>: عند الحاجة إلى ملفات .htaccess، أو وحدات (modules) محددة، أو التوافق مع الأنظمة القديمة</li>
-<li><strong>كلاهما</strong>: Nginx كـ reverse proxy أمام Apache للجمع بين مزايا الاثنين</li>
+<li><strong>Nginx</strong>: المحتوى الثابت، الوكيل العكسي (reverse proxy)، التزامن العالي، الخدمات المصغّرة (microservices)</li>
+<li><strong>Apache</strong>: عند الحاجة إلى .htaccess، أو وحدات خاصة، أو التوافق مع أنظمة قديمة</li>
+<li><strong>كلاهما</strong>: Nginx كوكيل عكسي أمام Apache للجمع بين مزايا الاثنين</li>
 </ul>
-<p>في البيئات ذات الحركة الكثيفة، كما هو الحال في CCM Benchmark، يُفضَّل Nginx لكفاءته في إدارة الاتصالات المتزامنة.</p>
+<p>كثيراً ما نصادف حالة «كلاهما» في الاستضافة المشتركة أو أثناء ترحيل تدريجي: يستمع Nginx على المنافذ العامة، ويخدم الملفات الثابتة، ويتولى TLS، ثم يمرّر الباقي إلى Apache على منفذ محلي:</p>
+<pre><code>server {
+    listen 80;
+    server_name example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+<p>في هذا التركيب، فعّل <code>mod_remoteip</code> من جهة Apache حتى ترى السجلات والتطبيق عنوان IP الحقيقي للعميل وليس عنوان Nginx. ومن جهة Symfony، صرّح بـ <code>127.0.0.1</code> في <code>framework.trusted_proxies</code> حتى تؤخذ ترويسات <code>X-Forwarded-*</code> بعين الاعتبار.</p>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong>الجمع بين <code>mod_php</code> وMPM <code>event</code></strong>: غير ممكن، إذ يرفض Apache الإقلاع. انتقل إلى PHP-FPM لاستخدام <code>event</code>.</li>
+<li><strong>ترجمة <code>.htaccess</code> بشكل أعمى</strong>: عند الترحيل إلى Nginx، يجب نقل قواعد إعادة الكتابة يدوياً إلى الإعدادات، وإلا فستختفي عمليات إعادة توجيه أو حمايات بصمت.</li>
+<li><strong>نسيان اختبار الإعدادات</strong>: نفّذ دائماً <code>nginx -t</code> أو <code>apachectl configtest</code> قبل إعادة تحميل الخدمة.</li>
+<li><strong>ضبط جانب واحد فقط</strong>: مع PHP-FPM، غالباً ما يكون <code>pm.max_children</code> هو ما يحدّ من الإنتاجية، وليس خادم الويب.</li>
+</ul>
+<p>في البيئات ذات الحركة العالية كما هو الحال في CCM Benchmark، يُفضَّل Nginx لإدارته الفعّالة للاتصالات المتزامنة.</p>
+<p>باختصار: لمشروع PHP أو Symfony جديد، يُعدّ Nginx مع PHP-FPM خياراً افتراضياً متيناً وبسيطاً. ويبقى Apache مناسباً عندما تكون ملفات <code>.htaccess</code> ضرورية، أو عندما يعتمد التطبيق على وحدات خاصة، أو عندما يتقن الفريق منظومته مسبقاً. وفي الحالتين، فإن الإعدادات، ولا سيما إعدادات PHP-FPM، هي ما سيصنع الفرق في بيئة الإنتاج.</p>

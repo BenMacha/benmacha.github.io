@@ -1,36 +1,118 @@
 <h2>ترحيل قواعد البيانات دون أي انقطاع (Zero-downtime)</h2>
-<p>غالباً ما تكون عمليات ترحيل قاعدة البيانات (migrations) الجزء الأكثر خطورة في عملية النشر. إليك كيف تنفّذها دون أي انقطاع في الخدمة.</p>
+<p>غالباً ما تكون ترحيلات قاعدة البيانات الجزء الأكثر خطورة في عملية النشر. إليك كيف تنفّذها دون أي انقطاع.</p>
+<p>يسهل نشر شيفرة التطبيق دون توقف: نشغّل النسخة الجديدة، ونحوّل الحركة إليها، ثم نوقف القديمة. أما قاعدة البيانات فتتشاركها النسختان خلال هذا التحويل. وينتج عن ذلك خطران: مخطط (schema) غير متوافق مع إحدى نسختي الشيفرة، وأقفال (locks) تعطّل الاستعلامات طوال مدة تنفيذ <code>ALTER TABLE</code>. يجب على الترحيل دون انقطاع أن يتجنّب الخطرين معاً.</p>
+
+<h3>لماذا يجب أن يبقى المخطط متوافقاً</h3>
+<p>خلال نشر blue-green أو نشر تدريجي، تعمل النسخة القديمة والنسخة الجديدة من الشيفرة في الوقت نفسه، أحياناً لعدة دقائق. إذا أعاد الترحيل تسمية عمود، تنهار النسخة القديمة بمجرد قراءته. وإذا أضاف عموداً <code>NOT NULL</code> دون قيمة افتراضية، تنهار النسخة القديمة بمجرد إدراج سطر. القاعدة الذهبية: <strong>يجب أن يكون كل ترحيل متوافقاً مع الشيفرة الموجودة حالياً في الإنتاج ومع الشيفرة التي ستحلّ محلها</strong>. ويجب أن يبقى التراجع (rollback) ممكناً في كل لحظة.</p>
+
 <h3>القواعد الأساسية</h3>
 <ul>
-<li>لا تحذف أبداً عموداً ما زالت الشيفرة في بيئة الإنتاج تستخدمه</li>
-<li>أضف الأعمدة الجديدة دائماً كأعمدة تقبل القيمة الفارغة (nullable)</li>
-<li>افصل عمليات ترحيل البنية (schema) عن عمليات ترحيل البيانات</li>
-<li>اختبر عمليات الترحيل على نسخة من قاعدة بيانات الإنتاج</li>
+<li>لا تحذف أبداً عموداً تستخدمه الشيفرة في الإنتاج</li>
+<li>أضف الأعمدة الجديدة دائماً بصيغة nullable</li>
+<li>افصل ترحيلات المخطط عن ترحيلات البيانات</li>
+<li>اختبر الترحيلات على نسخة من قاعدة بيانات الإنتاج</li>
 </ul>
+<p>يمكن أيضاً إضافة عمود بقيمة افتراضية، كما في المثال أدناه: المهم أن تتمكن الشيفرة القديمة من مواصلة إدراج الأسطر دون أن تعرف بوجوده. والاختبار على نسخة من الإنتاج أمر لا غنى عنه، لأن ترحيلاً فورياً على قاعدة تطوير ببضعة آلاف من الأسطر قد يستغرق دقائق طويلة على جدول يضم عشرات الملايين من الأسطر.</p>
+
 <h3>نمط Expand-Contract</h3>
-<p><strong>المرحلة 1 - التوسيع (Expand):</strong> إضافة البنية الجديدة</p>
+<p>يقسّم نمط Expand-Contract (أو <em>التغيير المتوازي parallel change</em>) أي تغيير غير متوافق إلى خطوات متوافقة، موزّعة على عدة عمليات نشر.</p>
+<p><strong>المرحلة 1 - Expand (التوسيع):</strong> إضافة البنية الجديدة</p>
 <pre><code>-- Migration 1: Add the new column
 ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
 
 -- Migration 2: Backfill the data
 UPDATE users SET email_verified = TRUE WHERE verified_at IS NOT NULL;</code></pre>
-<p><strong>المرحلة 2 - نشر الشيفرة</strong> التي تستخدم العمودين معاً</p>
-<p><strong>المرحلة 3 - التقليص (Contract):</strong> حذف البنية القديمة</p>
+<p><strong>المرحلة 2 - نشر الشيفرة</strong> التي تستخدم العمودين</p>
+<p>خلال هذه المرحلة، تكتب الشيفرة في العمودين وتقرأ العمود الجديد. الأسطر التي أنشأتها النسخة القديمة أثناء التحويل لا تحمل القيمة الصحيحة بعد: أعد تشغيل عملية الملء بعد انتهاء النشر لاستدراكها.</p>
+<p><strong>المرحلة 3 - Contract (التقليص):</strong> حذف البنية القديمة</p>
 <pre><code>-- Migration 3: Drop the old column
 ALTER TABLE users DROP COLUMN verified_at;</code></pre>
-<h3>عمليات ترحيل Doctrine محسّنة</h3>
+<p>يُنشر هذا الترحيل الأخير في عملية نشر لاحقة، حين لا تعود أي نسخة في الإنتاج تقرأ العمود القديم. واحذفه أيضاً من ربط Doctrine (mapping) <strong>قبل</strong> حذفه من الجدول، وإلا فسيستمر ORM في تضمينه في استعلاماته.</p>
+<p>ينطبق المبدأ نفسه على إعادة تسمية عمود، وهو ما لا نفعله مباشرة أبداً:</p>
+<ol>
+<li>إضافة العمود الجديد؛</li>
+<li>نشر شيفرة تكتب في العمودين؛</li>
+<li>نسخ البيانات الموجودة على دفعات؛</li>
+<li>نشر شيفرة تقرأ العمود الجديد؛</li>
+<li>نشر شيفرة لم تعد تكتب في العمود القديم؛</li>
+<li>حذف العمود القديم.</li>
+</ol>
+
+<h3>ملء البيانات على دفعات</h3>
+<p>أمر <code>UPDATE</code> واحد على جدول كبير يفتح معاملة طويلة، ويقفل عدداً كبيراً من الأسطر، ويزيد تأخّر النسخ المتماثلة (replicas). على MySQL، الذي يقبل <code>LIMIT</code> داخل <code>UPDATE</code>، نعالج الأسطر بدلاً من ذلك على دفعات صغيرة:</p>
+<pre><code>$batchSize = 1000;
+
+do {
+    $affected = $connection-&gt;executeStatement(
+        'UPDATE users SET email_verified = TRUE
+         WHERE verified_at IS NOT NULL AND email_verified = FALSE
+         LIMIT ' . $batchSize
+    );
+
+    // Give the database and replicas room to breathe
+    usleep(100_000);
+} while ($affected &gt; 0);</code></pre>
+<p>كل دفعة هي معاملة قصيرة. ويمكن إيقاف السكربت وإعادة تشغيله دون خطر، لأن الشرط <code>email_verified = FALSE</code> يستبعد الأسطر المعالَجة سابقاً. ضع هذه الشيفرة في أمر Symfony بدلاً من ترحيل Doctrine: فقد تعمل مدة طويلة، ويجب أن يكون ممكناً إعادة تشغيلها بمعزل عن المخطط.</p>
+
+<h3>ترحيلات Doctrine محسَّنة</h3>
 <pre><code>public function up(Schema $schema): void
 {
     // Use non-blocking operations
-    $this->addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
+    $this-&gt;addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
 
     // For large tables, use pt-online-schema-change
     // or gh-ost to avoid locks
 }</code></pre>
-<h3>الأدوات الموصى بها</h3>
+<p>على MySQL 8.0، تتم إضافة عمود في أغلب الأحيان بالخوارزمية <code>INSTANT</code>، دون نسخ الجدول. أما العمليات الأخرى، فاطلب صراحة خوارزمية بلا قفل: إذا لم يستطع MySQL الالتزام بها، يفشل الاستعلام فوراً بدلاً من تعطيل الجدول.</p>
+<pre><code>ALTER TABLE orders ADD INDEX idx_orders_status (status), ALGORITHM=INPLACE, LOCK=NONE;</code></pre>
+<p>على PostgreSQL، يُنشأ الفهرس دون تعطيل عمليات الكتابة بواسطة <code>CREATE INDEX CONCURRENTLY</code>، الذي لا يمكن تنفيذه داخل معاملة. لذا يجب تعطيل المعاملة المحيطة التي يضيفها Doctrine Migrations لهذا الترحيل:</p>
+<pre><code>final class Version20241012120000 extends AbstractMigration
+{
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
+    public function up(Schema $schema): void
+    {
+        $this-&gt;addSql('SET lock_timeout = \'5s\'');
+        $this-&gt;addSql('CREATE INDEX CONCURRENTLY idx_orders_status ON orders (status)');
+    }
+}</code></pre>
+<p>يحمي <code>lock_timeout</code> من فخ معروف: فأمر <code>ALTER TABLE</code>، حتى السريع منه، يجب أن ينتظر انتهاء المعاملات الجارية على الجدول، وتتراكم خلفه كل الاستعلامات اللاحقة. مع مهلة قصيرة، يفشل الترحيل بشكل نظيف ويمكن إعادة تشغيله، بدلاً من تجميد التطبيق بأكمله. المكافئ في MySQL هو <code>SET SESSION lock_wait_timeout = 5</code>.</p>
+
+<h3>أدوات الترحيل المباشر (online)</h3>
+<p>حين يحتاج MySQL إلى إعادة بناء الجدول (عند تغيير نوع عمود مثلاً)، تُنشئ أداتا pt-online-schema-change وgh-ost نسخة من الجدول بالمخطط الجديد، وتُبقيانها متزامنة أثناء النسخ، ثم تبدّلان الجدولين في عملية قصيرة جداً:</p>
+<pre><code># Percona Toolkit: test, then execute
+pt-online-schema-change --alter "MODIFY status VARCHAR(100) DEFAULT NULL" D=app,t=orders --dry-run
+pt-online-schema-change --alter "MODIFY status VARCHAR(100) DEFAULT NULL" D=app,t=orders --execute
+
+# gh-ost: relies on the binlog rather than triggers
+gh-ost --host=db.internal --user=app --ask-pass --database=app --table=orders \
+  --alter="MODIFY status VARCHAR(100) DEFAULT NULL" --allow-on-master --execute</code></pre>
+
+<h3>أدوات موصى بها</h3>
 <ul>
-<li><strong>pt-online-schema-change</strong>: ترحيل دون أقفال (locks) لـ MySQL</li>
-<li><strong>gh-ost</strong>: بديل GitHub لعمليات الترحيل أثناء التشغيل</li>
-<li><strong>Doctrine Migrations</strong>: إدارة عمليات الترحيل بنظام الإصدارات</li>
-<li><strong>Flyway</strong>: أداة ترحيل تدعم قواعد بيانات متعددة</li>
+<li><strong>pt-online-schema-change</strong>: ترحيلات بلا أقفال لـ MySQL</li>
+<li><strong>gh-ost</strong>: بديل GitHub للترحيلات المباشرة</li>
+<li><strong>Doctrine Migrations</strong>: إدارة الترحيلات بنظام الإصدارات</li>
+<li><strong>Flyway</strong>: أداة ترحيل متعددة قواعد البيانات</li>
 </ul>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong><code>doctrine:schema:update --force</code> في الإنتاج</strong>: قد يحذف هذا الأمر أعمدة أو يعيد تسميتها دون سابق إنذار. في الإنتاج، يجب ألا يمسّ المخطط سوى الترحيلات المُدارة بالإصدارات والمُراجَعة.</li>
+<li><strong>مراجعة SQL المولَّد</strong>: ينتج <code>doctrine:migrations:diff</code> أحياناً <code>DROP</code> يليه <code>ADD</code> حيث كنت تتوقع إعادة تسمية.</li>
+<li><strong>المفاتيح الأجنبية والفهارس على الجداول الكبيرة</strong>: قد يستغرق إنشاؤها وقتاً طويلاً. قِس ذلك على نسخة الإنتاج.</li>
+<li><strong>الدالة <code>down()</code></strong>: لا تعتمد عليها للتراجع في الإنتاج. بفضل Expand-Contract، تكفي العودة إلى النسخة السابقة من الشيفرة، دون المساس بالمخطط.</li>
+</ul>
+
+<h3>قائمة التحقق قبل كل ترحيل</h3>
+<ol>
+<li>هل الترحيل متوافق مع الشيفرة الحالية ومع الشيفرة الجديدة؟</li>
+<li>هل قيست مدته على نسخة من قاعدة بيانات الإنتاج؟</li>
+<li>هل تُنفَّذ العمليات الثقيلة مباشرة (online) أو على دفعات؟</li>
+<li>هل حُدّدت مهلة انتظار للأقفال؟</li>
+<li>هل أُجّل حذف البنى القديمة إلى عملية نشر لاحقة؟</li>
+</ol>
+<p>تتطلب هذه القواعد عدداً أكبر قليلاً من عمليات النشر للتغيير الواحد، لكن كل عملية منها تصبح اعتيادية وقابلة للتراجع وغير محسوسة للمستخدمين.</p>

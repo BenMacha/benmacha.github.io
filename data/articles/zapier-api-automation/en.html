@@ -1,50 +1,130 @@
 <h2>Zapier for business automation</h2>
 <p>In a corporate environment such as ORPI, automating business processes through APIs is essential to working more efficiently.</p>
+<p>Zapier is a no-code automation platform that connects thousands of SaaS applications to one another. For a technical team, its value is twofold: business teams build their own automations, and developers only need to expose a few clean, secure entry points in their applications. This article shows how to prepare a Symfony application to talk to Zapier in both directions.</p>
+
+<h3>The basics</h3>
+<ul>
+<li><strong>Zap</strong>: an automation scenario, made of one trigger and one or more actions.</li>
+<li><strong>Trigger</strong>: the event that starts the Zap, for example a new lead or a submitted form.</li>
+<li><strong>Action</strong>: what the Zap does next, for example adding a row to a spreadsheet, sending a Slack message or calling your API.</li>
+<li><strong>Task</strong>: every successfully executed action counts as a task, and billing is based on that volume.</li>
+</ul>
+<p>A trigger works in one of two ways: <em>polling</em>, where Zapier regularly queries a URL to detect new items, or <em>instant</em>, where your application notifies Zapier through a webhook as soon as the event happens.</p>
+
 <h3>Common use cases</h3>
 <ul>
-<li>Syncing the CRM to an internal database</li>
+<li>Syncing a CRM to an internal database</li>
 <li>Slack notifications on business events</li>
-<li>Automated report generation</li>
-<li>Integrating web forms with the information system</li>
+<li>Automatic report generation</li>
+<li>Integrating web forms with internal systems</li>
 </ul>
-<h3>Creating a custom webhook</h3>
-<pre><code>// Symfony endpoint receiving Zapier webhooks
+<p>What these cases have in common: simple, moderate-volume flows that connect existing tools. That is where Zapier pays off most, because it saves you from building and maintaining a connector for each tool.</p>
+
+<h3>Building a custom webhook</h3>
+<p>First direction: Zapier sends data to your application. In the Zap, the "Webhooks by Zapier" action in POST mode sends JSON to your endpoint, with headers you define, including a secret token:</p>
+<pre><code>// Symfony endpoint to receive Zapier webhooks
 #[Route('/api/webhook/zapier', methods: ['POST'])]
 class ZapierWebhookController extends AbstractController
 {
+    public function __construct(
+        #[Autowire(env: 'ZAPIER_TOKEN')]
+        private readonly string $zapierToken,
+    ) {}
+
     public function __invoke(
         Request $request,
         MessageBusInterface $bus,
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
-
         // Validate the token
-        if ($request->headers->get('X-Zapier-Token') !== $this->zapierToken) {
-            return $this->json(['error' => 'Unauthorized'], 401);
+        $token = (string) $request-&gt;headers-&gt;get('X-Zapier-Token', '');
+        if (!hash_equals($this-&gt;zapierToken, $token)) {
+            return $this-&gt;json(['error' =&gt; 'Unauthorized'], 401);
+        }
+
+        $data = json_decode($request-&gt;getContent(), true);
+        if (!is_array($data)) {
+            return $this-&gt;json(['error' =&gt; 'Invalid JSON'], 400);
         }
 
         // Dispatch the processing
-        $bus->dispatch(new ProcessZapierDataMessage($data));
+        $bus-&gt;dispatch(new ProcessZapierDataMessage($data));
 
-        return $this->json(['status' => 'received']);
+        return $this-&gt;json(['status' =&gt; 'received']);
     }
 }</code></pre>
-<h3>API for Zapier Triggers</h3>
+<p>Several details matter in this controller:</p>
+<ul>
+<li>the token is read from an environment variable through the <code>#[Autowire(env: ...)]</code> attribute (Symfony 6.3 and later), never hard-coded;</li>
+<li><code>hash_equals()</code> compares strings in constant time, which prevents the token from being guessed character by character;</li>
+<li>the token is checked before the body is read at all, and invalid JSON is rejected with a 400 error;</li>
+<li>the actual processing goes to Messenger: the controller responds in a few milliseconds, which avoids timeouts on Zapier's side.</li>
+</ul>
+<p>The secret is stored like the application's other secrets, for example with Symfony's secrets vault:</p>
+<pre><code>php bin/console secrets:set ZAPIER_TOKEN
+# Generate a strong value
+openssl rand -hex 32</code></pre>
+
+<h3>An API for Zapier triggers</h3>
+<p>Second direction: your application provides data to Zapier. For a polling trigger, built in a private integration on Zapier's developer platform, all you need is an endpoint that returns the most recent items:</p>
 <pre><code>#[Route('/api/zapier/new-leads', methods: ['GET'])]
 public function newLeads(LeadRepository $repo): JsonResponse
 {
-    $leads = $repo->findRecent(limit: 50);
-    return $this->json(array_map(fn(Lead $l) => [
-        'id' => $l->getId(),
-        'name' => $l->getName(),
-        'email' => $l->getEmail(),
-        'created_at' => $l->getCreatedAt()->format('c'),
+    $leads = $repo-&gt;findRecent(limit: 50);
+    return $this-&gt;json(array_map(fn(Lead $l) =&gt; [
+        'id' =&gt; $l-&gt;getId(),
+        'name' =&gt; $l-&gt;getName(),
+        'email' =&gt; $l-&gt;getEmail(),
+        'created_at' =&gt; $l-&gt;getCreatedAt()-&gt;format('c'),
     ], $leads));
 }</code></pre>
+<p>Zapier expects a JSON array of objects, newest first, each with a unique <code>id</code> field. It remembers the identifiers it has already seen and only triggers the Zap for new ones: that is deduplication. Two practical consequences: an item's <code>id</code> must never change, and <code>findRecent()</code> must sort by creation date, descending. Protect this endpoint too, for example with an API key sent in a header and checked by the Security component.</p>
+
+<h3>Instant triggers</h3>
+<p>Polling introduces a delay that depends on the Zapier plan. For an immediate reaction, the application can push the event to the URL provided by the "Catch Hook" trigger of Webhooks by Zapier. Do it from a Messenger handler, so that a Zapier outage never slows down your users:</p>
+<pre><code>#[AsMessageHandler]
+final class NotifyZapierHandler
+{
+    public function __construct(
+        private readonly HttpClientInterface $httpClient,
+        #[Autowire(env: 'ZAPIER_HOOK_URL')]
+        private readonly string $zapierHookUrl,
+    ) {}
+
+    public function __invoke(LeadCreatedMessage $message): void
+    {
+        $response = $this-&gt;httpClient-&gt;request('POST', $this-&gt;zapierHookUrl, [
+            'json' =&gt; [
+                'id' =&gt; $message-&gt;leadId,
+                'name' =&gt; $message-&gt;name,
+                'email' =&gt; $message-&gt;email,
+            ],
+            'timeout' =&gt; 10,
+        ]);
+
+        // Throws an exception if the status is not 2xx: Messenger will retry
+        $response-&gt;getContent();
+    }
+}</code></pre>
+<p>If Zapier is temporarily unavailable, the exception triggers Messenger's retry strategy, then the failure transport: no event is lost. For a public integration, Zapier also offers <em>REST Hooks</em>: Zapier registers its own URL with your API when a Zap is turned on and removes it when the Zap is turned off.</p>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong>Duplicates</strong>: a webhook can be replayed, by Zapier or by a user re-running an execution. Make processing idempotent, for example by storing the identifier of the received event.</li>
+<li><strong>Personal data</strong>: every field you send passes through Zapier's servers. Send only what is strictly necessary and check the flow's GDPR compliance with your DPO.</li>
+<li><strong>Business logic inside Zapier</strong>: complex filters and paths in a Zap quickly become impossible to test and version. Keep business rules in the application.</li>
+<li><strong>Cost</strong>: per-task billing can climb fast on high-volume flows.</li>
+</ul>
+
+<h3>When not to use Zapier</h3>
+<p>For thousands of events per hour, a revenue-critical flow or a complex data transformation, an integration built directly between the two APIs remains more reliable, cheaper and easier to monitor. Zapier shines for internal automations, prototypes and flows that business teams need to be able to change on their own.</p>
+
 <h3>Best practices</h3>
 <ul>
 <li>Secure webhooks with tokens</li>
 <li>Log every interaction for debugging</li>
 <li>Use queues for asynchronous processing</li>
-<li>Document the APIs with OpenAPI for the Zapier integration</li>
+<li>Document APIs with OpenAPI for the Zapier integration</li>
+<li>Rate-limit public endpoints with Symfony's RateLimiter component</li>
+<li>Respond quickly with a 2xx status, then process</li>
 </ul>
+<p>With a few well-designed, secure and asynchronous endpoints, your application becomes a building block that business teams can plug into their tools without asking developers for every new need.</p>

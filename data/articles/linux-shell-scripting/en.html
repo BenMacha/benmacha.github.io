@@ -1,13 +1,20 @@
 <h2>The art of shell scripting</h2>
-<p>Shell scripting remains a fundamental tool for any DevOps engineer. Here are the essential patterns and best practices.</p>
+<p>Shell scripting remains a fundamental tool for every DevOps engineer. Despite the rise of Ansible, Terraform and declarative CI pipelines, there is always a moment when you write a few lines of Bash: a deployment hook, a nightly backup, a container entrypoint, a pipeline step. These scripts are often written quickly and rarely reviewed, which makes them a classic source of incidents. Here are the essential patterns and best practices for writing scripts that are reliable, readable and easy to maintain.</p>
+
+<h3>When to choose Bash (and when to avoid it)</h3>
+<p>Bash excels at <strong>orchestrating existing commands</strong>: chaining <code>git</code>, <code>rsync</code>, <code>docker</code>, <code>systemctl</code>, checking an exit code, writing a log line. It is available on virtually every Linux server and requires no dependencies.</p>
+<p>However, as soon as a script manipulates data structures (JSON, nested associative arrays), performs non-trivial calculations or grows beyond a few hundred lines, a language like Python or PHP becomes safer and more readable. In production, I recommend a simple rule: if you start parsing JSON with <code>grep</code> and <code>sed</code>, it is time to switch tools (or at the very least to use <code>jq</code>).</p>
+
 <h3>Structure of a robust script</h3>
+<p>A good script always follows the same skeleton: an explicit shebang, strict mode, constants at the top, functions, guaranteed cleanup and a <code>main</code> function called at the end.</p>
 <pre><code>#!/bin/bash
 set -euo pipefail
 IFS=$'\n\t'
 
 # Variables
-readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
 readonly LOG_FILE="/var/log/deploy.log"
+readonly TEMP_DIR="$(mktemp -d)"
 
 # Functions
 log() {
@@ -24,17 +31,40 @@ trap cleanup EXIT
 main() {
     log "Starting deployment"
     # ...
-    log "Deployment complete"
+    log "Deployment finished"
 }
 
 main "$@"</code></pre>
+<p>Let's go through each element:</p>
+<ul>
+<li><strong><code>set -e</code></strong>: the script stops as soon as a command fails, instead of carrying on in an inconsistent state.</li>
+<li><strong><code>set -u</code></strong>: any undefined variable raises an error. A typo in <code>$TEMP_DIR</code> no longer turns into <code>rm -rf /</code>.</li>
+<li><strong><code>set -o pipefail</code></strong>: a pipeline fails if any of its commands fails, not just the last one. Without it, <code>failing_command | tee file</code> is considered a success.</li>
+<li><strong><code>IFS=$'\n\t'</code></strong>: word splitting no longer happens on spaces, which avoids nasty surprises with file names that contain spaces.</li>
+<li><strong><code>readonly</code></strong>: constants cannot be accidentally overwritten further down the script.</li>
+<li><strong><code>mktemp -d</code></strong>: creates a unique temporary directory, instead of a fixed path like <code>/tmp/deploy</code> that may collide with another run.</li>
+<li><strong><code>trap cleanup EXIT</code></strong>: the <code>cleanup</code> function runs however the script ends (success, error, explicit <code>exit</code>). Temporary files are never left behind.</li>
+<li><strong><code>main "$@"</code></strong>: all the code runs inside a function, which keeps the flow readable and guarantees that Bash has read the whole file before starting.</li>
+</ul>
+
+<h3>The limits of <code>set -e</code></h3>
+<p>Strict mode is not magic. <code>set -e</code> is ignored in some situations: in the condition of an <code>if</code>, on the left-hand side of <code>&amp;&amp;</code> or <code>||</code>, and in a function called from one of those contexts. Likewise, <code>local var=$(command)</code> hides the command's exit code, because the one that counts is the exit code of <code>local</code>. Declare the variable and assign it on two separate lines:</p>
+<pre><code># Bad: the curl failure is hidden by "local"
+local body=$(curl -fsS "$url")
+
+# Good: the curl failure stops the script
+local body
+body=$(curl -fsS "$url")</code></pre>
+<p>Another classic trap: <code>((counter++))</code> returns an error code when the value <em>before</em> the increment is 0. With <code>set -e</code>, the script stops without any message. Prefer <code>counter=$((counter + 1))</code> when the counter can start at zero.</p>
+
 <h3>Useful patterns</h3>
+<p>Some functions show up in almost every operations script. The following two are good examples: a service status check and a retry with progressive delay.</p>
 <pre><code># Check whether a service is active
 check_service() {
     if systemctl is-active --quiet "$1"; then
         echo "$1 is active"
     else
-        echo "$1 is inactive" && return 1
+        echo "$1 is inactive" &amp;&amp; return 1
     fi
 }
 
@@ -50,6 +80,51 @@ retry() {
     done
     return 1
 }</code></pre>
+<p>The <code>retry</code> function takes the number of attempts as its first argument, then the command to run. <code>shift</code> removes the first argument, and <code>"$@"</code> runs the rest as is, preserving spaces and quoting. The wait grows after each failure (2, 4, 6 seconds…), giving a database or an API time to come back. Here <code>attempt</code> starts at 1, so <code>((attempt++))</code> is safe with <code>set -e</code>. Example usage:</p>
+<pre><code>retry 5 curl -fsS https://example.com/health
+check_service nginx || systemctl restart nginx</code></pre>
+
+<h3>Validating arguments and prerequisites</h3>
+<p>A script started with wrong arguments must fail immediately, with a clear message, before it has changed anything. Likewise, check that the required tools are installed:</p>
+<pre><code>usage() {
+    echo "Usage: $(basename "$0") &lt;environment&gt; [version]" &gt;&amp;2
+    exit 1
+}
+
+require() {
+    local cmd
+    for cmd in "$@"; do
+        command -v "$cmd" &gt;/dev/null 2&gt;&amp;1 || {
+            echo "Required command not found: $cmd" &gt;&amp;2
+            exit 1
+        }
+    done
+}
+
+[ $# -ge 1 ] || usage
+readonly ENVIRONMENT="$1"
+readonly VERSION="${2:-latest}"
+
+case "$ENVIRONMENT" in
+    staging|production) ;;
+    *) echo "Invalid environment: $ENVIRONMENT" &gt;&amp;2; exit 1 ;;
+esac
+
+require git rsync curl</code></pre>
+<p>Note the use of <code>${2:-latest}</code> for a default value, which works with <code>set -u</code>, and the redirection of error messages to standard error (<code>&gt;&amp;2</code>), so they do not get mixed with output that another program might consume.</p>
+
+<h3>Preventing concurrent runs</h3>
+<p>A script started by cron every five minutes can overlap with the previous run if that one falls behind. Two backups or two deployments in parallel are a guaranteed inconsistent state. The <code>flock</code> command (util-linux package) solves this cleanly:</p>
+<pre><code>exec 9&gt;/var/lock/deploy.lock
+if ! flock -n 9; then
+    echo "Another run is already in progress" &gt;&amp;2
+    exit 1
+fi</code></pre>
+<p>The lock is released automatically by the kernel when the script ends, even if it crashes: no orphaned lock file to delete by hand.</p>
+
+<h3>Quotes and variables</h3>
+<p>Most Bash bugs come from unquoted variables. Always write <code>"$variable"</code> in double quotes, unless you explicitly want word splitting. Prefer <code>$(command)</code> over backticks, which nest poorly, and <code>[[ ... ]]</code> over <code>[ ... ]</code> in Bash scripts: it handles empty strings better and supports regular expressions with <code>=~</code>.</p>
+
 <h3>Best practices</h3>
 <ul>
 <li>Always use <code>set -euo pipefail</code></li>
@@ -57,4 +132,13 @@ retry() {
 <li>Use functions for readability</li>
 <li>Handle errors with <code>trap</code></li>
 <li>Test with shellcheck</li>
+<li>Always put variables in double quotes</li>
+<li>Write errors to <code>stderr</code> and return a non-zero exit code</li>
+<li>Make scripts idempotent: a second run must not break anything</li>
 </ul>
+<p><strong>ShellCheck</strong> deserves a special mention: this static analyser detects unquoted variables, incorrect comparisons, <code>local</code> pitfalls and dozens of other mistakes. It integrates with most editors and is easy to run in CI:</p>
+<pre><code>shellcheck scripts/*.sh
+bash -n scripts/deploy.sh   # syntax check only</code></pre>
+
+<h3>When not to write a script</h3>
+<p>Before writing a new script, check whether a dedicated tool already exists. To schedule a task, a systemd timer provides logging and failure handling. To configure a fleet of servers reproducibly, Ansible is a better fit than an SSH loop. A good shell script is short, does one thing, fails loudly and can be reviewed in two minutes.</p>

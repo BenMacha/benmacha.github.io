@@ -1,9 +1,29 @@
 <h2>GraphQL: بديل قوي لـ REST</h2>
-<p>يتيح GraphQL للعملاء طلب البيانات التي يحتاجونها بالضبط. في مشاريع مثل مشاريع Matalto وManymore، ساعدت هذه المرونة على تقليل عدد طلبات API بشكل كبير.</p>
+<p>يتيح GraphQL للعملاء طلب البيانات التي يحتاجونها بالضبط. في مشاريع مثل مشاريع Matalto وManymore، سمحت هذه المرونة بتقليل عدد طلبات API بشكل كبير.</p>
+<p>في API من نوع REST التقليدي، لكل مورد عنوان URL خاص به، والخادم هو من يقرر شكل الاستجابة. الشاشة التي تعرض منتجاً وفئته وتقييماته تُطلق غالباً ثلاثة استدعاءات، وكل منها يُرجع حقولاً لا تحتاجها الواجهة. يقلب GraphQL المنطق: ينشر الخادم <strong>مخططاً (schema) محدَّد الأنواع</strong> يصف كل ما هو متاح، ويرسل العميل استعلاماً يصف بدقة شكل البيانات المنتظرة. عادةً توجد نقطة دخول واحدة تُستدعى بـ <code>POST</code>، وتعكس استجابة JSON بنية الاستعلام تماماً.</p>
+<p>في PHP، المرجع هو مكتبة <code>webonyx/graphql-php</code> التي تنفّذ المواصفة. وفي تطبيق Symfony نادراً ما تُستخدم مباشرة: فالحزمة <code>overblog/graphql-bundle</code> تدمجها في إطار العمل (إعداد عبر YAML أو السمات، حاوية الخدمات، الأمان)، كما يستطيع API Platform كشف نقطة دخول GraphQL انطلاقاً من الموارد نفسها التي تخدمها API من نوع REST. يستخدم هذا المقال OverblogGraphQLBundle.</p>
+
 <h3>التثبيت مع Symfony</h3>
 <pre><code>composer require overblog/graphql-bundle
 composer require overblog/graphiql-bundle --dev</code></pre>
-<h3>تعريف المخطط (schema)</h3>
+<p>توفر الحزمة الأولى نقطة دخول GraphQL ومحرّك التنفيذ. وتضيف الثانية GraphiQL، وهي بيئة تطوير داخل المتصفح تقترح الإكمال التلقائي انطلاقاً من المخطط: عملية جداً أثناء التطوير، لكن لا تُنشر أبداً في الإنتاج، ومن هنا الخيار <code>--dev</code>. يحدد إعداد الحزمة مكان الأنواع وأي نوع يمثّل جذر الاستعلامات:</p>
+<pre><code># config/packages/graphql.yaml
+overblog_graphql:
+    definitions:
+        schema:
+            query: Query
+        mappings:
+            types:
+                - type: yaml
+                  dir: "%kernel.project_dir%/config/graphql/types"
+    security:
+        query_max_depth: 10
+        query_max_complexity: 1000
+        enable_introspection: '%kernel.debug%'</code></pre>
+<p>القسم <code>security</code> مهم وكثيراً ما يُنسى؛ وسنعود إليه لاحقاً.</p>
+
+<h3>تعريف المخطط</h3>
+<p>المخطط هو العقد بين الخادم وعملائه. كل نوع كائن يصرّح بحقوله وأنواعها، وعند الحاجة بطريقة حلّها. علامة التعجب تعني «غير فارغ»: <code>String!</code> يضمن للعميل أن الحقل سيحمل دائماً قيمة.</p>
 <pre><code># config/graphql/types/Product.types.yaml
 Product:
     type: object
@@ -18,19 +38,40 @@ Product:
             category:
                 type: "Category"
                 resolve: "@=resolver('product_category', [value])"</code></pre>
-<h3>Resolver</h3>
+<p>الحقول البسيطة (<code>id</code> و<code>name</code> و<code>price</code>) تُقرأ تلقائياً من كائن PHP عبر دوال الوصول (getters) أو الخصائص العامة. أما الحقل <code>category</code> فيُحيل إلى resolver مسمّى، ويمرّر له الكائن الأب (<code>value</code>). بعد ذلك نحتاج إلى نوع جذر <code>Query</code> يحدد نقاط الدخول للقراءة ومعاملاتها:</p>
+<pre><code># config/graphql/types/Query.types.yaml
+Query:
+    type: object
+    config:
+        fields:
+            product:
+                type: "Product"
+                args:
+                    id:
+                        type: "ID!"
+                resolve: "@=resolver('products', [args])"
+            products:
+                type: "[Product!]!"
+                args:
+                    first:
+                        type: "Int"
+                        defaultValue: 10
+                resolve: "@=resolver('products', [args])"</code></pre>
+
+<h3>الـ Resolver</h3>
+<p>الـ resolver خدمة Symfony عادية: يتلقى معاملات الاستعلام (أو الكائن الأب) ويُرجع البيانات. وككل خدمة، يستفيد من حقن الاعتماديات:</p>
 <pre><code>class ProductResolver implements ResolverInterface
 {
     public function __construct(
         private ProductRepository $repository,
     ) {}
 
-    public function resolve(Argument $args): array
+    public function resolve(Argument $args): Product|array|null
     {
         if (isset($args['id'])) {
-            return $this->repository->find($args['id']);
+            return $this-&gt;repository-&gt;find($args['id']);
         }
-        return $this->repository->findAll();
+        return $this-&gt;repository-&gt;findBy([], ['id' =&gt; 'ASC'], $args['first'] ?? 10);
     }
 }
 
@@ -38,9 +79,12 @@ class ProductCategoryResolver implements ResolverInterface
 {
     public function resolve(Product $product): Category
     {
-        return $product->getCategory();
+        return $product-&gt;getCategory();
     }
 }</code></pre>
+<p>لكي يشير الاسمان <code>products</code> و<code>product_category</code> المستخدمان في المخطط إلى هذه الأصناف، صرّح بهما كأسماء مستعارة، مثلاً بتنفيذ <code>AliasedInterface</code> ودالتها الساكنة <code>getAliases()</code>. لاحظ أيضاً أن هذه الأمثلة تستخدم التسميات التاريخية للحزمة: في الإصدارات الحديثة أُعيدت تسمية <code>ResolverInterface</code> ودالة التعبير <code>resolver()</code> إلى <code>QueryInterface</code> و<code>query()</code>. راجع توثيق الإصدار المثبَّت. وللكتابة، المبدأ نفسه مع نوع جذر <code>Mutation</code> وأصناف تنفّذ <code>MutationInterface</code>.</p>
+<p>ضع دائماً حداً أقصى لعدد العناصر المُرجَعة (هنا عبر <code>first</code>)، وانتقل إلى الترقيم بالمؤشر (نموذج «Connection» من Relay الذي تدعمه الحزمة) بمجرد أن تطول القوائم.</p>
+
 <h3>استعلام GraphQL</h3>
 <pre><code>query {
   products(first: 10) {
@@ -52,10 +96,51 @@ class ProductCategoryResolver implements ResolverInterface
     }
   }
 }</code></pre>
-<h3>المزايا مقارنةً بـ REST</h3>
+<p>تحتوي الاستجابة على هذه الحقول بالضبط، متداخلة بالطريقة نفسها، تحت المفتاح <code>data</code>. عملياً، يستخدم العملاء استعلامات مسمّاة مع متغيرات بدلاً من قيم مكتوبة مباشرة. هذا يسهّل التخزين المؤقت لدى العميل ويتجنب أي ربط للسلاسل النصية:</p>
+<pre><code>query ProductDetail($id: ID!) {
+  product(id: $id) {
+    id
+    name
+    price
+    category {
+      name
+    }
+  }
+}</code></pre>
+<p>على مستوى HTTP، يُرسل الاستعلام ومتغيراته بصيغة JSON في جسم طلب <code>POST</code> (العنوان الدقيق يتوقف على إعداد مسارات الحزمة):</p>
+<pre><code>curl -X POST https://api.example.com/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "query ProductDetail($id: ID!) { product(id: $id) { name price } }", "variables": {"id": "42"}}'</code></pre>
+
+<h3>فخ N+1</h3>
+<p>لمرونة GraphQL كلفة خفية. في الاستعلام <code>products(first: 10)</code> أعلاه، يُستدعى resolver الفئة مرة لكل منتج: استعلام SQL للقائمة، ثم عشرة استعلامات للفئات إن كانت العلاقة تُحمَّل بشكل كسول. ومع القوائم المتداخلة، يتضاعف العدد بسرعة. يوجد حلّان متكاملان:</p>
 <ul>
-<li><strong>لا جلب زائد (over-fetching)</strong>: العميل يختار الحقول</li>
-<li><strong>لا جلب ناقص (under-fetching)</strong>: طلب واحد للبيانات المترابطة</li>
-<li><strong>أنواع صارمة</strong>: مخطط يوثّق نفسه بنفسه</li>
+<li>تحميل العلاقات الأكثر طلباً مباشرة في الـ repository، عبر ربط (join) و<code>addSelect</code>.</li>
+<li>استخدام نمط <strong>DataLoader</strong> (عبر <code>overblog/dataloader-bundle</code>): تُجمع المعرّفات المطلوبة أثناء التنفيذ، ثم تُحمَّل في استعلام مجمَّع واحد.</li>
+</ul>
+<p>راقب عدد استعلامات SQL لكل عملية GraphQL في محلّل Symfony: إنه المؤشر الأكثر موثوقية.</p>
+
+<h3>تأمين API من نوع GraphQL</h3>
+<p>نقطة دخول تقبل استعلامات عشوائية يجب أن تحمي نفسها من الإساءة. يستطيع عميل خبيث إرسال استعلام عميق جداً أو واسع جداً يستنزف الخادم. الإعدادان <code>query_max_depth</code> و<code>query_max_complexity</code> يرفضان مثل هذه الاستعلامات قبل تنفيذها. أما الاستبطان (introspection)، الذي يتيح لأي شخص تنزيل المخطط كاملاً، فهو هنا محصور في وضع التصحيح. وأخيراً، تُعلَن الصلاحيات حقلاً بحقل:</p>
+<pre><code># Type excerpt: field restricted to administrators
+Product:
+    type: object
+    config:
+        fields:
+            purchasePrice:
+                type: "Float"
+                access: "@=hasRole('ROLE_ADMIN')"</code></pre>
+<p>فرق آخر مع REST: يُرجع طلب GraphQL عادةً رمز الحالة HTTP 200 حتى عند وقوع خطأ، إذ تُدرج الأخطاء تحت المفتاح <code>errors</code> في الاستجابة. لذا يجب أن يحلّل نظام المراقبة لديك محتوى الاستجابات، لا رموز HTTP وحدها.</p>
+
+<h3>المزايا مقارنة بـ REST</h3>
+<ul>
+<li><strong>لا جلب زائد</strong>: العميل يختار الحقول</li>
+<li><strong>لا جلب ناقص</strong>: طلب واحد للبيانات المترابطة</li>
+<li><strong>أنواع صارمة</strong>: مخطط موثَّق ذاتياً</li>
 <li><strong>تطوّر سهل</strong>: إضافة حقول دون كسر العملاء الحاليين</li>
 </ul>
+<p>لتطوير المخطط دون ترقيم إصدارات الـ API، أضف حقولاً بدلاً من تعديلها، وعلِّم القديمة منها بـ <code>deprecationReason</code> قبل حذفها حين لا يعود أي عميل يستخدمها.</p>
+
+<h3>متى تبقى على REST</h3>
+<p>GraphQL ليس بديلاً شاملاً. التخزين المؤقت HTTP القياسي (CDN، الوكيل العكسي) لا يعمل جيداً مع طلبات <code>POST</code> موجَّهة كلها إلى العنوان نفسه. ورفع الملفات يتطلب امتداداً للمواصفة. ولـ API عامة وبسيطة يستهلكها أطراف خارجيون، تبقى API من نوع REST موثَّقة بـ OpenAPI مألوفة أكثر. يتألق GraphQL أساساً حين يكون لعدة عملاء (ويب، جوّال) احتياجات مختلفة من نموذج بيانات غني وشديد الترابط.</p>
+<p>باختصار: عرِّف مخططاً واضحاً، وضع حداً للقوائم، وتتبّع مشكلة N+1 منذ الاستعلامات الأولى، وقيِّد العمق والتعقيد، وعطِّل الاستبطان وGraphiQL في الإنتاج.</p>

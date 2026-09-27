@@ -1,6 +1,17 @@
 <h2>مراقبة أداء النظام</h2>
-<p>المراقبة (monitoring) الجيدة ضرورية لاكتشاف المشكلات قبل أن تؤثر في المستخدمين.</p>
-<h3>أدوات أساسية</h3>
+<p>المراقبة الجيدة ضرورية لاكتشاف المشكلات قبل أن تؤثر على المستخدمين. فالقرص الذي يمتلئ، أو تسرّب الذاكرة في worker لـ PHP، أو العملية التي تستحوذ على المعالج، يظهر دائماً تقريباً في المقاييس قبل ساعات، بل أيام، من العطل. لكن يبقى عليك أن تعرف ما الذي تراقبه، وبأي أدوات، وعند أي عتبة تتدخل.</p>
+<p>يغطي هذا المقال مستويين متكاملين: <strong>التشخيص المباشر</strong>، عندما تكون متصلاً عبر SSH بجهاز بطيء، و<strong>المراقبة المستمرة</strong>، مع مقاييس محفوظة تاريخياً وتنبيهات تلقائية.</p>
+
+<h3>المنهجية قبل الأدوات</h3>
+<p>أمام خادم بطيء، يكون الإغراء هو تشغيل <code>htop</code> والتحديق في الشاشة. النهج الأكثر فعالية هو المرور على كل مورد (المعالج، الذاكرة، القرص، الشبكة) وطرح ثلاثة أسئلة، وفق منهجية USE التي روّج لها Brendan Gregg:</p>
+<ul>
+<li><strong>الاستخدام</strong> (Utilisation): ما النسبة المئوية من الوقت التي يكون فيها المورد مشغولاً؟</li>
+<li><strong>التشبّع</strong> (Saturation): هل هناك عمل ينتظر في طابور بسبب نقص السعة؟</li>
+<li><strong>الأخطاء</strong> (Errors): هل يبلّغ المورد عن أخطاء (حزم مفقودة، أخطاء إدخال/إخراج)؟</li>
+</ul>
+<p>يمكن أن يكون المورد مستخدماً بنسبة 100% دون أي مشكلة، ما دام لا يوجد تشبّع. وعلى العكس، فإن قرصاً مستخدماً بنسبة 60% مع طابور انتظار طويل يُعدّ بالفعل عنق زجاجة.</p>
+
+<h3>الأدوات الأساسية</h3>
 <pre><code># Real-time CPU and memory
 htop
 
@@ -12,20 +23,103 @@ iftop -i eth0
 
 # Resource-hungry processes
 ps aux --sort=-%mem | head -20</code></pre>
+<p>بعض النقاط المرجعية لقراءة هذه المخرجات:</p>
+<ul>
+<li><strong><code>htop</code></strong> يعرض الاستخدام لكل نواة، والذاكرة، والـ swap. رتّب حسب العمود باستخدام <code>F6</code> واعرض شجرة العمليات باستخدام <code>F5</code> لترى أي عملية أب أطلقت أي عمليات أبناء.</li>
+<li><strong><code>iostat -x 1</code></strong> (حزمة <code>sysstat</code>) يتحدّث كل ثانية. راقب <code>%util</code> (نسبة انشغال الجهاز)، و<code>r_await</code> و<code>w_await</code> (متوسط زمن الاستجابة بالمللي ثانية)، و<code>aqu-sz</code> (متوسط حجم طابور الانتظار). ارتفاع زمن الاستجابة مؤشر على التشبّع.</li>
+<li><strong><code>iftop</code></strong> يعرض معدل النقل لكل اتصال. عدّل اسم الواجهة: في التوزيعات الحديثة غالباً ما تسمى <code>ens3</code> أو <code>enp0s3</code> بدلاً من <code>eth0</code> (تحقق باستخدام <code>ip -br link</code>).</li>
+<li><strong><code>ps aux --sort=-%mem</code></strong> يسرد العمليات الأكثر استهلاكاً للذاكرة. استبدله بـ <code>--sort=-%cpu</code> للمعالج.</li>
+</ul>
+
+<h3>قراءة الذاكرة والحمل بشكل صحيح</h3>
+<p>مؤشران يُساء فهمهما كثيراً. أولاً <strong>الذاكرة</strong>: يستخدم Linux الذاكرة الحرة كـ cache للقرص. لذا فإن قيمة <code>free</code> القريبة من الصفر أمر طبيعي. العمود المهم هو <code>available</code>، أي تقدير الذاكرة القابلة للاستخدام دون اللجوء إلى الـ swap.</p>
+<p>ثانياً <strong>متوسط الحمل</strong> (load average): القيم الثلاث التي يعرضها <code>uptime</code> هي متوسطات على مدى 1 و5 و15 دقيقة لعدد العمليات قيد التنفيذ أو المنتظرة للتنفيذ. في Linux، تشمل أيضاً العمليات المحجوبة في انتظار الإدخال/الإخراج. حمل بقيمة 4 على جهاز بأربع أنوية يعني أن المعالج مشغول بالكامل؛ وما فوق ذلك يعني أن هناك مهاماً تنتظر.</p>
+<pre><code># Memory: look at the "available" column, not "free"
+free -h
+
+# Load average over 1, 5 and 15 minutes, and number of cores
+uptime
+nproc
+
+# Summary view every second, 5 times:
+# r = processes waiting for CPU, si/so = swap, wa = I/O wait
+vmstat 1 5
+
+# Resource pressure (kernel 4.20+)
+cat /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io</code></pre>
+<p>في مخرجات <code>vmstat</code>، يشير عمود <code>r</code> الذي يتجاوز باستمرار عدد الأنوية إلى تشبّع المعالج، وتعني القيم غير الصفرية في <code>si</code>/<code>so</code> أن الجهاز يستخدم الـ swap بنشاط، مما يضعف الأداء بشدة. أما ملفات <code>/proc/pressure/*</code> (PSI) فتعطي مباشرة النسبة المئوية من الوقت الذي تأخرت فيه المهام بسبب نقص مورد ما.</p>
+
 <h3>المراقبة باستخدام Prometheus وNode Exporter</h3>
+<p>الأدوات التفاعلية لا تعرض إلا اللحظة الحالية. لفهم تدهور تدريجي أو تحليل حادثة وقعت ليلاً، تحتاج إلى مقاييس محفوظة تاريخياً. أصبح الثنائي <strong>Prometheus</strong> و<strong>Node Exporter</strong> هو المعيار: يعرض Node Exporter مقاييس النظام (المعالج، الذاكرة، الأقراص، الشبكة، أنظمة الملفات) على المنفذ 9100، ويجمعها Prometheus على فترات منتظمة.</p>
 <pre><code># Install Node Exporter
 wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
 tar xvfz node_exporter-*.tar.gz
 sudo mv node_exporter-*/node_exporter /usr/local/bin/</code></pre>
+<p>تحقق من أحدث إصدار على صفحة إصدارات المشروع قبل التثبيت. بعد ذلك، بدلاً من تشغيل الملف التنفيذي يدوياً، شغّله كخدمة systemd تحت مستخدم مخصص بلا shell:</p>
+<pre><code>sudo useradd --system --no-create-home --shell /usr/sbin/nologin node_exporter
+
+# /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Prometheus Node Exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=127.0.0.1:9100
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now node_exporter
+curl -s http://127.0.0.1:9100/metrics | grep node_load1</code></pre>
+<p>الاستماع على <code>127.0.0.1</code> يتجنب كشف المقاييس على الإنترنت. إذا كان Prometheus يعمل على جهاز آخر، فاستمع على الواجهة الخاصة وقيّد الوصول إلى المنفذ 9100 عبر الجدار الناري. من جهة Prometheus، يكفي إضافة هدف:</p>
+<pre><code># prometheus.yml
+scrape_configs:
+  - job_name: node
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['10.0.0.5:9100']</code></pre>
+
 <h3>تنبيهات النظام</h3>
 <p>اضبط تنبيهات للمقاييس الحرجة:</p>
 <ul>
-<li><strong>CPU</strong>: تنبيه عند تجاوز 80% لمدة 5 دقائق</li>
-<li><strong>الذاكرة</strong>: تنبيه عند تجاوز 90%</li>
-<li><strong>القرص</strong>: تنبيه عند تجاوز 85%</li>
-<li><strong>Load average</strong>: تنبيه عند تجاوز عدد وحدات المعالجة (CPUs)</li>
+<li><strong>المعالج</strong>: تنبيه فوق 80% لمدة 5 دقائق</li>
+<li><strong>الذاكرة</strong>: تنبيه فوق 90%</li>
+<li><strong>القرص</strong>: تنبيه فوق 85%</li>
+<li><strong>متوسط الحمل</strong>: تنبيه فوق عدد المعالجات</li>
 </ul>
-<h3>سكربتات مراقبة مخصّصة</h3>
+<p>عند ترجمة هذه العتبات إلى قواعد Prometheus، نحصل على الملف التالي. يفرض البند <code>for</code> أن يبقى الشرط صحيحاً لمدة دنيا، مما يجنّبك الاستيقاظ بسبب ذروة تدوم بضع ثوانٍ:</p>
+<pre><code># /etc/prometheus/rules/node.yml
+groups:
+  - name: node
+    rules:
+      - alert: HighCpuUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) &gt; 80
+        for: 5m
+        labels:
+          severity: warning
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 &gt; 90
+        for: 5m
+        labels:
+          severity: critical
+      - alert: DiskAlmostFull
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 &gt; 85
+        for: 10m
+        labels:
+          severity: warning
+      - alert: HighLoadAverage
+        expr: node_load5 &gt; on (instance) count by (instance) (node_cpu_seconds_total{mode="idle"})
+        for: 10m
+        labels:
+          severity: warning</code></pre>
+<p>تعتمد قاعدة الذاكرة على <code>MemAvailable</code> وليس على الذاكرة الحرة، للأسباب الموضحة أعلاه. وتقارن قاعدة الحمل <code>node_load5</code> بعدد الأنوية، المحسوب من سلاسل المعالج لكل instance. تحقق من صحة الملف باستخدام <code>promtool check rules /etc/prometheus/rules/node.yml</code> قبل إعادة تحميل Prometheus، ثم اترك لـ Alertmanager مهمة إرسال الإشعارات (البريد الإلكتروني، Slack…).</p>
+
+<h3>سكربتات مراقبة مخصصة</h3>
+<p>على خادم صغير منعزل دون منظومة Prometheus، قد يكفي سكربت يشغّله cron لإطلاق الإنذار:</p>
 <pre><code>#!/bin/bash
 # check_resources.sh
 CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}')
@@ -34,6 +128,19 @@ DISK=$(df -h / | awk 'NR==2{print $5}' | tr -d '%')
 
 echo "CPU: ${CPU}% | MEM: ${MEM}% | DISK: ${DISK}%"
 
-if (( $(echo "$CPU > 80" | bc -l) )); then
+if (( $(echo "$CPU &gt; 80" | bc -l) )); then
   echo "ALERT: high CPU!" | mail -s "Server alert" admin@example.com
 fi</code></pre>
+<p>لهذا السكربت بعض الحدود التي يجب معرفتها. قيمة المعالج المستخرجة من <code>top</code> تمثل وقت المستخدم فقط (<code>us</code>)، ويعتمد تنسيق السطر على الإصدار والإعدادات المحلية (locale). والذاكرة المحسوبة هي الذاكرة «المستخدمة» التي تستثني الـ cache. وأخيراً، يفترض الأمر <code>mail</code> وجود وكيل بريد مُعَدّ على الجهاز. يُجدول في crontab:</p>
+<pre><code>*/5 * * * * /usr/local/bin/check_resources.sh &gt;&gt; /var/log/check_resources.log 2&gt;&amp;1</code></pre>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong>كثرة التنبيهات</strong>: التنبيه الذي ينطلق كل يوم دون أي إجراء سرعان ما يُتجاهل. يجب أن يقابل كل تنبيه إجراءً ملموساً.</li>
+<li><strong>المراقبة من الداخل فقط</strong>: قد يمتلك الخادم مقاييس ممتازة ومع ذلك يكون غير قابل للوصول. أضف مسباراً خارجياً على عناوين URL العامة.</li>
+<li><strong>نسيان الـ inodes</strong>: قد تنفد الـ inodes من القرص رغم وجود مساحة حرة، عادةً بسبب ملايين الملفات الصغيرة للجلسات أو الـ cache. تحقق باستخدام <code>df -i</code>.</li>
+<li><strong>تجاهل الاتجاه</strong>: قرص عند 70% يزداد بنسبة 5% يومياً أكثر إلحاحاً من قرص مستقر عند 88%. تتيح دالة <code>predict_linear</code> في Prometheus التنبيه بناءً على تاريخ الامتلاء المتوقع.</li>
+</ul>
+
+<h3>باختصار</h3>
+<p>للتشخيص، اتبع منهجية (الاستخدام، التشبّع، الأخطاء) واقرأ الذاكرة المتاحة والحمل بشكل صحيح. وعلى المدى الطويل، ثبّت Node Exporter كخدمة، واجمع مقاييسه بـ Prometheus، وحدّد عدداً قليلاً من التنبيهات بعتبات ومدد واقعية. أفضل مراقبة ليست تلك التي تقيس كل شيء، بل تلك التي تنبّهك في الوقت المناسب، وفقط عندما يكون ذلك مفيداً.</p>

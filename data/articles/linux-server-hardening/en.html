@@ -1,5 +1,19 @@
 <h2>Securing your Linux server</h2>
-<p>Securing a Linux server is the very first step before any production deployment. Here are the essential measures.</p>
+<p>Securing a Linux server is the first step before any production deployment. A freshly created VPS with a public IP address receives automated SSH login attempts within minutes: bots constantly scan the Internet for weak passwords, misconfigured services and unpatched software. Here are the essential measures, in the order I apply them on a new machine.</p>
+<p>The goal is not to make the server impregnable, which does not exist, but to <strong>reduce the attack surface</strong> and make opportunistic attacks ineffective. The examples below target Debian and Ubuntu; the principles apply to every distribution.</p>
+
+<h3>Preparing a user and an SSH key</h3>
+<p>Before touching the SSH configuration, create an unprivileged user and check that you can log in with a key. This is the step that keeps you from locking yourself out. On your workstation, generate an Ed25519 key if you do not have one, then copy it to the server:</p>
+<pre><code># On the server (as root)
+adduser deploy
+usermod -aG sudo deploy
+
+# On your workstation
+ssh-keygen -t ed25519 -C "deploy@myserver"
+ssh-copy-id -i ~/.ssh/id_ed25519.pub deploy@203.0.113.10
+ssh deploy@203.0.113.10</code></pre>
+<p>Only move on once key-based login works with the new user, and check that it can use <code>sudo</code>.</p>
+
 <h3>SSH configuration</h3>
 <pre><code># /etc/ssh/sshd_config
 PermitRootLogin no
@@ -8,20 +22,80 @@ PubkeyAuthentication yes
 Port 2222
 MaxAuthTries 3
 AllowUsers deploy</code></pre>
+<p>Each directive has a specific role:</p>
+<ul>
+<li><strong><code>PermitRootLogin no</code></strong>: the root account, present on every machine, is the first target of attacks. Administrators log in with their own account and then use <code>sudo</code>, which leaves a named audit trail.</li>
+<li><strong><code>PasswordAuthentication no</code></strong>: without passwords, dictionary attacks become pointless. Also set <code>KbdInteractiveAuthentication no</code>, otherwise password authentication may remain possible through PAM.</li>
+<li><strong><code>Port 2222</code></strong>: changing the port does not protect against a targeted attack, but it greatly reduces the noise in the logs.</li>
+<li><strong><code>MaxAuthTries 3</code></strong>: limits the number of attempts per connection.</li>
+<li><strong><code>AllowUsers deploy</code></strong>: an allowlist of accounts permitted to log in. Any other user is rejected, even with a valid key.</li>
+</ul>
+<p>On recent distributions, you can put these directives in a dedicated file, for example <code>/etc/ssh/sshd_config.d/hardening.conf</code>, rather than editing the main file. Be careful: for each directive, sshd keeps the <em>first</em> value it reads, and included files are read at the beginning. Before restarting, always test the configuration and <strong>keep your current session open</strong>:</p>
+<pre><code>sudo sshd -t &amp;&amp; sudo systemctl restart ssh
+# From a second terminal, before closing the current session:
+ssh -p 2222 deploy@203.0.113.10</code></pre>
+<p>On Ubuntu 24.04, SSH is socket-activated by systemd: after changing the port, run <code>sudo systemctl daemon-reload</code> then <code>sudo systemctl restart ssh.socket</code> so the new port takes effect.</p>
+
 <h3>Firewall with UFW</h3>
+<p>The firewall principle is simple: deny all incoming traffic, then explicitly open only the ports you need. UFW (Uncomplicated Firewall) is a readable layer on top of nftables/iptables, installed by default on Ubuntu.</p>
 <pre><code>sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 2222/tcp    # SSH
 sudo ufw allow 80/tcp      # HTTP
 sudo ufw allow 443/tcp     # HTTPS
 sudo ufw enable</code></pre>
+<p>Order matters: allow the SSH port <strong>before</strong> running <code>ufw enable</code>, otherwise your current connection may be cut. Then check the rules with <code>sudo ufw status verbose</code>. Two useful options:</p>
+<ul>
+<li><code>sudo ufw limit 2222/tcp</code> replaces the <code>allow</code> rule and denies an address that attempts 6 or more connections within 30 seconds.</li>
+<li><code>sudo ufw allow from 10.0.0.0/24 to any port 5432 proto tcp</code> opens a port only for a private network, for example for a database.</li>
+</ul>
+<p>An important trap: <strong>Docker bypasses UFW</strong>. A port published with <code>-p 5432:5432</code> is reachable from the Internet even if UFW does not allow it, because Docker writes its own iptables rules. Publish internal ports on <code>127.0.0.1</code> (<code>-p 127.0.0.1:5432:5432</code>) or do not publish them at all.</p>
+
 <h3>Automatic updates</h3>
+<p>Most compromises exploit known vulnerabilities that have already been fixed. The <code>unattended-upgrades</code> package installs security updates automatically:</p>
 <pre><code>sudo apt install unattended-upgrades
 sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+<p>By default, only security updates are applied. Some of them, kernel updates in particular, only take effect after a reboot. You can allow an automatic reboot at an off-peak time in <code>/etc/apt/apt.conf.d/50unattended-upgrades</code>:</p>
+<pre><code>Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";</code></pre>
+<p>To check the configuration without installing anything: <code>sudo unattended-upgrade --dry-run --debug</code>. On a server that must not reboot on its own, leave this option disabled and watch for the <code>/var/run/reboot-required</code> file.</p>
+
 <h3>Fail2Ban</h3>
 <p>Protect yourself against brute-force attacks:</p>
 <pre><code>sudo apt install fail2ban
 sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
+<p>Fail2Ban reads the logs, spots repeated authentication failures and temporarily bans the offending IP address through the firewall. The <code>jail.conf</code> file can be overwritten by updates: always work in <code>jail.local</code>. Rather than copying the whole file, it is often enough to write only the values you want to override:</p>
+<pre><code># /etc/fail2ban/jail.local
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+backend  = systemd
+
+[sshd]
+enabled = true
+port    = 2222</code></pre>
+<p><code>backend = systemd</code> is required on Debian 12, where SSH logins are logged to journald rather than to <code>/var/log/auth.log</code>. Remember to set the custom SSH port, otherwise the ban would apply to port 22. A few useful commands:</p>
+<pre><code>sudo systemctl restart fail2ban
+sudo fail2ban-client status sshd
+sudo fail2ban-client set sshd unbanip 198.51.100.7</code></pre>
+
+<h3>Reducing the attack surface</h3>
+<p>Every service listening on the network is a potential door. List the open ports and disable anything that is not needed:</p>
+<pre><code>sudo ss -tulpn
+sudo systemctl disable --now cups.service   # example: a useless service on a server</code></pre>
+<p>Databases, Redis and admin interfaces should listen on <code>127.0.0.1</code> or on a private network, never on the public interface. A few kernel parameters also harden the network stack:</p>
+<pre><code># /etc/sysctl.d/99-hardening.conf
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0</code></pre>
+<p>Apply them with <code>sudo sysctl --system</code>.</p>
+
+<h3>Logs and auditing</h3>
+<p>A secure server must also let you understand what happened after the fact. Make the systemd journal persistent (<code>Storage=persistent</code> in <code>/etc/systemd/journald.conf</code>), and ship the logs to a separate machine: an attacker who gains root access can wipe local logs. For regular checks, the <strong>Lynis</strong> tool (<code>sudo lynis audit system</code>) reviews hundreds of configuration points and suggests concrete improvements.</p>
+
 <h3>Security checklist</h3>
 <ul>
 <li>Disable root login over SSH</li>
@@ -29,6 +103,9 @@ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
 <li>Configure a restrictive firewall</li>
 <li>Install and configure Fail2Ban</li>
 <li>Enable automatic security updates</li>
-<li>Set up centralized logging</li>
+<li>Set up centralised logging</li>
 <li>Put system monitoring in place</li>
+<li>Check open ports with <code>ss -tulpn</code> and the ports published by Docker</li>
+<li>Set up off-site backups and test restoring them</li>
 </ul>
+<p>Security is an ongoing process, not a one-off configuration: run an audit again after every significant change and keep access to the strict minimum.</p>

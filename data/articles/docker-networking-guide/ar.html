@@ -1,20 +1,48 @@
 <h2>أوضاع الشبكة في Docker</h2>
-<p>يوفّر Docker عدة مشغّلات شبكة (network drivers)، يناسب كلٌّ منها حالات استخدام محددة.</p>
+<p>يقدّم Docker عدة مشغّلات (drivers) للشبكة، يناسب كلٌّ منها حالات استخدام محددة.</p>
+<p>فهم هذه المشغّلات يجنّبك معظم مشاكل الاتصال التي تصادفها مع الحاويات: تطبيق لا يجد قاعدة بياناته، أو منفذ لا يمكن الوصول إليه من الخارج، أو على العكس قاعدة بيانات مكشوفة على الإنترنت دون قصد. أكثر المشغّلات استخداماً هي <strong>bridge</strong> و<strong>host</strong> و<strong>overlay</strong>؛ ويوجد أيضاً <code>none</code> الذي يقطع كل وصول إلى الشبكة، و<code>macvlan</code> الأقل شيوعاً. الأوامر الأساسية لاستكشاف الموجود:</p>
+<pre><code>docker network ls
+docker network inspect bridge
+docker network inspect mon-reseau --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'</code></pre>
+
 <h3>Bridge (الوضع الافتراضي)</h3>
-<p>ينشئ وضع bridge شبكة معزولة للحاويات الموجودة على المضيف (host) نفسه:</p>
-<pre><code>docker network create --driver bridge my-network
-docker run --network my-network --name app myapp
-docker run --network my-network --name db mysql</code></pre>
-<p>تستطيع الحاويات المتصلة بشبكة bridge نفسها التواصل فيما بينها باستخدام اسم الحاوية كاسم مضيف (hostname).</p>
+<p>ينشئ وضع bridge شبكة معزولة للحاويات على المضيف نفسه:</p>
+<pre><code>docker network create --driver bridge mon-reseau
+docker run --network mon-reseau --name app myapp
+docker run --network mon-reseau --name db mysql</code></pre>
+<p>يمكن للحاويات الموجودة على شبكة bridge نفسها أن تتواصل باستخدام اسم الحاوية كاسم مضيف (hostname).</p>
+<p>تفصيل مهم: لا يعمل هذا التحليل بالاسم إلا على شبكات bridge <strong>التي ينشئها المستخدم</strong>. أما الشبكة الافتراضية <code>bridge</code>، التي تُلحق بها الحاويات المشغّلة دون الخيار <code>--network</code>، فلا توفّر DNS بين الحاويات. وهذا سبب كافٍ لإنشاء شبكاتك الخاصة دائماً، وهو ما يفعله Docker Compose تلقائياً: يحصل كل مشروع على شبكة باسم <code>&lt;project&gt;_default</code>.</p>
+<p>على شبكة bridge، تملك الحاويات عناوين خاصة ولا يمكن الوصول إليها من الخارج. ولجعل خدمة ما قابلة للوصول، <strong>ننشر</strong> منفذاً: يضيف Docker حينها قاعدة NAT من المضيف نحو الحاوية. افتراضياً يُفتح المنفذ على جميع واجهات المضيف؛ حدّد عنواناً لتقييده:</p>
+<pre><code># Reachable from outside on host port 8080
+docker run -d -p 8080:80 --name web nginx:alpine
+
+# Reachable only from the host itself
+docker run -d -p 127.0.0.1:8081:80 --name admin nginx:alpine
+
+# Attach an existing container to a second network
+docker network connect mon-reseau web</code></pre>
+<p>انتبه: قواعد iptables التي ينشئها Docker للمنافذ المنشورة تُطبَّق قبل قواعد جدار حماية مثل UFW. لذا فالمنفذ المنشور على <code>0.0.0.0</code> يمكن الوصول إليه حتى لو بدا أن UFW يحجبه.</p>
+
 <h3>Host</h3>
-<p>يلغي وضع host العزل الشبكي، إذ تستخدم الحاوية شبكة المضيف مباشرة:</p>
+<p>يلغي وضع host عزل الشبكة. تستخدم الحاوية شبكة المضيف مباشرة:</p>
 <pre><code>docker run --network host nginx</code></pre>
 <p>مفيد للحصول على أقصى أداء، لكن دون أي عزل.</p>
+<p>لا يوجد NAT ولا منفذ يجب نشره: يستمع Nginx مباشرة على المنفذ 80 للمضيف، وتُتجاهل خيارات <code>-p</code>. في المقابل، لا يمكن لحاويتين استخدام المنفذ نفسه، وترى الحاوية كل واجهات الشبكة في الجهاز. يُبرَّر هذا الوضع للأدوات التي تحتاج إلى مراقبة شبكة المضيف (وكلاء المراقبة، بعض أدوات VPN) أو لأحمال العمل التي يهم فيها أدنى قدر من زمن الاستجابة. وهو مدعوم بالكامل على Linux؛ أما مع Docker Desktop على macOS وWindows، فتعمل الحاويات داخل آلة افتراضية ولا يكون السلوك نفسه.</p>
+
+<h3>None</h3>
+<p>مع <code>--network none</code> لا تملك الحاوية سوى واجهة loopback. هذا مفيد لمعالجة لا تحتاج إلى أي وصول إلى الشبكة، مثل تحويل ملفات غير موثوقة: حتى لو اختُرقت العملية، فلا يمكنها تسريب أي شيء.</p>
+<pre><code>docker run --rm --network none -v "$PWD/input:/data:ro" alpine ls -l /data</code></pre>
+
 <h3>Overlay</h3>
-<p>في عناقيد Docker Swarm، تتيح شبكة overlay التواصل بين الحاويات الموزعة على عُقد مختلفة:</p>
-<pre><code>docker network create --driver overlay --attachable my-overlay</code></pre>
-<h3>خادم DNS الداخلي</h3>
-<p>يتضمن Docker خادم DNS مدمجاً يتيح الوصول إلى الخدمات بأسمائها:</p>
+<p>بالنسبة لعناقيد Docker Swarm، تتيح شبكة overlay التواصل بين الحاويات الموجودة على عُقد مختلفة:</p>
+<pre><code>docker network create --driver overlay --attachable mon-overlay</code></pre>
+<p>تتطلب شبكة overlay أن يكون المضيف عقدةً في Swarm (<code>docker swarm init</code>). تُغلَّف حركة المرور بين العقد بتقنية VXLAN: يجب فتح المنافذ 2377/tcp (إدارة العنقود) و7946/tcp وudp (اكتشاف العقد) و4789/udp (البيانات) بين الأجهزة. يسمح الخيار <code>--attachable</code> للحاويات المشغّلة بـ <code>docker run</code>، وليس فقط لخدمات Swarm، بالانضمام إلى الشبكة. حركة مرور الإدارة مشفّرة افتراضياً؛ ولتشفير حركة مرور التطبيقات بين العقد أيضاً، أضف <code>--opt encrypted</code>.</p>
+
+<h3>Macvlan</h3>
+<p>يمنح المشغّل <code>macvlan</code> الحاوية عنوان MAC خاصاً بها وعنوان IP على الشبكة الفعلية، كأنها جهاز مستقل. يُستخدم أساساً لدمج تطبيقات قديمة تتوقع عنوان IP مخصصاً. خاصية يجب معرفتها: افتراضياً، لا يستطيع المضيف نفسه التواصل مع حاويات macvlan الخاصة به.</p>
+
+<h3>DNS الداخلي</h3>
+<p>يدمج Docker خادم DNS يتيح التحليل باسم الخدمة:</p>
 <pre><code>services:
   app:
     networks:
@@ -30,10 +58,49 @@ docker run --network my-network --name db mysql</code></pre>
 networks:
   frontend:
   backend:</code></pre>
-<h3>أفضل ممارسات الشبكات</h3>
+<p>داخل كل حاوية، يمكن الوصول إلى خادم DNS هذا على العنوان <code>127.0.0.11</code>. وهو يحلّل أسماء الخدمات وأسماء الحاويات والأسماء المستعارة (aliases) المصرّح بها، لكن فقط للحاويات التي تتشارك شبكة. في المثال أعلاه، يستطيع <code>app</code> الوصول إلى <code>nginx</code> و<code>db</code>، بينما لا يستطيع <code>nginx</code> تحليل <code>db</code>: فلا يملك Nginx مخترَق أي طريق مباشر إلى قاعدة البيانات. وإذا وُسِّعت خدمة على عدة حاويات، يعيد اسمها عدة عناوين.</p>
+<p>وللذهاب أبعد، صرّح بشبكة backend على أنها <strong>داخلية</strong> (دون وصول إلى الخارج)، وشارك مع الوكيل العكسي شبكةً أُنشئت خارج المشروع:</p>
+<pre><code>networks:
+  frontend:
+  backend:
+    internal: true
+  proxy:
+    external: true</code></pre>
+<p>لتشخيص مشكلة في التحليل أو الاتصال، شغّل حاوية أدوات على الشبكة نفسها بدلاً من تثبيت حزم في صورك:</p>
+<pre><code>docker run --rm -it --network mon-reseau nicolaka/netshoot
+# Then, inside the container:
+dig db
+nc -zv db 3306</code></pre>
+
+<h3>تعارض الشبكات الفرعية</h3>
+<p>يخصّص Docker لكل شبكة شبكة فرعية خاصة، غالباً ضمن <code>172.17.0.0/16</code> وما بعدها. إذا كانت شبكة مؤسستك أو الـ VPN الخاص بك تستخدم هذه النطاقات مسبقاً، تصبح بعض الوجهات غير قابلة للوصول من المضيف. الحل هو تعريف نطاقات مخصصة في <code>/etc/docker/daemon.json</code>، ثم إعادة تشغيل Docker وإعادة إنشاء الشبكات:</p>
+<pre><code>{
+  "default-address-pools": [
+    { "base": "10.200.0.0/16", "size": 24 }
+  ]
+}</code></pre>
+
+<h3>ملخّص المشغّلات</h3>
+<table>
+<thead>
+<tr><th>المشغّل</th><th>النطاق</th><th>حالة الاستخدام</th></tr>
+</thead>
+<tbody>
+<tr><td>bridge</td><td>مضيف واحد</td><td>الحالة العامة، تطبيقات Compose</td></tr>
+<tr><td>host</td><td>مضيف واحد</td><td>أقصى أداء، أدوات الشبكة</td></tr>
+<tr><td>none</td><td>حاوية واحدة</td><td>معالجة دون وصول إلى الشبكة</td></tr>
+<tr><td>overlay</td><td>عدة مضيفين</td><td>عناقيد Docker Swarm</td></tr>
+<tr><td>macvlan</td><td>الشبكة الفعلية</td><td>تطبيقات تتطلب عنوان IP مخصصاً</td></tr>
+</tbody>
+</table>
+
+<h3>الممارسات الجيدة للشبكة</h3>
 <ul>
 <li>اعزل الخدمات حسب الشبكة (frontend، backend، monitoring)</li>
-<li>استخدم شبكات داخلية للخدمات غير المكشوفة للخارج</li>
-<li>وثّق طوبولوجيا الشبكات لديك</li>
-<li>قلّص المنافذ (ports) المكشوفة إلى الحد الأدنى الضروري</li>
+<li>استخدم شبكات داخلية للخدمات غير المكشوفة</li>
+<li>وثّق بنية شبكاتك</li>
+<li>قلّص المنافذ المكشوفة إلى الحد الأدنى الضروري</li>
+<li>استخدم أسماء الخدمات بدلاً من عناوين IP التي تتغير مع كل إعادة إنشاء للحاوية</li>
+<li>اربط بـ <code>127.0.0.1</code> المنافذ التي لا يُراد استخدامها إلا محلياً</li>
 </ul>
+<p>لأمن الحاويات فيما يتجاوز الشبكة، راجع مقال <a href="/blog/docker-security-best-practices">تأمين حاويات Docker</a>.</p>

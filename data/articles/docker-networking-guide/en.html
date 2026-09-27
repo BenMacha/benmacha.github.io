@@ -1,20 +1,48 @@
 <h2>Docker network modes</h2>
 <p>Docker offers several network drivers, each suited to specific use cases.</p>
+<p>Understanding these drivers avoids most of the connectivity problems you run into with containers: an application that cannot find its database, a port that cannot be reached from outside, or, on the contrary, a database exposed to the Internet without anyone intending it. The most widely used drivers are <strong>bridge</strong>, <strong>host</strong> and <strong>overlay</strong>; there is also <code>none</code>, which cuts off all network access, and the rarer <code>macvlan</code>. The basic commands to explore what already exists:</p>
+<pre><code>docker network ls
+docker network inspect bridge
+docker network inspect mon-reseau --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'</code></pre>
+
 <h3>Bridge (default)</h3>
 <p>Bridge mode creates an isolated network for containers on the same host:</p>
-<pre><code>docker network create --driver bridge my-network
-docker run --network my-network --name app myapp
-docker run --network my-network --name db mysql</code></pre>
-<p>Containers on the same bridge network can reach each other using their container name as the hostname.</p>
+<pre><code>docker network create --driver bridge mon-reseau
+docker run --network mon-reseau --name app myapp
+docker run --network mon-reseau --name db mysql</code></pre>
+<p>Containers on the same bridge network can communicate using their container name as the hostname.</p>
+<p>An important nuance: this name resolution only works on <strong>user-defined</strong> bridge networks. The default <code>bridge</code> network, to which containers started without a <code>--network</code> option are attached, provides no DNS between containers. That alone is reason enough to always create your own networks, which Docker Compose does automatically: each project gets a network named <code>&lt;project&gt;_default</code>.</p>
+<p>On a bridge network, containers have private addresses and cannot be reached from outside. To make a service reachable, you <strong>publish</strong> a port: Docker then adds a NAT rule from the host to the container. By default, the port is opened on every host interface; specify an address to restrict it:</p>
+<pre><code># Reachable from outside on host port 8080
+docker run -d -p 8080:80 --name web nginx:alpine
+
+# Reachable only from the host itself
+docker run -d -p 127.0.0.1:8081:80 --name admin nginx:alpine
+
+# Attach an existing container to a second network
+docker network connect mon-reseau web</code></pre>
+<p>Be careful: the iptables rules Docker creates for published ports apply before those of a firewall such as UFW. A port published on <code>0.0.0.0</code> is therefore reachable even if UFW seems to block it.</p>
+
 <h3>Host</h3>
 <p>Host mode removes network isolation. The container uses the host's network directly:</p>
 <pre><code>docker run --network host nginx</code></pre>
-<p>Useful for maximum performance, but with no isolation.</p>
+<p>Useful for maximum performance, but without isolation.</p>
+<p>There is no NAT and no port to publish: Nginx listens directly on the host's port 80, and <code>-p</code> options are ignored. On the other hand, two containers cannot use the same port, and the container sees every network interface of the machine. This mode makes sense for tools that need to observe the host's network (monitoring agents, some VPN tools) or for workloads where every bit of latency counts. It is fully supported on Linux; with Docker Desktop on macOS and Windows, containers run inside a VM and the behaviour is not the same.</p>
+
+<h3>None</h3>
+<p>With <code>--network none</code>, the container only has a loopback interface. This is useful for processing that needs no network access at all, for example converting untrusted files: even if compromised, the process cannot exfiltrate anything.</p>
+<pre><code>docker run --rm --network none -v "$PWD/input:/data:ro" alpine ls -l /data</code></pre>
+
 <h3>Overlay</h3>
-<p>For Docker Swarm clusters, the overlay network lets containers communicate across different nodes:</p>
-<pre><code>docker network create --driver overlay --attachable my-overlay</code></pre>
+<p>For Docker Swarm clusters, the overlay network enables communication between containers on different nodes:</p>
+<pre><code>docker network create --driver overlay --attachable mon-overlay</code></pre>
+<p>An overlay network requires the host to be a Swarm node (<code>docker swarm init</code>). Traffic between nodes is encapsulated in VXLAN: ports 2377/tcp (cluster management), 7946/tcp and udp (node discovery) and 4789/udp (data) must be open between the machines. The <code>--attachable</code> option lets containers started with <code>docker run</code>, not just Swarm services, join the network. Management traffic is encrypted by default; to also encrypt application traffic between nodes, add <code>--opt encrypted</code>.</p>
+
+<h3>Macvlan</h3>
+<p>The <code>macvlan</code> driver gives the container its own MAC address and an IP address on the physical network, as if it were a separate machine. It is mainly used to integrate legacy applications that expect a dedicated IP. One quirk to know: by default, the host itself cannot communicate with its macvlan containers.</p>
+
 <h3>Internal DNS</h3>
-<p>Docker ships with a built-in DNS server that resolves services by name:</p>
+<p>Docker includes a DNS server that resolves service names:</p>
 <pre><code>services:
   app:
     networks:
@@ -30,10 +58,49 @@ docker run --network my-network --name db mysql</code></pre>
 networks:
   frontend:
   backend:</code></pre>
+<p>Inside every container, this DNS server is reachable at <code>127.0.0.11</code>. It resolves service names, container names and any declared aliases, but only for containers that share a network. In the example above, <code>app</code> can reach <code>nginx</code> and <code>db</code>, while <code>nginx</code> cannot resolve <code>db</code>: a compromised Nginx has no direct path to the database. If a service is scaled to several containers, its name returns several addresses.</p>
+<p>To go further, declare the backend network as <strong>internal</strong> (no outbound access) and share a network created outside the project with a reverse proxy:</p>
+<pre><code>networks:
+  frontend:
+  backend:
+    internal: true
+  proxy:
+    external: true</code></pre>
+<p>To diagnose a resolution or connectivity problem, start a tools container on the same network rather than installing packages in your images:</p>
+<pre><code>docker run --rm -it --network mon-reseau nicolaka/netshoot
+# Then, inside the container:
+dig db
+nc -zv db 3306</code></pre>
+
+<h3>Subnet conflicts</h3>
+<p>Docker assigns each network a private subnet, often in <code>172.17.0.0/16</code> and beyond. If your corporate network or your VPN already uses these ranges, some destinations become unreachable from the host. The fix is to define dedicated ranges in <code>/etc/docker/daemon.json</code>, then restart Docker and recreate the networks:</p>
+<pre><code>{
+  "default-address-pools": [
+    { "base": "10.200.0.0/16", "size": 24 }
+  ]
+}</code></pre>
+
+<h3>Driver summary</h3>
+<table>
+<thead>
+<tr><th>Driver</th><th>Scope</th><th>Use case</th></tr>
+</thead>
+<tbody>
+<tr><td>bridge</td><td>One host</td><td>General case, Compose applications</td></tr>
+<tr><td>host</td><td>One host</td><td>Maximum performance, network tools</td></tr>
+<tr><td>none</td><td>One container</td><td>Processing with no network access</td></tr>
+<tr><td>overlay</td><td>Several hosts</td><td>Docker Swarm clusters</td></tr>
+<tr><td>macvlan</td><td>Physical network</td><td>Applications that require a dedicated IP</td></tr>
+</tbody>
+</table>
+
 <h3>Networking best practices</h3>
 <ul>
 <li>Isolate services by network (frontend, backend, monitoring)</li>
 <li>Use internal networks for services that are not exposed</li>
 <li>Document your network topologies</li>
 <li>Keep exposed ports to the bare minimum</li>
+<li>Use service names rather than IP addresses, which change every time a container is recreated</li>
+<li>Bind ports that are only meant for local use to <code>127.0.0.1</code></li>
 </ul>
+<p>For container security beyond networking, see the article <a href="/blog/docker-security-best-practices">Securing your Docker containers</a>.</p>

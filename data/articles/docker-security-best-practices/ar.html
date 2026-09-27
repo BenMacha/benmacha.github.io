@@ -1,27 +1,74 @@
-<h2>تأمين حاويات Docker الخاصة بك</h2>
-<p>أمان الحاويات موضوع بالغ الأهمية. إليك الممارسات الأساسية لحماية تطبيقاتك المعبّأة في حاويات.</p>
-<h3>مبدأ الحد الأدنى من الصلاحيات</h3>
+<h2>تأمين حاويات Docker</h2>
+<p>أمن الحاويات موضوع بالغ الأهمية. إليك الممارسات الأساسية لحماية تطبيقاتك العاملة داخل حاويات.</p>
+<p>الحاوية ليست آلة افتراضية: جميع الحاويات على المضيف نفسه تتشارك <strong>نواة Linux واحدة</strong>. يعتمد العزل على namespaces وcgroups وcapabilities وملفات seccomp. هذا العزل فعّال، لكن كل إعداد متساهل أكثر من اللازم (عملية تعمل بصلاحيات root، أو capabilities زائدة، أو socket لـ Docker مركّب داخل الحاوية، أو منفذ مفتوح) يوسّع ما يستطيع المهاجم فعله بعد اختراق تطبيق ما. الهدف إذن هو تقليص سطح الهجوم طبقةً بعد طبقة: الصورة، والمستخدم، والصلاحيات أثناء التشغيل، والشبكة، والأسرار.</p>
+
+<h3>مبدأ أدنى الصلاحيات</h3>
 <pre><code># NEVER run as root
 FROM php:8.3-fpm-alpine
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
 USER appuser
 WORKDIR /app
 COPY --chown=appuser:appgroup . .</code></pre>
-<h3>فحص الثغرات الأمنية</h3>
-<p>أدمج أداة لفحص الثغرات في خط الأنابيب (pipeline) الخاص بك:</p>
+<p>افتراضياً، تعمل العملية داخل الحاوية بصلاحيات <strong>root</strong>. إذا اختُرق التطبيق (حقن أوامر، أو اعتمادية مصابة بثغرة)، يصبح المهاجم root داخل الحاوية، فيستطيع تعديل الشيفرة وتثبيت أدوات، ويكون في موقع أفضل لمحاولة الهروب نحو المضيف. مع <code>USER</code> تعمل العملية الرئيسية بمستخدم نظام بلا صلاحيات، أُنشئ هنا بخيارات <code>-S</code> الخاصة بـ Alpine.</p>
+<p>تفصيلتان بخصوص PHP-FPM: بما أن العملية الرئيسية لم تعد root، فلا يمكنها تغيير المستخدم، وتُتجاهل تعليمات <code>user</code>/<code>group</code> الخاصة بالـ pool (مع مجرد تحذير في السجلات). ويجب أيضاً أن تستمع على منفذ أعلى من 1024، وهو حال المنفذ الافتراضي 9000. وأخيراً، يمنح <code>COPY --chown</code> ملكية الملفات لمستخدم التطبيق؛ وإذا لم تكن الشيفرة بحاجة إلى أن تكون قابلة للتعديل، فالأفضل تركها مملوكة لـ root وعدم فتح الكتابة إلا لمجلدات الـ cache والسجلات.</p>
+<p>ينطبق مبدأ أدنى الصلاحيات أيضاً أثناء التشغيل. يمنح Docker افتراضياً مجموعة من capabilities الخاصة بـ Linux لا يحتاجها تطبيق ويب تقريباً أبداً. انزعها كلها، وامنع رفع الصلاحيات، واجعل نظام الملفات للقراءة فقط:</p>
+<pre><code>services:
+  app:
+    image: registry.example.com/myapp:1.4.2
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/var
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true</code></pre>
+<p>يمنع الخيار <code>no-new-privileges</code> أي ملف تنفيذي من نوع setuid من رفع صلاحيات العملية. ويمنع وضع <code>read_only</code> الكتابة في كل مكان باستثناء نقاط <code>tmpfs</code> المصرّح بها: هنا <code>/tmp</code> ومجلد <code>var/</code> الخاص بـ Symfony (الـ cache والسجلات). إذا كان تطبيقك يكتب في مكان آخر فسيفشل عند الإقلاع، وهي طريقة ممتازة لاكتشاف ما يفعله فعلاً. لا تشغّل أبداً حاوية بالخيار <code>--privileged</code> في الإنتاج: فهذا الخيار يعطّل معظم العزل.</p>
+
+<h3>حماية socket الخاص بـ Docker</h3>
+<p>تركيب <code>/var/run/docker.sock</code> داخل حاوية يعني منحها السيطرة الكاملة على المضيف: إذ يمكنها تشغيل حاوية ذات صلاحيات كاملة تركّب نظام الملفات الجذري. احصره في الأدوات النادرة التي تحتاجه فعلاً (وكيل عكسي، وكيل مراقبة)، للقراءة فقط، ويُفضَّل خلف وكيل socket يرشّح الاستدعاءات المسموح بها. وللسبب نفسه، إضافة مستخدم إلى المجموعة <code>docker</code> تعادل منحه صلاحيات root. أما وضع <strong>rootless</strong> في Docker، حيث تعمل الخدمة نفسها دون صلاحيات، فيقلّص هذا الأثر كثيراً.</p>
+
+<h3>فحص الثغرات</h3>
+<p>أدمج أداة لفحص الثغرات في خط الـ CI الخاص بك:</p>
 <pre><code># With Trivy
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
   aquasec/trivy image myapp:latest
 
 # With Docker Scout
 docker scout cves myapp:latest</code></pre>
-<h3>الشبكات والعزل</h3>
+<p>تقارن هذه الأدوات حزم النظام واعتماديات التطبيق (بما فيها <code>composer.lock</code>) بقواعد بيانات الثغرات المعروفة (CVE). ولكي يكون الفحص مفيداً، يجب أن <strong>يوقف</strong> خط الـ CI عندما يجد ثغرة خطيرة. مع Trivy يمكن ضبط رمز الخروج:</p>
+<pre><code>trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+  registry.example.com/myapp:1.4.2</code></pre>
+<p>يستبعد الخيار <code>--ignore-unfixed</code> الثغرات التي لا يوجد لها إصلاح بعد، حتى لا يتوقف خط الـ CI بسبب تنبيهات لا يمكن معالجتها. افحص أيضاً بشكل دوري الصور العاملة في الإنتاج: تُنشر ثغرات جديدة كل يوم لحزم كانت سليمة لحظة البناء. وأعد بناء صورك بانتظام للحصول على إصلاحات الصورة الأساسية.</p>
+
+<h3>الشبكة والعزل</h3>
 <ul>
 <li>أنشئ شبكات مخصصة لعزل الخدمات</li>
 <li>لا تكشف أبداً منافذ قواعد البيانات</li>
-<li>استخدم أسرار Docker (secrets) بدلاً من متغيرات البيئة للبيانات الحساسة</li>
-<li>فعّل وضع القراءة فقط (read-only) للحاويات عديمة الحالة (stateless)</li>
+<li>استخدم أسرار Docker بدلاً من متغيرات البيئة للبيانات الحساسة</li>
+<li>فعّل وضع القراءة فقط (read-only) للحاويات عديمة الحالة</li>
 </ul>
+<p>الشبكة المعرّفة بـ <code>internal: true</code> ليس لها أي وصول إلى الخارج: يمكن لقاعدة البيانات أن تتحاور عليها مع التطبيق، لكن لا يمكن الوصول إليها من الإنترنت ولا يمكنها فتح اتصال صادر. الوكيل العكسي وحده منشور على المضيف:</p>
+<pre><code>services:
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "443:443"
+    networks: [frontend]
+  app:
+    image: registry.example.com/myapp:1.4.2
+    networks: [frontend, backend]
+  db:
+    image: mysql:8.4
+    networks: [backend]
+
+networks:
+  frontend:
+  backend:
+    internal: true</code></pre>
+<p>تذكّر أن المنافذ التي ينشرها Docker تُفتح عبر قواعد iptables تُقيَّم غالباً قبل قواعد UFW: المنفذ المنشور يمكن الوصول إليه حتى لو بدا أن الجدار الناري يحجبه. إذا كان يجب الوصول إلى خدمة من المضيف فقط، فانشرها على <code>127.0.0.1</code>. طريقة عمل الشبكات مفصّلة في <a href="/blog/docker-networking-guide">دليل شبكات Docker</a>.</p>
+
 <h3>إدارة الأسرار</h3>
 <pre><code>services:
   app:
@@ -34,5 +81,48 @@ secrets:
     file: ./secrets/db_password.txt
   api_key:
     external: true</code></pre>
+<p>تتسرّب متغيرات البيئة بسهولة: فهي تظهر في <code>docker inspect</code>، وترثها كل العمليات الفرعية، وتنتهي أحياناً في تقارير الأخطاء. أما السر فيُركَّب كملف في <code>/run/secrets/&lt;name&gt;</code>، ولا يمكن قراءته إلا في الحاويات التي تصرّح به. يُقرأ سر من نوع <code>file</code> من المضيف (ويجب بالطبع ألا يُرفع الملف إلى المستودع)؛ أما السر من نوع <code>external</code> فيجب أن يكون موجوداً مسبقاً في العنقود (<code>docker secret create</code>)، وهذا يفترض استخدام Docker Swarm.</p>
+<p>تقبل كثير من الصور الرسمية متغيرات تنتهي باللاحقة <code>_FILE</code> (مثل <code>MYSQL_PASSWORD_FILE</code>). ومن جهة Symfony، تقرأ معالجات متغيرات البيئة <code>file</code> و<code>trim</code> الملف مباشرة:</p>
+<pre><code># config/packages/doctrine.yaml
+parameters:
+    env(DB_PASSWORD_FILE): '/run/secrets/db_password'
+
+doctrine:
+    dbal:
+        driver: pdo_mysql
+        host: db
+        dbname: app
+        user: app
+        password: '%env(trim:file:DB_PASSWORD_FILE)%'</code></pre>
+<p>انتبه أيضاً إلى الأسرار اللازمة أثناء البناء (رمز وصول إلى مستودع Composer خاص مثلاً). يبقى <code>ARG</code> أو <code>ENV</code> ظاهراً في سجلّ الصورة. استخدم بدلاً من ذلك تركيب سر عبر BuildKit، والذي لا يُكتب أبداً في أي طبقة:</p>
+<pre><code># syntax=docker/dockerfile:1
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN --mount=type=secret,id=composer_auth,target=/app/auth.json \
+    composer install --no-dev --no-scripts --prefer-dist
+
+# Build: docker build --secret id=composer_auth,src=$HOME/.composer/auth.json .</code></pre>
+
 <h3>صور موثوقة</h3>
-<p>استخدم فقط الصور الرسمية أو المُتحقَّق منها. ثبّت الإصدارات الدقيقة بدلاً من استخدام <code>latest</code>. ووقّع صورك باستخدام Docker Content Trust.</p>
+<p>استخدم فقط الصور الرسمية أو الموثّقة. ثبّت الإصدارات بدقة بدلاً من استخدام <code>latest</code>. وقّع صورك باستخدام Docker Content Trust.</p>
+<p>الوسم مثل <code>php:8.3-fpm-alpine</code> متحرك: يشير إلى صورة جديدة مع كل تحديث. لقابلية إعادة إنتاج كاملة، ثبّت الـ <strong>digest</strong> (<code>FROM php:8.3-fpm-alpine@sha256:…</code>) ودع أداة مثل Renovate أو Dependabot تقترح التحديثات. أما التوقيع، فيعتمد Docker Content Trust على Notary v1 الذي تتخلى عنه Docker تدريجياً؛ ولتوقيع صورك الخاصة، يُعدّ <strong>Sigstore Cosign</strong> اليوم الخيار الأكثر انتشاراً:</p>
+<pre><code># Find out an image's digest
+docker buildx imagetools inspect php:8.3-fpm-alpine
+
+# Sign then verify an image with Cosign
+cosign sign --key cosign.key registry.example.com/myapp:1.4.2
+cosign verify --key cosign.pub registry.example.com/myapp:1.4.2</code></pre>
+<p>وأخيراً، اختر صوراً أساسية مصغّرة (Alpine أو نسخ <code>slim</code> أو صور distroless): كل حزمة غائبة هي ثغرة محتملة أقل.</p>
+
+<h3>قائمة التحقق</h3>
+<ul>
+<li>صورة أساسية مصغّرة، بإصدار محدد، يُعاد بناؤها بانتظام</li>
+<li>عملية لا تعمل بصلاحيات root، مع نزع الـ capabilities و<code>no-new-privileges</code></li>
+<li>نظام ملفات للقراءة فقط للحاويات عديمة الحالة</li>
+<li>فحص ثغرات يوقف خط الـ CI</li>
+<li>شبكات منفصلة، وقواعد بيانات غير منشورة</li>
+<li>أسرار على شكل ملفات، لا في الصورة ولا في المستودع أبداً</li>
+<li>لا يُركَّب socket الخاص بـ Docker أبداً في حاوية تطبيق</li>
+</ul>
+<p>لا يكفي أيٌّ من هذه الإجراءات وحده، لكن اجتماعها يحوّل اختراق تطبيق ما إلى حادث محصور بدلاً من سيطرة كاملة على الخادم.</p>

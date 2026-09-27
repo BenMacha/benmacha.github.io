@@ -1,12 +1,34 @@
 <h2>Sécuriser vos conteneurs Docker</h2>
 <p>La sécurité des conteneurs est un sujet critique. Voici les pratiques essentielles pour protéger vos applications conteneurisées.</p>
+<p>Un conteneur n'est pas une machine virtuelle : tous les conteneurs d'un hôte partagent le <strong>même noyau Linux</strong>. L'isolation repose sur les namespaces, les cgroups, les capabilities et les profils seccomp. Elle est efficace, mais chaque réglage trop permissif (processus root, capabilities superflues, socket Docker monté, port ouvert) élargit ce qu'un attaquant peut faire après avoir compromis une application. L'objectif est donc de réduire, couche par couche, la surface d'attaque : l'image, l'utilisateur, les droits à l'exécution, le réseau et les secrets.</p>
+
 <h3>Principe du moindre privilège</h3>
 <pre><code># Ne JAMAIS exécuter en root
 FROM php:8.3-fpm-alpine
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
 USER appuser
 WORKDIR /app
 COPY --chown=appuser:appgroup . .</code></pre>
+<p>Par défaut, un processus dans un conteneur tourne en <strong>root</strong>. Si l'application est compromise (injection de commande, dépendance vulnérable), l'attaquant est root dans le conteneur, peut modifier le code, installer des outils, et se trouve en meilleure position pour tenter une évasion vers l'hôte. Avec <code>USER</code>, le processus principal tourne sous un utilisateur système sans privilèges, créé ici avec les options <code>-S</code> d'Alpine.</p>
+<p>Deux détails pour PHP-FPM : le processus maître n'étant plus root, il ne peut pas changer d'utilisateur, et les directives <code>user</code>/<code>group</code> du pool sont ignorées (avec un simple avertissement dans les logs). Il doit aussi écouter sur un port supérieur à 1024, ce qui est le cas du port 9000 par défaut. Enfin, <code>COPY --chown</code> donne la propriété des fichiers à l'utilisateur applicatif ; si le code n'a pas besoin d'être modifiable, il est même préférable de le laisser appartenir à root et de n'ouvrir en écriture que les répertoires de cache et de logs.</p>
+<p>Le moindre privilège s'applique aussi à l'exécution. Docker accorde par défaut un ensemble de capabilities Linux dont une application web n'a presque jamais besoin. Retirez-les toutes, interdisez l'élévation de privilèges et rendez le système de fichiers en lecture seule :</p>
+<pre><code>services:
+  app:
+    image: registry.example.com/myapp:1.4.2
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/var
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true</code></pre>
+<p>L'option <code>no-new-privileges</code> empêche un binaire setuid d'augmenter les droits du processus. Le mode <code>read_only</code> bloque l'écriture partout sauf dans les <code>tmpfs</code> déclarés : ici <code>/tmp</code> et le répertoire <code>var/</code> de Symfony (cache et logs). Si votre application écrit ailleurs, elle échouera au démarrage, ce qui est un excellent moyen de découvrir ce qu'elle fait réellement. Ne lancez jamais un conteneur avec <code>--privileged</code> en production : cette option désactive l'essentiel de l'isolation.</p>
+
+<h3>Protéger le socket Docker</h3>
+<p>Monter <code>/var/run/docker.sock</code> dans un conteneur revient à lui donner le contrôle total de l'hôte : il peut lancer un conteneur privilégié qui monte le système de fichiers racine. Réservez-le aux rares outils qui en ont réellement besoin (reverse proxy, agent de monitoring), en lecture seule et idéalement derrière un proxy de socket qui filtre les appels autorisés. Pour la même raison, ajouter un utilisateur au groupe <code>docker</code> équivaut à lui donner les droits root. Le mode <strong>rootless</strong> de Docker, où le démon lui-même tourne sans privilèges, réduit fortement cet impact.</p>
+
 <h3>Scanner les vulnérabilités</h3>
 <p>Intégrez un scanner de vulnérabilités dans votre pipeline :</p>
 <pre><code># Avec Trivy
@@ -15,6 +37,11 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 
 # Avec Docker Scout
 docker scout cves myapp:latest</code></pre>
+<p>Ces outils comparent les paquets du système et les dépendances applicatives (y compris le <code>composer.lock</code>) à des bases de CVE connues. Pour qu'un scan serve à quelque chose, il doit <strong>bloquer</strong> le pipeline quand il trouve une faille grave. Avec Trivy, le code de sortie est configurable :</p>
+<pre><code>trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+  registry.example.com/myapp:1.4.2</code></pre>
+<p><code>--ignore-unfixed</code> écarte les vulnérabilités pour lesquelles aucun correctif n'existe encore, afin de ne pas bloquer le pipeline sur des alertes impossibles à traiter. Scannez aussi périodiquement les images déjà en production : de nouvelles CVE sont publiées chaque jour pour des paquets qui étaient sains au moment du build. Et reconstruisez régulièrement vos images pour récupérer les correctifs de l'image de base.</p>
+
 <h3>Réseau et isolation</h3>
 <ul>
 <li>Créez des réseaux dédiés pour isoler les services</li>
@@ -22,6 +49,26 @@ docker scout cves myapp:latest</code></pre>
 <li>Utilisez des secrets Docker plutôt que des variables d'environnement pour les données sensibles</li>
 <li>Activez le mode read-only pour les conteneurs stateless</li>
 </ul>
+<p>Un réseau déclaré avec <code>internal: true</code> n'a aucun accès vers l'extérieur : la base de données peut y dialoguer avec l'application, mais ne peut ni être jointe depuis Internet ni initier de connexion sortante. Seul le reverse proxy est publié sur l'hôte :</p>
+<pre><code>services:
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "443:443"
+    networks: [frontend]
+  app:
+    image: registry.example.com/myapp:1.4.2
+    networks: [frontend, backend]
+  db:
+    image: mysql:8.4
+    networks: [backend]
+
+networks:
+  frontend:
+  backend:
+    internal: true</code></pre>
+<p>Rappelez-vous que les ports publiés par Docker sont ouverts via des règles iptables qui passent souvent avant celles d'UFW : un port publié est accessible même si le pare-feu semble le bloquer. Si un service doit être joignable depuis l'hôte uniquement, publiez-le sur <code>127.0.0.1</code>. Le fonctionnement des réseaux est détaillé dans le <a href="/blog/docker-networking-guide">guide du réseau Docker</a>.</p>
+
 <h3>Gestion des secrets</h3>
 <pre><code>services:
   app:
@@ -34,5 +81,48 @@ secrets:
     file: ./secrets/db_password.txt
   api_key:
     external: true</code></pre>
+<p>Les variables d'environnement fuient facilement : elles apparaissent dans <code>docker inspect</code>, sont héritées par tous les processus enfants et finissent parfois dans des rapports d'erreur. Un secret est monté sous forme de fichier dans <code>/run/secrets/&lt;nom&gt;</code>, lisible uniquement dans les conteneurs qui le déclarent. Un secret <code>file</code> est lu depuis l'hôte (le fichier ne doit évidemment pas être commité) ; un secret <code>external</code> doit déjà exister dans le cluster (<code>docker secret create</code>), ce qui suppose Docker Swarm.</p>
+<p>Beaucoup d'images officielles acceptent des variables suffixées par <code>_FILE</code> (par exemple <code>MYSQL_PASSWORD_FILE</code>). Côté Symfony, les processeurs de variables d'environnement <code>file</code> et <code>trim</code> lisent directement le fichier :</p>
+<pre><code># config/packages/doctrine.yaml
+parameters:
+    env(DB_PASSWORD_FILE): '/run/secrets/db_password'
+
+doctrine:
+    dbal:
+        driver: pdo_mysql
+        host: db
+        dbname: app
+        user: app
+        password: '%env(trim:file:DB_PASSWORD_FILE)%'</code></pre>
+<p>Attention aussi aux secrets nécessaires pendant le build (jeton d'accès à un dépôt Composer privé, par exemple). Un <code>ARG</code> ou un <code>ENV</code> reste visible dans l'historique de l'image. Utilisez plutôt un montage de secret BuildKit, qui n'est jamais écrit dans une couche :</p>
+<pre><code># syntax=docker/dockerfile:1
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN --mount=type=secret,id=composer_auth,target=/app/auth.json \
+    composer install --no-dev --no-scripts --prefer-dist
+
+# Build : docker build --secret id=composer_auth,src=$HOME/.composer/auth.json .</code></pre>
+
 <h3>Images de confiance</h3>
 <p>Utilisez uniquement des images officielles ou vérifiées. Épinglez les versions exactes plutôt que d'utiliser <code>latest</code>. Signez vos images avec Docker Content Trust.</p>
+<p>Un tag comme <code>php:8.3-fpm-alpine</code> est mobile : il pointe vers une nouvelle image à chaque mise à jour. Pour une reproductibilité totale, épinglez le <strong>digest</strong> (<code>FROM php:8.3-fpm-alpine@sha256:…</code>) et laissez un outil comme Renovate ou Dependabot proposer les mises à jour. Côté signature, Docker Content Trust repose sur Notary v1, que Docker est en train d'abandonner ; pour signer vos propres images, <strong>Sigstore Cosign</strong> est aujourd'hui l'option la plus répandue :</p>
+<pre><code># Connaître le digest d'une image
+docker buildx imagetools inspect php:8.3-fpm-alpine
+
+# Signer puis vérifier une image avec Cosign
+cosign sign --key cosign.key registry.example.com/myapp:1.4.2
+cosign verify --key cosign.pub registry.example.com/myapp:1.4.2</code></pre>
+<p>Choisissez enfin des images de base minimales (Alpine, variantes <code>slim</code> ou images distroless) : chaque paquet absent est une vulnérabilité potentielle en moins.</p>
+
+<h3>Checklist</h3>
+<ul>
+<li>Image de base minimale, versionnée, reconstruite régulièrement</li>
+<li>Processus non-root, capabilities retirées, <code>no-new-privileges</code></li>
+<li>Système de fichiers en lecture seule pour les conteneurs sans état</li>
+<li>Scan de vulnérabilités bloquant dans la CI</li>
+<li>Réseaux séparés, bases de données non publiées</li>
+<li>Secrets en fichiers, jamais dans l'image ni dans le dépôt</li>
+<li>Socket Docker jamais monté dans un conteneur applicatif</li>
+</ul>
+<p>Aucune de ces mesures n'est suffisante seule, mais leur combinaison transforme la compromission d'une application en incident contenu plutôt qu'en prise de contrôle du serveur.</p>

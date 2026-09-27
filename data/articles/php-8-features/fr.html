@@ -1,20 +1,49 @@
 <h2>PHP 8 : une révolution pour le langage</h2>
 <p>PHP 8 apporte des améliorations majeures qui modernisent le langage et améliorent les performances grâce au compilateur JIT.</p>
+<p>Sorti en novembre 2020, PHP 8.0 a ouvert une série de versions annuelles qui ont profondément changé la façon d'écrire du PHP : typage plus expressif, syntaxe plus concise, objets immuables, énumérations natives. Le code Symfony ou Laravel moderne s'appuie massivement sur ces nouveautés, et les bibliothèques récentes exigent souvent PHP 8.2 ou plus. Cet article passe en revue les fonctionnalités qui ont le plus d'impact au quotidien, version par version, avec pour chacune son intérêt concret et ses pièges.</p>
+<p>Un point de contexte avant de commencer : chaque version mineure de PHP reçoit deux ans de support actif puis deux ans de correctifs de sécurité. Rester sur une version en fin de vie n'est pas seulement se priver de fonctionnalités, c'est surtout s'exposer à des failles qui ne seront plus corrigées. Consultez la page <a href="https://www.php.net/supported-versions.php">des versions supportées</a> pour planifier vos montées de version.</p>
+
 <h3>Named Arguments</h3>
+<p>Les arguments nommés permettent de passer un paramètre par son nom plutôt que par sa position. On n'a plus besoin de répéter toutes les valeurs par défaut pour modifier seulement le dernier paramètre, et l'appel devient auto-documenté :</p>
 <pre><code>// Avant
 htmlspecialchars($string, ENT_COMPAT | ENT_HTML401, 'UTF-8', false);
 
 // PHP 8
 htmlspecialchars($string, double_encode: false);</code></pre>
+<p>Revers de la médaille : le nom des paramètres fait désormais partie de l'API publique d'une fonction. Renommer un paramètre dans une bibliothèque peut casser le code de ses utilisateurs. Si vous maintenez un package, traitez ces renommages comme des changements incompatibles.</p>
+
+<h3>Promotion des propriétés, union types et opérateur nullsafe</h3>
+<p>PHP 8.0 a aussi introduit trois fonctionnalités que l'on utilise dans presque chaque fichier. La promotion des propriétés du constructeur supprime le code répétitif de déclaration et d'affectation. Les union types (<code>int|string</code>) décrivent précisément les valeurs acceptées. L'opérateur nullsafe <code>?-&gt;</code> interrompt une chaîne d'appels dès qu'un maillon vaut <code>null</code> :</p>
+<pre><code>final class InvoiceService
+{
+    public function __construct(
+        private InvoiceRepository $invoices,
+        private ?LoggerInterface $logger = null,
+    ) {}
+
+    public function findReference(int|string $id): ?string
+    {
+        $invoice = $this-&gt;invoices-&gt;find($id);
+
+        // null si la facture, le client ou l'adresse n'existe pas
+        return $invoice?-&gt;getCustomer()?-&gt;getAddress()?-&gt;getCountryCode();
+    }
+}</code></pre>
+<p>À cela s'ajoutent des fonctions attendues depuis longtemps (<code>str_contains()</code>, <code>str_starts_with()</code>, <code>str_ends_with()</code>), le type <code>mixed</code>, et <code>throw</code> utilisable comme expression, par exemple <code>$value ?? throw new InvalidArgumentException()</code>.</p>
+
 <h3>Match Expression</h3>
+<p><code>match</code> est une version plus sûre de <code>switch</code> : c'est une expression qui retourne une valeur, la comparaison est <strong>stricte</strong> (<code>===</code>), il n'y a pas de <code>break</code> à oublier, et si aucune branche ne correspond sans <code>default</code>, PHP lève une <code>UnhandledMatchError</code> au lieu de continuer silencieusement.</p>
 <pre><code>$status = match($code) {
-    200 => 'OK',
-    301 => 'Redirect',
-    404 => 'Not Found',
-    500 => 'Server Error',
-    default => 'Unknown',
+    200 =&gt; 'OK',
+    301 =&gt; 'Redirect',
+    404 =&gt; 'Not Found',
+    500 =&gt; 'Server Error',
+    default =&gt; 'Unknown',
 };</code></pre>
+<p>Attention à la comparaison stricte : si <code>$code</code> provient d'une chaîne (<code>'200'</code>), aucune branche entière ne correspondra. Convertissez la valeur en amont. Plusieurs valeurs peuvent partager une branche en les séparant par des virgules (<code>301, 302 =&gt; 'Redirect'</code>), et <code>match(true)</code> permet d'évaluer des conditions arbitraires.</p>
+
 <h3>Enums (PHP 8.1)</h3>
+<p>Les énumérations remplacent les constantes de classe et les chaînes « magiques ». Une enum « backed » associe chaque cas à une valeur scalaire, ce qui la rend facile à stocker en base ou à sérialiser en JSON. Elle peut porter des méthodes et implémenter des interfaces :</p>
 <pre><code>enum Status: string {
     case Active = 'active';
     case Inactive = 'inactive';
@@ -22,21 +51,45 @@ htmlspecialchars($string, double_encode: false);</code></pre>
 
     public function label(): string {
         return match($this) {
-            self::Active => 'Actif',
-            self::Inactive => 'Inactif',
-            self::Pending => 'En attente',
+            self::Active =&gt; 'Actif',
+            self::Inactive =&gt; 'Inactif',
+            self::Pending =&gt; 'En attente',
         };
     }
 }</code></pre>
+<p>Les méthodes générées automatiquement couvrent les usages courants :</p>
+<pre><code>$status = Status::from('active');        // Status::Active
+$maybe  = Status::tryFrom('archived');   // null au lieu d'une exception
+$all    = Status::cases();               // liste de tous les cas
+
+function activate(User $user): void
+{
+    // le type garantit une valeur valide, sans validation manuelle
+    $user-&gt;setStatus(Status::Active);
+}</code></pre>
+<p>Doctrine ORM (via <code>enumType</code> sur une colonne), le Serializer et les formulaires Symfony (<code>EnumType</code>) gèrent nativement les enums. Utilisez <code>from()</code> quand une valeur invalide est un bug, et <code>tryFrom()</code> pour les entrées utilisateur.</p>
+
 <h3>Fibers (PHP 8.1)</h3>
+<p>Les Fibers sont des fonctions interruptibles : elles peuvent suspendre leur exécution et la reprendre plus tard, en conservant leur pile d'appels. Elles ne créent <strong>pas</strong> de parallélisme (tout s'exécute dans un seul thread), mais elles permettent d'écrire du code asynchrone qui ressemble à du code synchrone.</p>
 <pre><code>$fiber = new Fiber(function (): void {
     $value = Fiber::suspend('première pause');
     echo "Reçu : $value\n";
 });
 
-$result = $fiber->start(); // 'première pause'
-$fiber->resume('données');</code></pre>
-<h3>Readonly Properties (PHP 8.2)</h3>
+$result = $fiber-&gt;start(); // 'première pause'
+$fiber-&gt;resume('données');</code></pre>
+<p>En pratique, on manipule rarement les Fibers directement. Ce sont des briques bas niveau utilisées par des bibliothèques comme AMPHP ou la boucle d'événements Revolt, qui orchestrent les suspensions pendant les entrées/sorties réseau.</p>
+
+<h3>Autres ajouts de PHP 8.1</h3>
+<ul>
+<li><strong>Syntaxe callable de première classe</strong> : <code>$fn = strlen(...);</code> crée une <code>Closure</code> à partir de n'importe quelle fonction ou méthode.</li>
+<li><strong>Type de retour <code>never</code></strong> pour les fonctions qui lèvent toujours une exception ou terminent le script.</li>
+<li><strong><code>new</code> dans les initialiseurs</strong> : un objet peut servir de valeur par défaut d'un paramètre, comme dans l'exemple <code>User</code> ci-dessous.</li>
+<li><strong><code>array_is_list()</code></strong> pour vérifier qu'un tableau a des clés 0, 1, 2… consécutives.</li>
+</ul>
+
+<h3>Readonly Properties (PHP 8.1) et classes readonly (PHP 8.2)</h3>
+<p>Une propriété <code>readonly</code> ne peut être initialisée qu'une seule fois, depuis la portée de la classe. C'est idéal pour les value objects, les DTO et les événements, qui ne doivent pas changer après leur création :</p>
 <pre><code>class User {
     public function __construct(
         public readonly string $name,
@@ -44,7 +97,66 @@ $fiber->resume('données');</code></pre>
         public readonly DateTimeImmutable $createdAt = new DateTimeImmutable(),
     ) {}
 }</code></pre>
+<p>PHP 8.2 permet de déclarer toute la classe <code>readonly</code>, ce qui évite de répéter le mot-clé sur chaque propriété. Pour « modifier » un tel objet, on en crée une copie avec la nouvelle valeur (méthodes <code>with…()</code>) :</p>
+<pre><code>final readonly class Money
+{
+    public function __construct(
+        public int $amount,
+        public string $currency,
+    ) {}
+
+    public function withAmount(int $amount): self
+    {
+        return new self($amount, $this-&gt;currency);
+    }
+}</code></pre>
+<p>Limites à connaître : une propriété readonly doit être typée, n'accepte pas de valeur par défaut dans sa déclaration, et l'immuabilité est superficielle. Si la propriété contient un objet mutable, cet objet peut toujours être modifié. D'où l'intérêt de <code>DateTimeImmutable</code> plutôt que <code>DateTime</code>. PHP 8.2 a aussi apporté les types DNF (<code>(Countable&amp;ArrayAccess)|null</code>) et a déprécié la création dynamique de propriétés.</p>
+
+<h3>PHP 8.3 et 8.4 : les dernières nouveautés</h3>
+<p>PHP 8.3 a introduit les constantes de classe typées, l'attribut <code>#[\Override]</code> (PHP lève une erreur si la méthode ne surcharge en réalité rien, par exemple après un renommage dans la classe parente) et la fonction <code>json_validate()</code>. PHP 8.4 a ajouté deux fonctionnalités importantes pour la modélisation : les <strong>property hooks</strong>, qui attachent une logique de lecture ou d'écriture directement à une propriété, et la <strong>visibilité asymétrique</strong>, qui permet par exemple une lecture publique et une écriture privée :</p>
+<pre><code>final class Product
+{
+    public const string DEFAULT_CURRENCY = 'EUR'; // PHP 8.3
+
+    public private(set) string $status = 'draft'; // PHP 8.4
+
+    public int $priceInCents { // PHP 8.4
+        set(int $value) {
+            if ($value &lt; 0) {
+                throw new InvalidArgumentException('Le prix doit être positif.');
+            }
+            $this-&gt;priceInCents = $value;
+        }
+    }
+
+    public string $formattedPrice {
+        get =&gt; number_format($this-&gt;priceInCents / 100, 2).' '.self::DEFAULT_CURRENCY;
+    }
+
+    public function __construct(int $priceInCents)
+    {
+        $this-&gt;priceInCents = $priceInCents;
+    }
+
+    public function publish(): void
+    {
+        $this-&gt;status = 'published';
+    }
+}</code></pre>
+<p>PHP 8.4 permet aussi d'enchaîner un appel directement après <code>new</code> sans parenthèses supplémentaires (<code>new Foo()-&gt;bar()</code>) et ajoute des fonctions comme <code>array_find()</code> et <code>array_any()</code>. PHP 8.5, sorti en novembre 2025, poursuit dans cette direction avec notamment l'opérateur pipe <code>|&gt;</code>.</p>
+
 <h3>Performances JIT</h3>
 <p>Le compilateur JIT améliore les performances de 2 à 3x pour les opérations intensives en CPU. Activez-le dans php.ini :</p>
 <pre><code>opcache.jit=1255
 opcache.jit_buffer_size=100M</code></pre>
+<p>Il faut cependant nuancer : le JIT compile le bytecode en code machine, ce qui profite surtout aux calculs purs (traitement d'image, algorithmes mathématiques, parsers). Une application web classique passe l'essentiel de son temps à attendre la base de données, le réseau ou le système de fichiers, et le gain y est généralement faible. OPcache, lui, reste indispensable dans tous les cas, et le JIT ne fonctionne que s'il est activé. Les valeurs <code>tracing</code> et <code>function</code> sont des alias plus lisibles pour <code>opcache.jit</code>, et depuis PHP 8.4 le JIT est désactivé par défaut (<code>opcache.jit=disable</code>). Mesurez avec votre propre charge avant de l'activer en production.</p>
+
+<h3>Checklist pour migrer vers PHP 8.x</h3>
+<ol>
+<li>Lisez les guides de migration officiels de chaque version sur php.net, en particulier les sections « incompatibilités » et « dépréciations ».</li>
+<li>Activez l'affichage des dépréciations dans l'environnement de test (<code>error_reporting=E_ALL</code>) et corrigez-les avant de changer de version.</li>
+<li>Lancez une analyse statique (PHPStan ou Psalm) et automatisez les réécritures répétitives avec Rector.</li>
+<li>Mettez à jour les dépendances Composer et vérifiez la contrainte <code>"php"</code> dans <code>composer.json</code>.</li>
+<li>Faites tourner la suite de tests complète sur la nouvelle version en CI avant de basculer la production.</li>
+</ol>
+<p>Adopter ces fonctionnalités progressivement, fichier par fichier, suffit à rendre une base de code plus sûre et plus lisible : les types attrapent les erreurs plus tôt, les enums et les objets readonly éliminent des catégories entières de bugs, et <code>match</code> rend les branches exhaustives explicites.</p>

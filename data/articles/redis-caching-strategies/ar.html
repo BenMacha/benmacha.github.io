@@ -1,35 +1,47 @@
-<h2>Redis: استراتيجيات cache متقدمة</h2>
+<h2>Redis: استراتيجيات تخزين مؤقت متقدمة</h2>
 <p>Redis أكثر بكثير من مجرد cache بسيط من نوع مفتاح-قيمة. إليك الاستراتيجيات التي تتيح لك الاستفادة القصوى منه.</p>
-<h3>أنماط الـ cache</h3>
-<h3>Cache-Aside (التحميل الكسول Lazy Loading)</h3>
+<p>لأن Redis يخزن البيانات في الذاكرة، فهو يستجيب عادةً في أقل من جزء من الألف من الثانية، بينما قد يستغرق استعلام SQL معقد عشرات الأجزاء من الألف. ويؤدي تخزين نتائج العمليات المكلفة مؤقتاً (الاستعلامات الثقيلة، استدعاءات API خارجية، حسابات التجميع) إلى تخفيف العبء عن قاعدة البيانات وتقليص زمن الاستجابة بشكل كبير. لكن الـ cache سيئ التصميم يخلق بدوره أخطاءه الخاصة: بيانات قديمة تُعرض على المستخدمين، وذروات حمل عند انتهاء صلاحية مفتاح، وذاكرة ممتلئة. واختيار الاستراتيجية لا يقل أهمية عن الأداة نفسها.</p>
+
+<h3>ماذا نخزّن مؤقتاً؟</h3>
+<p>المرشح الجيد هو بيانات <strong>تُقرأ أكثر بكثير مما تُعدَّل</strong>، و<strong>مكلفة الإنتاج</strong>، و<strong>تتحمل تأخراً طفيفاً</strong>: كتالوج المنتجات، صفحات المحتوى، الإعدادات، نتائج API لأطراف ثالثة. وعلى العكس، فإن رصيد الحساب أو المخزون في الوقت الفعلي أو البيانات الخاصة بمستخدم واحد ونادراً ما تُعاد قراءتها مرشحات سيئة: فتعقيد الإبطال (invalidation) غالباً ما يفوق الفائدة.</p>
+
+<h3>أنماط التخزين المؤقت</h3>
+<h3>Cache-Aside (Lazy Loading)</h3>
+<p>هذا هو النمط الأكثر شيوعاً: يستشير التطبيق الـ cache أولاً؛ وفي حال عدم وجود القيمة (<em>cache miss</em>)، يقرأ قاعدة البيانات ثم يخزن النتيجة مع مدة صلاحية. ولا ينتهي في الـ cache إلا ما يُطلب فعلاً من بيانات.</p>
 <pre><code>class ProductService
 {
     public function getProduct(int $id): Product
     {
         $cacheKey = "product:{$id}";
-        $cached = $this->redis->get($cacheKey);
+        $cached = $this-&gt;redis-&gt;get($cacheKey);
 
         if ($cached !== null) {
             return unserialize($cached);
         }
 
-        $product = $this->repository->find($id);
-        $this->redis->setex($cacheKey, 3600, serialize($product));
+        $product = $this-&gt;repository-&gt;find($id);
+        $this-&gt;redis-&gt;setex($cacheKey, 3600, serialize($product));
 
         return $product;
     }
 }</code></pre>
+<p>ملاحظتان حول هذه الشيفرة. أولاً، القيمة المُرجعة لمفتاح غير موجود تعتمد على العميل: يُرجع <strong>Predis</strong> القيمة <code>null</code>، بينما يُرجع امتداد <strong>phpredis</strong> القيمة <code>false</code>. ومع phpredis، سيكون الشرط <code>!== null</code> صحيحاً دائماً وسيفشل <code>unserialize(false)</code>: كيّف الشرط حسب العميل الذي تستخدمه. ثانياً، تسلسل (serialize) كيان Doctrine كامل أمر هش (الـ proxies، والمجموعات المحمّلة عند الطلب، وتغيّر بنية الصنف بين عمليتي نشر). أنصح بتخزين مصفوفة أو DTO بسيط بدلاً من الكيان نفسه.</p>
+
 <h3>Write-Through</h3>
+<p>هنا، تحدّث كل عملية كتابة قاعدة البيانات <strong>و</strong>الـ cache في العملية نفسها. يبقى الـ cache ممتلئاً، ولا تحتاج القراءة التالية إلى لمس قاعدة البيانات.</p>
 <pre><code>public function updateProduct(Product $product): void
 {
-    $this->repository->save($product);
-    $this->redis->setex(
-        "product:{$product->getId()}",
+    $this-&gt;repository-&gt;save($product);
+    $this-&gt;redis-&gt;setex(
+        "product:{$product-&gt;getId()}",
         3600,
         serialize($product)
     );
 }</code></pre>
-<h3>الـ cache مع Symfony</h3>
+<p>الترتيب مهم: قاعدة البيانات هي مصدر الحقيقة، لذا تُكتب أولاً. وإذا فشلت الكتابة في Redis بعد ذلك، يحتفظ الـ cache بنسخة قديمة إلى أن تنتهي مدة الـ TTL. لهذا السبب، تفضّل فرق كثيرة بديلاً أبسط: <strong>حذف</strong> المفتاح بعد الكتابة (<code>DEL</code>) وترك نمط cache-aside يعيد بناءه عند القراءة التالية. وبذلك نتجنب أيضاً تخزين بيانات لن يقرأها أحد.</p>
+
+<h3>التخزين المؤقت مع Symfony</h3>
+<p>في تطبيق Symfony، نادراً ما يكون من المفيد التعامل مع Redis مباشرة: فمكوّن Cache يوفر <em>pools</em> قابلة للضبط، وإدارة للوسوم (tags)، وحماية من ذروات الحمل.</p>
 <pre><code># config/packages/cache.yaml
 framework:
     cache:
@@ -42,19 +54,105 @@ framework:
 {
     public function list(CacheInterface $productsCache): Response
     {
-        $products = $productsCache->get('products_list', function (ItemInterface $item) {
-            $item->expiresAfter(3600);
-            $item->tag(['products']);
-            return $this->repository->findAll();
+        $products = $productsCache-&gt;get('products_list', function (ItemInterface $item) {
+            $item-&gt;expiresAfter(3600);
+            $item-&gt;tag(['products']);
+            return $this-&gt;repository-&gt;findAll();
         });
 
-        return $this->json($products);
+        return $this-&gt;json($products);
     }
 }</code></pre>
+<p>تطبّق الدالة <code>get()</code> نمط cache-aside نيابةً عنك: لا تُنفَّذ دالة الاستدعاء إلا عند غياب المفتاح. كما تحمي من <strong>cache stampede</strong> (عشرات الطلبات التي تعيد حساب القيمة نفسها في اللحظة نفسها، مباشرة بعد انتهاء صلاحيتها) بفضل قفل (lock) وانتهاء صلاحية مبكر احتمالي، يمكن ضبطه عبر الوسيط الثالث <code>$beta</code>.</p>
+<p>لكن انتبه: لاستخدام <code>$item-&gt;tag()</code>، يجب أن يدعم الـ pool الوسوم، وإلا أطلق Symfony استثناءً. يجب إضافة <code>tags: true</code> إلى الـ pool وحقن <code>TagAwareCacheInterface</code>. وتتيح السمة <code>#[Target]</code> اختيار الـ pool صراحةً:</p>
+<pre><code># config/packages/cache.yaml
+framework:
+    cache:
+        pools:
+            app.cache.products:
+                adapter: cache.adapter.redis
+                default_lifetime: 3600
+                provider: 'redis://redis:6379'
+                tags: true</code></pre>
+<pre><code>use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
+
+final class ProductCatalog
+{
+    public function __construct(
+        #[Target('app.cache.products')]
+        private readonly TagAwareCacheInterface $cache,
+        private readonly ProductRepository $repository,
+    ) {
+    }
+
+    /** @return list&lt;array{id: int, name: string}&gt; */
+    public function all(): array
+    {
+        return $this-&gt;cache-&gt;get('products_list', function (ItemInterface $item): array {
+            $item-&gt;tag(['products']);
+
+            return array_map(
+                static fn (Product $p): array =&gt; ['id' =&gt; $p-&gt;getId(), 'name' =&gt; $p-&gt;getName()],
+                $this-&gt;repository-&gt;findAll(),
+            );
+        });
+    }
+}</code></pre>
+<p>لاحظ أن النتيجة المخزنة مؤقتاً مصفوفة بسيطة، لا قائمة كيانات: فهي تُسلسَل دون مفاجآت وتبقى صالحة حتى لو تطوّر الكيان.</p>
+
 <h3>إبطال الـ cache</h3>
 <ul>
 <li><strong>TTL</strong>: انتهاء صلاحية تلقائي بعد مدة محددة</li>
-<li><strong>Tags</strong>: إبطال حسب المجموعة باستخدام tags في Symfony</li>
-<li><strong>Events</strong>: إبطال عند وقوع أحداث Doctrine</li>
-<li><strong>Versioning</strong>: مفاتيح cache ذات إصدارات</li>
+<li><strong>Tags</strong>: إبطال جماعي باستخدام وسوم Symfony</li>
+<li><strong>Events</strong>: إبطال عند وقوع حدث Doctrine</li>
+<li><strong>Versioning</strong>: مفاتيح cache مرقّمة بالإصدارات</li>
 </ul>
+<p>الـ <strong>TTL</strong> هو شبكة الأمان: حتى لو نُسي إبطال ما، ستتحدّث البيانات في النهاية. اختره وفق التأخير المقبول من الناحية الوظيفية، لا عشوائياً. وتتكامل <strong>الوسوم</strong> و<strong>أحداث Doctrine</strong> بشكل ممتاز: يُبطل مستمع الكيان (entity listener) الوسوم المعنية بمجرد إنشاء منتج أو تعديله أو حذفه.</p>
+<pre><code>use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
+use Doctrine\ORM\Events;
+use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
+
+#[AsEntityListener(event: Events::postPersist, method: 'invalidate', entity: Product::class)]
+#[AsEntityListener(event: Events::postUpdate, method: 'invalidate', entity: Product::class)]
+#[AsEntityListener(event: Events::preRemove, method: 'invalidate', entity: Product::class)]
+final class ProductCacheInvalidator
+{
+    public function __construct(
+        #[Target('app.cache.products')]
+        private readonly TagAwareCacheInterface $cache,
+    ) {
+    }
+
+    public function invalidate(Product $product): void
+    {
+        $this-&gt;cache-&gt;invalidateTags(['products', 'product_'.$product-&gt;getId()]);
+    }
+}</code></pre>
+<p>نستمع إلى <code>preRemove</code> بدلاً من <code>postRemove</code>، لأن Doctrine قد يعيد معرّف الكيان إلى <code>null</code> بعد الحذف. وأخيراً، يعني <strong>الترقيم بالإصدارات</strong> إدراج رقم إصدار في المفتاح (<code>product:v2:42</code>). وتغيير الإصدار يجعل كل المفاتيح القديمة غير قابلة للوصول دفعة واحدة، وهذا عملي عندما يتغير تنسيق البيانات المخزنة أثناء عملية نشر؛ ثم تختفي المفاتيح القديمة من تلقاء نفسها بفضل الـ TTL الخاص بها.</p>
+
+<h3>ضبط Redis للاستخدام كـ cache</h3>
+<p>من دون حد للذاكرة، يكبر Redis إلى أن يستنفد ذاكرة الخادم. بالنسبة لنسخة مخصصة للتخزين المؤقت، حدّد سقفاً وسياسة إخلاء (eviction) في <code>redis.conf</code>:</p>
+<pre><code>maxmemory 512mb
+maxmemory-policy allkeys-lru</code></pre>
+<p>مع <code>allkeys-lru</code>، يحذف Redis المفاتيح الأقل استخداماً مؤخراً عند بلوغ الحد. وإذا كانت النسخة نفسها تحتوي أيضاً على جلسات أو طوابير رسائل، فقد تمسحها هذه السياسة: استخدم حينها <code>volatile-lru</code> (التي لا تُخلي إلا المفاتيح ذات الـ TTL) أو، والأفضل، نسخاً منفصلة.</p>
+
+<h3>قياس فعالية الـ cache</h3>
+<p>يُحكم على الـ cache بنسبة نجاحه. يوفر الأمر <code>INFO stats</code> العدّادين <code>keyspace_hits</code> و<code>keyspace_misses</code>:</p>
+<pre><code>redis-cli INFO stats | grep -E 'keyspace_(hits|misses)'
+redis-cli INFO memory | grep used_memory_human
+redis-cli --bigkeys</code></pre>
+<p>تشير نسبة نجاح منخفضة إلى مدد TTL قصيرة جداً، أو مفاتيح محددة أكثر من اللازم، أو بيانات نادراً ما تُعاد قراءتها. ويستعرض <code>--bigkeys</code> قاعدة البيانات عبر <code>SCAN</code> ويحدد المفاتيح الأكبر حجماً.</p>
+
+<h3>أخطاء شائعة</h3>
+<ul>
+<li><strong><code>KEYS *</code> في الإنتاج</strong>: يحجب هذا الأمر Redis طوال مدة استعراض كل المفاتيح. استخدم <code>SCAN</code>، أو الأفضل، الوسوم.</li>
+<li><strong>مفاتيح بلا TTL</strong>: تتراكم إلى ما لا نهاية. يجب أن يكون لكل ما في الـ cache مدة صلاحية.</li>
+<li><strong>الـ cache كمصدر للحقيقة</strong>: يجب أن يواصل التطبيق العمل، ولو ببطء أكبر، إذا أُفرغ Redis أو أصبح غير متاح.</li>
+<li><strong>مفاتيح بلا مساحة أسماء</strong>: أضف بادئة إلى مفاتيحك (<code>app:product:42</code>) لتجنب التعارض بين التطبيقات التي تتشارك النسخة نفسها.</li>
+</ul>
+
+<h3>خلاصة</h3>
+<p>ابدأ بنمط cache-aside مع TTL معقول، واعتمد على مكوّن Cache في Symfony بدلاً من استدعاءات Redis المباشرة، وأبطل عبر الوسوم انطلاقاً من أحداث Doctrine، وراقب نسبة النجاح. فالـ cache البسيط والمُبطَل جيداً أفضل من بنية معقدة تقدم بيانات قديمة.</p>

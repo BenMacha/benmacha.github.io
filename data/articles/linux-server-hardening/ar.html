@@ -1,6 +1,20 @@
 <h2>تأمين خادم Linux الخاص بك</h2>
-<p>تأمين خادم Linux هو الخطوة الأولى قبل أي نشر في بيئة الإنتاج. إليك الإجراءات الأساسية.</p>
-<h3>إعداد SSH</h3>
+<p>تأمين خادم Linux هو الخطوة الأولى قبل أي نشر في بيئة الإنتاج. فالخادم الافتراضي (VPS) المُنشأ حديثاً بعنوان IP عام يتلقى محاولات اتصال SSH آلية خلال دقائق: روبوتات تجوب الإنترنت باستمرار بحثاً عن كلمات مرور ضعيفة وخدمات سيئة الإعداد وبرمجيات غير محدّثة. إليك الإجراءات الأساسية، بالترتيب الذي أطبّقها به على جهاز جديد.</p>
+<p>الهدف ليس جعل الخادم منيعاً تماماً، فهذا غير موجود، بل <strong>تقليص سطح الهجوم</strong> وجعل الهجمات الانتهازية غير فعالة. تستهدف الأمثلة أدناه Debian وUbuntu؛ لكن المبادئ تنطبق على كل التوزيعات.</p>
+
+<h3>تجهيز مستخدم ومفتاح SSH</h3>
+<p>قبل المساس بإعدادات SSH، أنشئ مستخدماً غير مميز وتحقق من قدرتك على الاتصال بمفتاح. هذه هي الخطوة التي تمنعك من إغلاق الباب على نفسك. على جهازك، أنشئ مفتاح Ed25519 إن لم يكن لديك واحد، ثم انسخه إلى الخادم:</p>
+<pre><code># On the server (as root)
+adduser deploy
+usermod -aG sudo deploy
+
+# On your workstation
+ssh-keygen -t ed25519 -C "deploy@myserver"
+ssh-copy-id -i ~/.ssh/id_ed25519.pub deploy@203.0.113.10
+ssh deploy@203.0.113.10</code></pre>
+<p>لا تنتقل إلى الخطوة التالية إلا بعد نجاح الاتصال بالمفتاح مع المستخدم الجديد، وتحقق من أنه يستطيع استخدام <code>sudo</code>.</p>
+
+<h3>إعدادات SSH</h3>
 <pre><code># /etc/ssh/sshd_config
 PermitRootLogin no
 PasswordAuthentication no
@@ -8,27 +22,90 @@ PubkeyAuthentication yes
 Port 2222
 MaxAuthTries 3
 AllowUsers deploy</code></pre>
-<h3>جدار الحماية مع UFW</h3>
+<p>لكل توجيه دور محدد:</p>
+<ul>
+<li><strong><code>PermitRootLogin no</code></strong>: حساب root الموجود على كل الأجهزة هو الهدف الأول للهجمات. يتصل المسؤولون بحساباتهم الخاصة ثم يستخدمون <code>sudo</code>، مما يترك أثراً باسم كل شخص.</li>
+<li><strong><code>PasswordAuthentication no</code></strong>: من دون كلمات مرور، تصبح هجمات القاموس بلا فائدة. اضبط أيضاً <code>KbdInteractiveAuthentication no</code>، وإلا فقد تبقى المصادقة بكلمة المرور ممكنة عبر PAM.</li>
+<li><strong><code>Port 2222</code></strong>: تغيير المنفذ لا يحمي من هجوم موجّه، لكنه يقلل بشكل كبير الضجيج في السجلات.</li>
+<li><strong><code>MaxAuthTries 3</code></strong>: يحدّ من عدد المحاولات في كل اتصال.</li>
+<li><strong><code>AllowUsers deploy</code></strong>: قائمة بيضاء للحسابات المسموح لها بالاتصال. يُرفض أي مستخدم آخر، حتى لو امتلك مفتاحاً صالحاً.</li>
+</ul>
+<p>في التوزيعات الحديثة، يمكنك وضع هذه التوجيهات في ملف مخصص، مثل <code>/etc/ssh/sshd_config.d/hardening.conf</code>، بدلاً من تعديل الملف الرئيسي. انتبه: يحتفظ sshd لكل توجيه بـ<em>أول</em> قيمة يقرؤها، والملفات المضمّنة تُقرأ في البداية. قبل إعادة التشغيل، اختبر الإعدادات دائماً و<strong>أبقِ جلستك الحالية مفتوحة</strong>:</p>
+<pre><code>sudo sshd -t &amp;&amp; sudo systemctl restart ssh
+# From a second terminal, before closing the current session:
+ssh -p 2222 deploy@203.0.113.10</code></pre>
+<p>في Ubuntu 24.04، يُفعَّل SSH عبر socket من systemd: بعد تغيير المنفذ، نفّذ <code>sudo systemctl daemon-reload</code> ثم <code>sudo systemctl restart ssh.socket</code> حتى يُعتمد المنفذ الجديد.</p>
+
+<h3>الجدار الناري باستخدام UFW</h3>
+<p>مبدأ الجدار الناري بسيط: رفض كل حركة المرور الواردة، ثم فتح المنافذ الضرورية فقط بشكل صريح. UFW (Uncomplicated Firewall) طبقة سهلة القراءة فوق nftables/iptables، مثبتة افتراضياً على Ubuntu.</p>
 <pre><code>sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 2222/tcp    # SSH
 sudo ufw allow 80/tcp      # HTTP
 sudo ufw allow 443/tcp     # HTTPS
 sudo ufw enable</code></pre>
+<p>الترتيب مهم: اسمح بمنفذ SSH <strong>قبل</strong> تنفيذ <code>ufw enable</code>، وإلا فقد ينقطع اتصالك الحالي. ثم تحقق من القواعد باستخدام <code>sudo ufw status verbose</code>. خياران مفيدان:</p>
+<ul>
+<li><code>sudo ufw limit 2222/tcp</code> يحل محل قاعدة <code>allow</code> ويرفض العنوان الذي يحاول 6 اتصالات أو أكثر خلال 30 ثانية.</li>
+<li><code>sudo ufw allow from 10.0.0.0/24 to any port 5432 proto tcp</code> يفتح منفذاً لشبكة خاصة فقط، مثلاً لقاعدة بيانات.</li>
+</ul>
+<p>فخ مهم: <strong>Docker يتجاوز UFW</strong>. المنفذ المنشور باستخدام <code>-p 5432:5432</code> يكون قابلاً للوصول من الإنترنت حتى لو لم يسمح به UFW، لأن Docker يكتب قواعد iptables الخاصة به. انشر المنافذ الداخلية على <code>127.0.0.1</code> (<code>-p 127.0.0.1:5432:5432</code>) أو لا تنشرها إطلاقاً.</p>
+
 <h3>التحديثات التلقائية</h3>
+<p>تستغل معظم الاختراقات ثغرات معروفة سبق إصلاحها. تثبّت حزمة <code>unattended-upgrades</code> التحديثات الأمنية تلقائياً:</p>
 <pre><code>sudo apt install unattended-upgrades
 sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+<p>افتراضياً، تُطبَّق التحديثات الأمنية فقط. بعضها، ولا سيما تحديثات النواة، لا يسري إلا بعد إعادة التشغيل. يمكنك السماح بإعادة تشغيل تلقائية في ساعة هادئة داخل <code>/etc/apt/apt.conf.d/50unattended-upgrades</code>:</p>
+<pre><code>Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";</code></pre>
+<p>للتحقق من الإعدادات دون تثبيت أي شيء: <code>sudo unattended-upgrade --dry-run --debug</code>. على خادم لا يجب أن يعيد التشغيل وحده، اترك هذا الخيار معطلاً وراقب وجود الملف <code>/var/run/reboot-required</code>.</p>
+
 <h3>Fail2Ban</h3>
-<p>احمِ خادمك من هجمات القوة الغاشمة (brute force):</p>
+<p>احمِ نفسك من هجمات القوة الغاشمة:</p>
 <pre><code>sudo apt install fail2ban
 sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
+<p>يقرأ Fail2Ban السجلات، ويرصد إخفاقات المصادقة المتكررة، ويحظر مؤقتاً عنوان IP المخالف عبر الجدار الناري. قد يُستبدل الملف <code>jail.conf</code> أثناء التحديثات: لذا نعمل دائماً في <code>jail.local</code>. وبدلاً من نسخ الملف كاملاً، يكفي غالباً أن تكتب فيه القيم التي تريد تجاوزها فقط:</p>
+<pre><code># /etc/fail2ban/jail.local
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+backend  = systemd
+
+[sshd]
+enabled = true
+port    = 2222</code></pre>
+<p>الإعداد <code>backend = systemd</code> ضروري على Debian 12، حيث تُسجَّل اتصالات SSH في journald وليس في <code>/var/log/auth.log</code>. لا تنسَ تحديد منفذ SSH المخصص، وإلا فسيُطبَّق الحظر على المنفذ 22. بعض الأوامر المفيدة:</p>
+<pre><code>sudo systemctl restart fail2ban
+sudo fail2ban-client status sshd
+sudo fail2ban-client set sshd unbanip 198.51.100.7</code></pre>
+
+<h3>تقليص سطح الهجوم</h3>
+<p>كل خدمة تستمع على الشبكة هي باب محتمل. اسرد المنافذ المفتوحة وعطّل كل ما ليس ضرورياً:</p>
+<pre><code>sudo ss -tulpn
+sudo systemctl disable --now cups.service   # example: a useless service on a server</code></pre>
+<p>يجب أن تستمع قواعد البيانات وRedis وواجهات الإدارة على <code>127.0.0.1</code> أو على شبكة خاصة، وليس أبداً على الواجهة العامة. كما تعزز بعض معاملات النواة حزمة الشبكة:</p>
+<pre><code># /etc/sysctl.d/99-hardening.conf
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0</code></pre>
+<p>طبّقها باستخدام <code>sudo sysctl --system</code>.</p>
+
+<h3>السجلات والتدقيق</h3>
+<p>يجب أن يتيح الخادم الآمن أيضاً فهم ما حدث بعد وقوعه. اجعل سجل systemd دائماً (<code>Storage=persistent</code> في <code>/etc/systemd/journald.conf</code>)، وأرسل السجلات إلى جهاز منفصل: فالمهاجم الذي يحصل على صلاحيات root يستطيع محو السجلات المحلية. وللفحص الدوري، تراجع أداة <strong>Lynis</strong> (<code>sudo lynis audit system</code>) مئات نقاط الإعداد وتقترح تحسينات ملموسة.</p>
+
 <h3>قائمة التحقق الأمنية</h3>
 <ul>
-<li>تعطيل تسجيل دخول root عبر SSH</li>
-<li>الاعتماد حصرياً على المصادقة بالمفاتيح</li>
-<li>إعداد جدار حماية صارم</li>
+<li>تعطيل دخول root عبر SSH</li>
+<li>استخدام المصادقة بالمفاتيح فقط</li>
+<li>إعداد جدار ناري مقيِّد</li>
 <li>تثبيت Fail2Ban وإعداده</li>
 <li>تفعيل التحديثات الأمنية التلقائية</li>
-<li>إعداد سجلات (logs) مركزية</li>
-<li>إنشاء نظام لمراقبة الخادم (monitoring)</li>
+<li>إعداد سجلات مركزية</li>
+<li>إعداد مراقبة للنظام</li>
+<li>التحقق من المنافذ المفتوحة باستخدام <code>ss -tulpn</code> ومن المنافذ التي ينشرها Docker</li>
+<li>إعداد نسخ احتياطية خارجية واختبار استعادتها</li>
 </ul>
+<p>الأمان عملية مستمرة، وليس إعداداً يُنجز مرة واحدة: أعد التدقيق بعد كل تغيير مهم، واحصر صلاحيات الوصول في الحد الأدنى الضروري.</p>

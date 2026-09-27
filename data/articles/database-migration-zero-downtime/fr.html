@@ -1,5 +1,10 @@
 <h2>Zero-downtime database migrations</h2>
 <p>Les migrations de base de données sont souvent la partie la plus risquée d'un déploiement. Voici comment les réaliser sans interruption.</p>
+<p>Le code applicatif se déploie facilement sans coupure : on démarre la nouvelle version, on bascule le trafic, on arrête l'ancienne. La base de données, elle, est partagée par les deux versions pendant cette bascule. Deux risques en découlent : un schéma incompatible avec l'une des versions du code, et des verrous qui bloquent les requêtes le temps d'un <code>ALTER TABLE</code>. Une migration sans interruption doit éviter les deux.</p>
+
+<h3>Pourquoi le schéma doit rester compatible</h3>
+<p>Pendant un déploiement blue-green ou progressif, l'ancienne et la nouvelle version du code tournent en même temps, parfois pendant plusieurs minutes. Si la migration renomme une colonne, l'ancienne version plante dès qu'elle la lit. Si elle ajoute une colonne <code>NOT NULL</code> sans valeur par défaut, l'ancienne version plante dès qu'elle insère une ligne. La règle d'or : <strong>chaque migration doit être compatible avec le code actuellement en production et avec le code qui va le remplacer</strong>. Le rollback doit rester possible à tout moment.</p>
+
 <h3>Règles fondamentales</h3>
 <ul>
 <li>Ne jamais supprimer une colonne utilisée par le code en production</li>
@@ -7,7 +12,10 @@
 <li>Séparer les migrations de schéma des migrations de données</li>
 <li>Tester les migrations sur une copie de la base de production</li>
 </ul>
+<p>Une colonne peut aussi être ajoutée avec une valeur par défaut, comme dans l'exemple ci-dessous : l'essentiel est que l'ancien code puisse continuer à insérer des lignes sans la connaître. Le test sur une copie de production est indispensable, car une migration instantanée sur une base de développement de quelques milliers de lignes peut prendre de longues minutes sur une table de plusieurs dizaines de millions de lignes.</p>
+
 <h3>Pattern Expand-Contract</h3>
+<p>Le pattern Expand-Contract (ou <em>parallel change</em>) découpe tout changement incompatible en étapes compatibles, réparties sur plusieurs déploiements.</p>
 <p><strong>Phase 1 - Expand :</strong> Ajouter la nouvelle structure</p>
 <pre><code>-- Migration 1 : Ajouter la nouvelle colonne
 ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
@@ -15,18 +23,74 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
 -- Migration 2 : Remplir les données
 UPDATE users SET email_verified = TRUE WHERE verified_at IS NOT NULL;</code></pre>
 <p><strong>Phase 2 - Déployer le code</strong> utilisant les deux colonnes</p>
+<p>Pendant cette phase, le code écrit dans les deux colonnes et lit la nouvelle. Les lignes créées par l'ancienne version pendant la bascule n'ont pas encore la bonne valeur : relancez le remplissage une fois le déploiement terminé pour les rattraper.</p>
 <p><strong>Phase 3 - Contract :</strong> Supprimer l'ancienne structure</p>
 <pre><code>-- Migration 3 : Supprimer l'ancienne colonne
 ALTER TABLE users DROP COLUMN verified_at;</code></pre>
+<p>Cette dernière migration part dans un déploiement ultérieur, une fois que plus aucune version en production ne lit l'ancienne colonne. Retirez-la aussi du mapping Doctrine <strong>avant</strong> de la supprimer, sinon l'ORM continuera de l'inclure dans ses requêtes.</p>
+<p>Le même principe s'applique pour renommer une colonne, qu'on ne renomme jamais directement :</p>
+<ol>
+<li>ajouter la nouvelle colonne ;</li>
+<li>déployer un code qui écrit dans les deux colonnes ;</li>
+<li>copier les données existantes par lots ;</li>
+<li>déployer un code qui lit la nouvelle colonne ;</li>
+<li>déployer un code qui n'écrit plus dans l'ancienne ;</li>
+<li>supprimer l'ancienne colonne.</li>
+</ol>
+
+<h3>Remplir les données par lots</h3>
+<p>Un <code>UPDATE</code> unique sur une grosse table ouvre une longue transaction, verrouille de nombreuses lignes et fait grossir le retard des réplicas. Sur MySQL, qui accepte <code>LIMIT</code> dans un <code>UPDATE</code>, on traite plutôt les lignes par petits lots :</p>
+<pre><code>$batchSize = 1000;
+
+do {
+    $affected = $connection-&gt;executeStatement(
+        'UPDATE users SET email_verified = TRUE
+         WHERE verified_at IS NOT NULL AND email_verified = FALSE
+         LIMIT ' . $batchSize
+    );
+
+    // Laisser respirer la base et les réplicas
+    usleep(100_000);
+} while ($affected &gt; 0);</code></pre>
+<p>Chaque lot est une transaction courte. Le script peut être interrompu et relancé sans risque, car la condition <code>email_verified = FALSE</code> exclut les lignes déjà traitées. Placez ce code dans une commande Symfony plutôt que dans une migration Doctrine : il peut tourner longtemps et doit pouvoir être relancé indépendamment du schéma.</p>
+
 <h3>Migrations Doctrine optimisées</h3>
 <pre><code>public function up(Schema $schema): void
 {
     // Utiliser des opérations non-bloquantes
-    $this->addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
+    $this-&gt;addSql('ALTER TABLE orders ADD COLUMN status VARCHAR(50) DEFAULT NULL');
 
     // Pour les grandes tables, utiliser pt-online-schema-change
     // ou gh-ost pour éviter les locks
 }</code></pre>
+<p>Sur MySQL 8.0, l'ajout d'une colonne se fait le plus souvent avec l'algorithme <code>INSTANT</code>, sans copie de la table. Pour les autres opérations, demandez explicitement un algorithme sans verrou : si MySQL ne peut pas le respecter, la requête échoue immédiatement au lieu de bloquer la table.</p>
+<pre><code>ALTER TABLE orders ADD INDEX idx_orders_status (status), ALGORITHM=INPLACE, LOCK=NONE;</code></pre>
+<p>Sur PostgreSQL, un index se crée sans bloquer les écritures avec <code>CREATE INDEX CONCURRENTLY</code>, qui ne peut pas s'exécuter dans une transaction. Il faut donc désactiver la transaction englobante de Doctrine Migrations pour cette migration :</p>
+<pre><code>final class Version20241012120000 extends AbstractMigration
+{
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
+    public function up(Schema $schema): void
+    {
+        $this-&gt;addSql('SET lock_timeout = \'5s\'');
+        $this-&gt;addSql('CREATE INDEX CONCURRENTLY idx_orders_status ON orders (status)');
+    }
+}</code></pre>
+<p>Le <code>lock_timeout</code> protège d'un piège classique : un <code>ALTER TABLE</code>, même rapide, doit attendre la fin des transactions en cours sur la table, et toutes les requêtes suivantes s'accumulent derrière lui. Avec un délai court, la migration échoue proprement et peut être relancée, au lieu de bloquer toute l'application. L'équivalent MySQL est <code>SET SESSION lock_wait_timeout = 5</code>.</p>
+
+<h3>Les outils de migration en ligne</h3>
+<p>Quand MySQL doit reconstruire la table (changement de type de colonne, par exemple), pt-online-schema-change et gh-ost créent une copie de la table avec le nouveau schéma, la synchronisent pendant la copie, puis échangent les deux tables en une opération très brève :</p>
+<pre><code># Percona Toolkit : tester, puis exécuter
+pt-online-schema-change --alter "MODIFY status VARCHAR(100) DEFAULT NULL" D=app,t=orders --dry-run
+pt-online-schema-change --alter "MODIFY status VARCHAR(100) DEFAULT NULL" D=app,t=orders --execute
+
+# gh-ost : s'appuie sur le binlog plutôt que sur des triggers
+gh-ost --host=db.internal --user=app --ask-pass --database=app --table=orders \
+  --alter="MODIFY status VARCHAR(100) DEFAULT NULL" --allow-on-master --execute</code></pre>
+
 <h3>Outils recommandés</h3>
 <ul>
 <li><strong>pt-online-schema-change</strong> : migrations sans lock pour MySQL</li>
@@ -34,3 +98,21 @@ ALTER TABLE users DROP COLUMN verified_at;</code></pre>
 <li><strong>Doctrine Migrations</strong> : gestion versionnée des migrations</li>
 <li><strong>Flyway</strong> : outil de migration multi-base</li>
 </ul>
+
+<h3>Pièges courants</h3>
+<ul>
+<li><strong><code>doctrine:schema:update --force</code> en production</strong> : cette commande peut supprimer ou renommer des colonnes sans prévenir. En production, seules les migrations versionnées et relues doivent toucher au schéma.</li>
+<li><strong>Relire le SQL généré</strong> : <code>doctrine:migrations:diff</code> produit parfois un <code>DROP</code> suivi d'un <code>ADD</code> là où vous attendiez un renommage.</li>
+<li><strong>Clés étrangères et index sur de grosses tables</strong> : leur création peut être longue. Mesurez sur la copie de production.</li>
+<li><strong>Méthode <code>down()</code></strong> : ne comptez pas dessus pour un rollback en production. Grâce à l'Expand-Contract, revenir à la version précédente du code suffit, sans toucher au schéma.</li>
+</ul>
+
+<h3>Checklist avant chaque migration</h3>
+<ol>
+<li>La migration est-elle compatible avec le code actuel et avec le nouveau ?</li>
+<li>A-t-elle été chronométrée sur une copie de la base de production ?</li>
+<li>Les opérations lourdes sont-elles faites en ligne ou par lots ?</li>
+<li>Un délai d'attente de verrou est-il défini ?</li>
+<li>La suppression des anciennes structures est-elle reportée à un déploiement ultérieur ?</li>
+</ol>
+<p>Ces règles demandent un peu plus de déploiements pour un même changement, mais chacun devient banal, réversible et sans impact pour les utilisateurs.</p>

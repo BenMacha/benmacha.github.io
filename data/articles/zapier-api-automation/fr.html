@@ -1,5 +1,16 @@
 <h2>Zapier pour l'automatisation métier</h2>
 <p>Dans un contexte d'entreprise comme chez ORPI, l'automatisation des processus métier via les APIs est essentielle pour gagner en efficacité.</p>
+<p>Zapier est une plateforme d'automatisation sans code qui relie des milliers d'applications SaaS entre elles. Son intérêt pour une équipe technique est double : les équipes métier construisent elles-mêmes leurs automatisations, et les développeurs n'ont qu'à exposer quelques points d'entrée propres et sécurisés dans leurs applications. Cet article montre comment préparer une application Symfony à dialoguer avec Zapier dans les deux sens.</p>
+
+<h3>Les notions de base</h3>
+<ul>
+<li><strong>Zap</strong> : un scénario d'automatisation, composé d'un déclencheur et d'une ou plusieurs actions.</li>
+<li><strong>Trigger</strong> (déclencheur) : l'événement qui lance le Zap, par exemple un nouveau prospect ou un formulaire soumis.</li>
+<li><strong>Action</strong> : ce que fait le Zap ensuite, par exemple créer une ligne dans un tableur, envoyer un message Slack ou appeler votre API.</li>
+<li><strong>Task</strong> : chaque action exécutée avec succès compte comme une tâche, et c'est sur ce volume que repose la facturation.</li>
+</ul>
+<p>Un déclencheur fonctionne de deux façons : par <em>polling</em>, où Zapier interroge régulièrement une URL pour détecter les nouveaux éléments, ou de façon <em>instantanée</em>, où votre application prévient Zapier par un webhook dès que l'événement survient.</p>
+
 <h3>Cas d'usage courants</h3>
 <ul>
 <li>Synchronisation CRM vers base de données interne</li>
@@ -7,44 +18,113 @@
 <li>Génération automatique de rapports</li>
 <li>Intégration de formulaires web avec le SI</li>
 </ul>
+<p>Le point commun de ces cas : des flux simples, à volume modéré, qui relient des outils existants. C'est là que Zapier est le plus rentable, car il évite de développer et de maintenir un connecteur pour chaque outil.</p>
+
 <h3>Créer un webhook personnalisé</h3>
+<p>Premier sens : Zapier envoie des données à votre application. Dans le Zap, l'action « Webhooks by Zapier » en mode POST envoie un JSON vers votre endpoint, avec des en-têtes que vous définissez, dont un jeton secret :</p>
 <pre><code>// Endpoint Symfony pour recevoir les webhooks Zapier
 #[Route('/api/webhook/zapier', methods: ['POST'])]
 class ZapierWebhookController extends AbstractController
 {
+    public function __construct(
+        #[Autowire(env: 'ZAPIER_TOKEN')]
+        private readonly string $zapierToken,
+    ) {}
+
     public function __invoke(
         Request $request,
         MessageBusInterface $bus,
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
-
         // Valider le token
-        if ($request->headers->get('X-Zapier-Token') !== $this->zapierToken) {
-            return $this->json(['error' => 'Unauthorized'], 401);
+        $token = (string) $request-&gt;headers-&gt;get('X-Zapier-Token', '');
+        if (!hash_equals($this-&gt;zapierToken, $token)) {
+            return $this-&gt;json(['error' =&gt; 'Unauthorized'], 401);
+        }
+
+        $data = json_decode($request-&gt;getContent(), true);
+        if (!is_array($data)) {
+            return $this-&gt;json(['error' =&gt; 'Invalid JSON'], 400);
         }
 
         // Dispatcher le traitement
-        $bus->dispatch(new ProcessZapierDataMessage($data));
+        $bus-&gt;dispatch(new ProcessZapierDataMessage($data));
 
-        return $this->json(['status' => 'received']);
+        return $this-&gt;json(['status' =&gt; 'received']);
     }
 }</code></pre>
+<p>Plusieurs détails comptent dans ce contrôleur :</p>
+<ul>
+<li>le jeton est lu depuis une variable d'environnement grâce à l'attribut <code>#[Autowire(env: ...)]</code> (Symfony 6.3 et plus), jamais écrit en dur dans le code ;</li>
+<li><code>hash_equals()</code> compare les chaînes en temps constant, ce qui évite de laisser deviner le jeton caractère par caractère ;</li>
+<li>la vérification du jeton a lieu avant toute lecture du contenu, et un JSON invalide est rejeté avec une erreur 400 ;</li>
+<li>le traitement réel part dans Messenger : le contrôleur répond en quelques millisecondes, ce qui évite les délais d'expiration côté Zapier.</li>
+</ul>
+<p>Le secret se stocke comme les autres secrets de l'application, par exemple avec le coffre-fort de Symfony :</p>
+<pre><code>php bin/console secrets:set ZAPIER_TOKEN
+# Générer une valeur robuste
+openssl rand -hex 32</code></pre>
+
 <h3>API pour Zapier Triggers</h3>
+<p>Second sens : votre application fournit des données à Zapier. Pour un déclencheur par polling, construit dans une intégration privée sur la plateforme développeur de Zapier, il suffit d'exposer un endpoint qui renvoie les éléments les plus récents :</p>
 <pre><code>#[Route('/api/zapier/new-leads', methods: ['GET'])]
 public function newLeads(LeadRepository $repo): JsonResponse
 {
-    $leads = $repo->findRecent(limit: 50);
-    return $this->json(array_map(fn(Lead $l) => [
-        'id' => $l->getId(),
-        'name' => $l->getName(),
-        'email' => $l->getEmail(),
-        'created_at' => $l->getCreatedAt()->format('c'),
+    $leads = $repo-&gt;findRecent(limit: 50);
+    return $this-&gt;json(array_map(fn(Lead $l) =&gt; [
+        'id' =&gt; $l-&gt;getId(),
+        'name' =&gt; $l-&gt;getName(),
+        'email' =&gt; $l-&gt;getEmail(),
+        'created_at' =&gt; $l-&gt;getCreatedAt()-&gt;format('c'),
     ], $leads));
 }</code></pre>
+<p>Zapier attend un tableau JSON d'objets, du plus récent au plus ancien, chacun doté d'un champ <code>id</code> unique. Il mémorise les identifiants déjà vus et ne déclenche le Zap que pour les nouveaux : c'est la déduplication. Deux conséquences pratiques : l'<code>id</code> d'un élément ne doit jamais changer, et <code>findRecent()</code> doit trier par date de création décroissante. Protégez aussi cet endpoint, par exemple avec une clé d'API transmise dans un en-tête et vérifiée par le composant Security.</p>
+
+<h3>Déclencheurs instantanés</h3>
+<p>Le polling introduit un délai, qui dépend de l'abonnement Zapier. Pour une réaction immédiate, l'application peut pousser l'événement vers l'URL fournie par le déclencheur « Catch Hook » de Webhooks by Zapier. Faites-le depuis un handler Messenger, pour qu'une indisponibilité de Zapier ne ralentisse jamais vos utilisateurs :</p>
+<pre><code>#[AsMessageHandler]
+final class NotifyZapierHandler
+{
+    public function __construct(
+        private readonly HttpClientInterface $httpClient,
+        #[Autowire(env: 'ZAPIER_HOOK_URL')]
+        private readonly string $zapierHookUrl,
+    ) {}
+
+    public function __invoke(LeadCreatedMessage $message): void
+    {
+        $response = $this-&gt;httpClient-&gt;request('POST', $this-&gt;zapierHookUrl, [
+            'json' =&gt; [
+                'id' =&gt; $message-&gt;leadId,
+                'name' =&gt; $message-&gt;name,
+                'email' =&gt; $message-&gt;email,
+            ],
+            'timeout' =&gt; 10,
+        ]);
+
+        // Lève une exception si le statut n'est pas 2xx : Messenger réessaiera
+        $response-&gt;getContent();
+    }
+}</code></pre>
+<p>Si Zapier est momentanément indisponible, l'exception déclenche la stratégie de réessai de Messenger, puis le transport d'échec : aucun événement n'est perdu. Pour une intégration publique, Zapier propose aussi les <em>REST Hooks</em> : Zapier enregistre lui-même son URL auprès de votre API à l'activation d'un Zap et la supprime à sa désactivation.</p>
+
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Doublons</strong> : un webhook peut être rejoué, par Zapier ou par un utilisateur qui relance une exécution. Rendez le traitement idempotent, par exemple en stockant l'identifiant de l'événement reçu.</li>
+<li><strong>Données personnelles</strong> : chaque champ envoyé transite par les serveurs de Zapier. N'envoyez que le strict nécessaire et vérifiez la conformité RGPD du flux avec votre DPO.</li>
+<li><strong>Logique métier dans Zapier</strong> : des filtres et des chemins complexes dans un Zap deviennent vite impossibles à tester et à versionner. Gardez les règles métier dans l'application.</li>
+<li><strong>Coût</strong> : la facturation à la tâche peut grimper vite sur des flux à fort volume.</li>
+</ul>
+
+<h3>Quand ne pas utiliser Zapier</h3>
+<p>Pour des milliers d'événements par heure, un flux critique pour le chiffre d'affaires ou une transformation de données complexe, une intégration développée directement entre les deux APIs reste plus fiable, plus économique et plus facile à surveiller. Zapier excelle pour les automatisations internes, les prototypes et les flux que les équipes métier doivent pouvoir faire évoluer seules.</p>
+
 <h3>Bonnes pratiques</h3>
 <ul>
 <li>Sécuriser les webhooks avec des tokens</li>
 <li>Logger toutes les interactions pour le débogage</li>
 <li>Utiliser des files d'attente pour le traitement asynchrone</li>
 <li>Documenter les APIs avec OpenAPI pour l'intégration Zapier</li>
+<li>Limiter le débit des endpoints publics avec le composant RateLimiter de Symfony</li>
+<li>Répondre vite, avec un code 2xx, et traiter ensuite</li>
 </ul>
+<p>Avec quelques endpoints bien conçus, sécurisés et asynchrones, votre application devient une brique que les équipes métier peuvent brancher à leurs outils sans solliciter les développeurs pour chaque nouveau besoin.</p>

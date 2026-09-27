@@ -1,14 +1,26 @@
 <h2>Nginx vs Apache: which web server should you choose?</h2>
-<p>Choosing between Nginx and Apache depends on your use case. Here is an objective comparison.</p>
+<p>The choice between Nginx and Apache depends on your use case. Here is an objective comparison. Both are mature, actively maintained open-source projects, and together they serve a very large share of websites. Neither is "better" in absolute terms: they were designed at different times, with different priorities, and those original choices still explain their respective strengths today.</p>
+
 <h3>Architecture</h3>
 <p><strong>Apache</strong> uses a process/thread-based model (prefork or worker). Each connection is handled by a dedicated process or thread.</p>
-<p><strong>Nginx</strong> uses an asynchronous, event-driven architecture. A single worker process can handle thousands of concurrent connections.</p>
+<p><strong>Nginx</strong> uses an asynchronous, event-driven architecture. A single worker process can handle thousands of simultaneous connections.</p>
+<p>In practice, Apache delegates this behaviour to a module called an <strong>MPM</strong> (Multi-Processing Module):</p>
+<ul>
+<li><strong><code>prefork</code></strong>: one process per connection, no threads. It uses the most memory, but it is the only one compatible with <code>mod_php</code>, because PHP was historically not guaranteed to be thread-safe.</li>
+<li><strong><code>worker</code></strong>: several processes, each with several threads. More memory-efficient.</li>
+<li><strong><code>event</code></strong>: an evolution of <code>worker</code> that hands idle keep-alive connections to a dedicated thread, instead of blocking one thread per client. It is the default MPM on recent distributions when <code>mod_php</code> is not installed.</li>
+</ul>
+<p>Nginx, for its part, starts a small number of worker processes (often one per core, with <code>worker_processes auto;</code>). Each one handles thousands of connections in an event loop, using <code>epoll</code> on Linux. An idle connection costs only a few kilobytes of memory, which explains its stability when facing a large number of slow clients or keep-alive connections.</p>
+
 <h3>Performance</h3>
 <pre><code># Benchmark with ab (Apache Bench)
 ab -n 10000 -c 100 http://localhost/
 
 # Nginx: ~15000 req/s for static content
 # Apache: ~5000 req/s for static content</code></pre>
+<p>These figures are orders of magnitude and should be taken with caution: they vary enormously depending on hardware, file size, MPM configuration and the number of concurrent connections. Apache configured with the <code>event</code> MPM significantly narrows the gap. Always measure on your own infrastructure, ideally from a machine other than the server under test, and with a tool like <code>wrk</code> that generates a more realistic load than <code>ab</code>.</p>
+<p>Above all, for a PHP application the web server is rarely the bottleneck. Response time is dominated by PHP execution, SQL queries and network calls. The difference between Nginx and Apache shows mostly on static files and under high concurrency.</p>
+
 <h3>PHP configuration</h3>
 <p><strong>Apache with mod_php:</strong></p>
 <pre><code>&lt;VirtualHost *:80&gt;
@@ -17,6 +29,7 @@ ab -n 10000 -c 100 http://localhost/
         AllowOverride All
     &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</code></pre>
+<p>With <code>mod_php</code>, the PHP interpreter is loaded into every Apache process, including those that only serve an image or a CSS file. <code>AllowOverride All</code> enables <code>.htaccess</code> files: convenient, but Apache must then look for those files in every directory along the path, on every request.</p>
 <p><strong>Nginx with PHP-FPM:</strong></p>
 <pre><code>server {
     root /var/www/html/public;
@@ -26,10 +39,98 @@ ab -n 10000 -c 100 http://localhost/
         include fastcgi_params;
     }
 }</code></pre>
+<p>Nginx does not execute PHP: it forwards <code>.php</code> requests to PHP-FPM over FastCGI, here through a Unix socket. The two services have independent process pools, sized separately. Using <code>$realpath_root</code> rather than <code>$document_root</code> resolves symbolic links, which matters with atomic deployments where <code>current</code> points to a new release.</p>
+<p>For a Symfony application, the recommended configuration goes further: every request that does not match an existing file goes through <code>index.php</code>, and no other PHP file can be executed:</p>
+<pre><code>server {
+    listen 80;
+    server_name example.com;
+    root /var/www/html/public;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}</code></pre>
+<p>The <code>internal</code> directive prevents calling <code>/index.php</code> directly in the URL, and the last block returns a 404 for any other PHP file: a script left behind in <code>public/</code> cannot be executed.</p>
+
+<h3>Modern Apache: event and PHP-FPM</h3>
+<p>Apache is not stuck with the <code>prefork</code> + <code>mod_php</code> pair. It can also hand PHP over to PHP-FPM through <code>mod_proxy_fcgi</code> and use the <code>event</code> MPM. On Debian or Ubuntu:</p>
+<pre><code>sudo apt install php8.3-fpm
+sudo a2dismod php8.3 mpm_prefork
+sudo a2enmod mpm_event proxy_fcgi setenvif
+sudo a2enconf php8.3-fpm
+sudo apachectl configtest &amp;&amp; sudo systemctl restart apache2</code></pre>
+<p>The virtual host then forwards PHP files to the PHP-FPM socket. If you do not need <code>.htaccess</code>, disable it and put the rules directly in the configuration:</p>
+<pre><code>&lt;VirtualHost *:80&gt;
+    ServerName example.com
+    DocumentRoot /var/www/html/public
+
+    &lt;Directory /var/www/html/public&gt;
+        AllowOverride None
+        Require all granted
+        FallbackResource /index.php
+    &lt;/Directory&gt;
+
+    &lt;FilesMatch \.php$&gt;
+        SetHandler "proxy:unix:/run/php/php8.3-fpm.sock|fcgi://localhost"
+    &lt;/FilesMatch&gt;
+&lt;/VirtualHost&gt;</code></pre>
+<p><code>FallbackResource</code> plays the same role as Nginx's <code>try_files</code>: any URL that does not match a file is served by <code>index.php</code>. With this configuration, Apache uses far less memory and gets close to Nginx in connection handling.</p>
+
+<h3>Quick comparison</h3>
+<table>
+<thead>
+<tr><th>Criterion</th><th>Nginx</th><th>Apache</th></tr>
+</thead>
+<tbody>
+<tr><td>Model</td><td>Event-driven, asynchronous</td><td>Processes/threads via MPM (prefork, worker, event)</td></tr>
+<tr><td>PHP</td><td>Through PHP-FPM only</td><td>mod_php or PHP-FPM</td></tr>
+<tr><td>Per-directory configuration</td><td>No (central configuration)</td><td>Yes, with <code>.htaccess</code></td></tr>
+<tr><td>Static content</td><td>Very efficient</td><td>Decent, especially with event</td></tr>
+<tr><td>Reverse proxy, load balancing</td><td>Native and very widespread</td><td>Possible via mod_proxy</td></tr>
+<tr><td>Configuration test</td><td><code>nginx -t</code></td><td><code>apachectl configtest</code></td></tr>
+</tbody>
+</table>
+
 <h3>When to choose which?</h3>
 <ul>
 <li><strong>Nginx</strong>: static content, reverse proxy, high concurrency, microservices</li>
 <li><strong>Apache</strong>: .htaccess required, specific modules, legacy compatibility</li>
 <li><strong>Both</strong>: Nginx as a reverse proxy in front of Apache for the best of both worlds</li>
 </ul>
-<p>In high-traffic environments such as CCM Benchmark, Nginx is preferred for its efficient handling of concurrent connections.</p>
+<p>The "both" setup is common on shared hosting or during a gradual migration: Nginx listens on the public ports, serves static files and handles TLS, then forwards the rest to Apache on a local port:</p>
+<pre><code>server {
+    listen 80;
+    server_name example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+<p>In this setup, enable <code>mod_remoteip</code> on the Apache side so that logs and the application see the client's real IP address rather than Nginx's. On the Symfony side, declare <code>127.0.0.1</code> in <code>framework.trusted_proxies</code> so that the <code>X-Forwarded-*</code> headers are taken into account.</p>
+
+<h3>Common pitfalls</h3>
+<ul>
+<li><strong>Mixing <code>mod_php</code> with the <code>event</code> MPM</strong>: not possible, Apache refuses to start. Switch to PHP-FPM to use <code>event</code>.</li>
+<li><strong>Translating an <code>.htaccess</code> blindly</strong>: when migrating to Nginx, rewrite rules must be ported by hand into the configuration, otherwise redirects or protections silently disappear.</li>
+<li><strong>Forgetting to test the configuration</strong>: always run <code>nginx -t</code> or <code>apachectl configtest</code> before reloading the service.</li>
+<li><strong>Sizing only one side</strong>: with PHP-FPM, it is often <code>pm.max_children</code> that limits throughput, not the web server.</li>
+</ul>
+<p>In high-traffic contexts such as at CCM Benchmark, Nginx is preferred for its efficient handling of concurrent connections.</p>
+<p>In summary: for a new PHP or Symfony project, Nginx with PHP-FPM is a solid and simple default choice. Apache remains relevant when <code>.htaccess</code> files are essential, when an application depends on specific modules, or when the team already masters its ecosystem. Either way, it is the configuration, and PHP-FPM's in particular, that will make the difference in production.</p>

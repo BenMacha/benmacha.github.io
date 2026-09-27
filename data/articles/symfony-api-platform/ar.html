@@ -1,13 +1,32 @@
 <h2>API Platform: إطار عمل الـ API لـ Symfony</h2>
-<p>يُعدّ API Platform الإطار المرجعي لبناء واجهات API حديثة باستخدام Symfony، إذ يولّد تلقائياً واجهة REST وGraphQL انطلاقاً من الكيانات (entities) الخاصة بك.</p>
+<p>API Platform هو إطار العمل المرجعي لبناء واجهات API حديثة مع Symfony. يولّد تلقائياً API من نوع REST وGraphQL انطلاقاً من كياناتك.</p>
+<p>عملياً، تصف مواردك بسمات PHP (attributes): أي العمليات مكشوفة، ومن يحق له الوصول إليها، وأي الحقول قابلة للقراءة أو التعديل. ويتكفل API Platform بالباقي: التوجيه، والتسلسل (serialization)، والتحقق، والترقيم، والمرشِّحات، والتفاوض على المحتوى، وتوثيق OpenAPI. والوقت الموفَّر في هذه الشيفرة المتكررة يمكن تخصيصه لقواعد الأعمال. يغطي هذا المقال إعداد مورد كامل، ثم النقاط التي تصنع الفرق في الإنتاج: مجموعات التسلسل، والأمان، ومنطق الأعمال المخصص، والاختبارات.</p>
+
 <h3>التثبيت والإعداد</h3>
 <pre><code>composer require api
 # Automatically creates the API Platform configuration</code></pre>
+<p>بفضل Symfony Flex، يثبّت الاسم المستعار <code>api</code> حزمة API Platform ووصفتها: الملف <code>config/packages/api_platform.yaml</code>، والمسارات تحت البادئة <code>/api</code>، وإعداد CORS. بعد تشغيل الخادم، يعرض <code>/api</code> توثيقاً تفاعلياً (Swagger UI) مولَّداً من مواردك. ويتيح الإعداد العام تحديد قيم افتراضية لكل الموارد:</p>
+<pre><code># config/packages/api_platform.yaml
+api_platform:
+    title: 'Catalogue API'
+    version: '1.0.0'
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    defaults:
+        pagination_items_per_page: 20
+        pagination_maximum_items_per_page: 100
+        pagination_client_items_per_page: true</code></pre>
+<p>مع <code>pagination_client_items_per_page</code>، يستطيع العميل اختيار حجم الصفحة عبر المعامل <code>itemsPerPage</code>، لكن دون تجاوز الحد الأقصى المحدد أبداً. فبدون هذا الحد، قد يطلب طلب واحد الجدول بأكمله.</p>
+
 <h3>إنشاء مورد API</h3>
+<p>المورد صنف موسوم بـ <code>#[ApiResource]</code>. وغالباً ما يكون كياناً في Doctrine كما هنا، وإن لم يكن ذلك إلزامياً. تصرّح القائمة <code>operations</code> صراحةً بالعمليات المكشوفة: كل ما ليس فيها لا وجود له في الـ API.</p>
 <pre><code>use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -32,21 +51,128 @@ class Product
 
     // Getters and setters...
 }</code></pre>
-<h3>الفلاتر والبحث</h3>
-<pre><code>#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
+<p>هذا الملف وحده يُنتج <code>GET /api/products</code> (مجموعة مرقَّمة) و<code>GET /api/products/{id}</code> و<code>POST /api/products</code> المحصور بالمديرين. يُخزَّن السعر كـ <code>decimal</code> ويُعالَج كسلسلة نصية في PHP: وهذا مقصود لتجنّب أخطاء تقريب الأعداد العشرية في المبالغ. وتُطبَّق قيود التحقق (<code>#[Assert\NotBlank]</code>) تلقائياً عند الكتابة: البيانات غير الصالحة تُنتج استجابة <strong>422</strong> تفصّل كل مخالفة، حقلاً بحقل.</p>
+
+<h3>المرشِّحات والبحث</h3>
+<p>تضيف المرشِّحات (filters) معاملات استعلام إلى المجموعات دون كتابة سطر SQL واحد:</p>
+<pre><code>use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+
+#[ApiFilter(SearchFilter::class, properties: ['name' =&gt; 'partial'])]
 #[ApiFilter(RangeFilter::class, properties: ['price'])]
-#[ApiFilter(OrderFilter::class, properties: ['name', 'price'])]</code></pre>
+#[ApiFilter(OrderFilter::class, properties: ['name', 'price'])]
+class Product
+{
+    // ...
+}</code></pre>
+<p>يستطيع العميل حينها استدعاء <code>/api/products?name=clavier&amp;price[lt]=100&amp;order[price]=asc</code>. ويظهر كل مرشِّح أيضاً في توثيق OpenAPI. احتياطان: المرشِّح <code>partial</code> يُترجَم إلى <code>LIKE '%…%'</code> لا يستفيد من فهرس B-tree عادي ويصبح مكلفاً على الجداول الكبيرة؛ ولا تكشف المرشِّحات إلا على الحقول المفيدة فعلاً، فكل مرشِّح مساحة استعلام إضافية. وتقترح الإصدارات الحديثة من API Platform أيضاً مقاربة قائمة على المعاملات (<code>QueryParameter</code>) تُعلَن مباشرة على العملية.</p>
+
 <h3>مجموعات التسلسل (Serialization Groups)</h3>
-<pre><code>#[ApiResource(
-    normalizationContext: ['groups' => ['product:read']],
-    denormalizationContext: ['groups' => ['product:write']],
+<p>افتراضياً، تُكشف كل الخصائص المتاحة للقراءة والكتابة معاً. ونادراً ما يكون هذا المطلوب: فالمعرّف يجب ألا يكون قابلاً للتعديل، وبعض الحقول الداخلية يجب ألا تخرج أبداً. تفصل مجموعات التسلسل بين ما تقرؤه الـ API وما تقبله:</p>
+<pre><code>use ApiPlatform\Metadata\ApiResource;
+use Symfony\Component\Serializer\Attribute\Groups;
+
+#[ApiResource(
+    normalizationContext: ['groups' =&gt; ['product:read']],
+    denormalizationContext: ['groups' =&gt; ['product:write']],
+)]
+class Product
+{
+    #[Groups(['product:read'])]
+    private ?int $id = null;
+
+    #[Groups(['product:read', 'product:write'])]
+    private string $name;
+
+    #[Groups(['product:read', 'product:write'])]
+    private string $price;
+}</code></pre>
+<p>الخاصية التي لا تنتمي إلى أي مجموعة غير مرئية للـ API. إنها أبسط حماية من الكشف غير المقصود لحقل يُضاف إلى الكيان لاحقاً، مثل سعر الشراء أو ملاحظة داخلية. اعتمد اصطلاح تسمية (<code>resource:read</code> و<code>resource:write</code>) والتزم به.</p>
+
+<h3>الأمان لكل عملية</h3>
+<p>يقبل الخيار <code>security</code> تعبيراً يُقيَّم قبل العملية. وفي العمليات على عنصر واحد، يتيح المتغير <code>object</code> الوصول إلى المورد المعني، ما يسمح بقواعد الملكية:</p>
+<pre><code>use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Patch;
+
+#[ApiResource(
+    operations: [
+        new Patch(security: "is_granted('ROLE_ADMIN') or object.getOwner() == user"),
+        new Delete(security: "is_granted('ROLE_ADMIN')"),
+    ],
 )]</code></pre>
+<p>للقواعد الأغنى، فوِّض القرار إلى Voter في Symfony عبر <code>is_granted('PRODUCT_EDIT', object)</code>: يبقى منطق الصلاحيات قابلاً للاختبار وإعادة الاستخدام خارج الـ API.</p>
+
+<h3>منطق الأعمال: State Processors</h3>
+<p>افتراضياً، تُحفَظ عمليات الكتابة مباشرة عبر Doctrine. ولإضافة سلوك (إرسال رسالة، حساب، استدعاء خارجي)، يستخدم API Platform ما يسمى <strong>State Providers</strong> للقراءة و<strong>State Processors</strong> للكتابة. والنهج الأكثر شيوعاً هو تزيين الـ processor الخاص بـ Doctrine:</p>
+<pre><code>namespace App\State;
+
+use ApiPlatform\Metadata\Operation;
+use ApiPlatform\State\ProcessorInterface;
+use App\Entity\Product;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+
+/** @implements ProcessorInterface&lt;Product, Product&gt; */
+final class ProductProcessor implements ProcessorInterface
+{
+    public function __construct(
+        #[Autowire(service: 'api_platform.doctrine.orm.state.persist_processor')]
+        private ProcessorInterface $persistProcessor,
+        private LoggerInterface $logger,
+    ) {}
+
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Product
+    {
+        $product = $this-&gt;persistProcessor-&gt;process($data, $operation, $uriVariables, $context);
+
+        $this-&gt;logger-&gt;info('Product saved', ['id' =&gt; $product-&gt;getId()]);
+
+        return $product;
+    }
+}</code></pre>
+<p>ثم نفعّله على العملية المعنية: <code>new Post(processor: ProductProcessor::class)</code>. والآلية نفسها تسمح بكشف موارد ليست كيانات، مثل DTO تغذّيه API خارجية، عبر provider وprocessor مخصصين. وهذا غالباً أنظف من كشف نموذج قاعدة البيانات مباشرة.</p>
+
+<h3>اختبار الـ API</h3>
+<p>يوفر API Platform الصنف <code>ApiTestCase</code>، وهو صنف اختبار مبني على عميل HTTP في Symfony، مع تأكيدات (assertions) مناسبة لاستجابات JSON:</p>
+<pre><code>use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+
+final class ProductApiTest extends ApiTestCase
+{
+    public function testCollectionIsPublic(): void
+    {
+        static::createClient()-&gt;request('GET', '/api/products');
+
+        $this-&gt;assertResponseIsSuccessful();
+        $this-&gt;assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+    }
+
+    public function testUnknownProductReturns404(): void
+    {
+        static::createClient()-&gt;request('GET', '/api/products/999999');
+
+        $this-&gt;assertResponseStatusCodeSame(404);
+    }
+}</code></pre>
+<p>أضف على الأقل اختباراً لكل قاعدة أمان: يجب أن يتلقى المستخدم الذي لا يملك الصلاحيات خطأً، وأن ينجح المدير. فهناك تختبئ أخطر حالات التراجع.</p>
+
 <h3>المزايا</h3>
 <ul>
-<li>توثيق OpenAPI يُولَّد تلقائياً</li>
+<li>توثيق OpenAPI مولَّد تلقائياً</li>
 <li>دعم JSON-LD وHydra</li>
-<li>ترقيم الصفحات (pagination) والفلترة والترتيب مدمجة</li>
-<li>تحقق تلقائي من صحة البيانات عبر قيود (constraints) Symfony</li>
+<li>ترقيم ومرشِّحات وفرز مدمجة</li>
+<li>تحقق تلقائي عبر قيود Symfony</li>
 <li>دعم أصلي لـ GraphQL</li>
 </ul>
-<p>تستخدم منصات مثل CCM Benchmark إطار API Platform لعرض خدماتها الداخلية عبر واجهات API موحّدة.</p>
+<p>يتطلب دعم GraphQL تثبيت حزمة إضافية، ثم يعيد استخدام الموارد والمجموعات وقواعد الأمان نفسها التي تستخدمها API من نوع REST. ويمكن تصدير مواصفة OpenAPI عبر <code>php bin/console api:openapi:export</code> لتوليد العملاء أو تغذية CI لاختبار العقود.</p>
+<p>تستخدم منصات مثل CCM Benchmark حزمة API Platform لكشف خدماتها الداخلية عبر واجهات API موحَّدة المعايير.</p>
+
+<h3>مزالق يجب تجنّبها</h3>
+<ul>
+<li><strong>كشف الكيان كما هو</strong>: دون مجموعات تسلسل، تصبح كل خاصية جديدة عامة. عرِّف المجموعات دائماً، أو استخدم كائنات DTO.</li>
+<li><strong>نسيان N+1</strong>: قد تُطلق مجموعةٌ تُسلسِل علاقاتها استعلاماً لكل عنصر. راقب محلّل Symfony وأضف روابط (joins) عند الحاجة، عبر امتداد Doctrine خاص بـ API Platform.</li>
+<li><strong>ترك كل العمليات الافتراضية</strong>: دون قائمة <code>operations</code>، يكشف API Platform أيضاً <code>PUT</code> و<code>PATCH</code> و<code>DELETE</code>. صرّح بوضوح بما تريده.</li>
+<li><strong>كتابة الأمان في المتحكمات (controllers)</strong>: أبقِه في سمات <code>security</code> وفي الـ Voters، حيث يكون مرئياً وقابلاً للاختبار.</li>
+</ul>
+<p>ليس API Platform الخيار الأفضل لـ API مكوّنة من بضع نقاط نهاية شديدة الخصوصية لا صلة لها بنموذج موارد: فالمتحكم التقليدي في Symfony سيكون أبسط حينها. لكن متى تعلّق الأمر بكشف نموذج أعمال بعمليات CRUD مع الترقيم والمرشِّحات والأمان والتوثيق، فهو من أكثر الطرق إنتاجية لتحقيق ذلك في PHP.</p>
