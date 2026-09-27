@@ -1,12 +1,19 @@
-export interface BlogArticle {
-  slug: string
+export type ArticleLocale = 'fr' | 'en' | 'ar'
+
+export interface ArticleText {
   title: string
   description: string
+  content: string
+}
+
+export interface BlogArticle extends ArticleText {
+  slug: string
   category: string
   date: string
   readTime: string
   tags: string[]
-  content: string
+  /** Optional translations; the French fields above are the fallback. */
+  translations?: Partial<Record<Exclude<ArticleLocale, 'fr'>, ArticleText>>
 }
 
 export const blogArticles: BlogArticle[] = [
@@ -1568,10 +1575,6 @@ public function newLeads(LeadRepository $repo): JsonResponse
     slug: 'mcp-server-php',
     title: 'Créer un serveur MCP en PHP',
     description: 'Exposez vos outils PHP à Claude et aux autres assistants IA grâce au Model Context Protocol et au SDK PHP officiel : outils, ressources, prompts, tests et intégration.',
-    category: 'PHP',
-    date: '22 Sep 2026',
-    readTime: '14 min',
-    tags: ['PHP', 'MCP', 'IA', 'Symfony'],
     content: `<h2>MCP : donner des mains à un assistant IA</h2>
 <p>Le <strong>Model Context Protocol</strong> (MCP) est un protocole ouvert qui standardise la façon dont une application d'IA (Claude, un IDE, un agent) se connecte à des sources de données et à des actions externes. Au lieu d'écrire une intégration spécifique pour chaque assistant, vous écrivez <strong>un serveur MCP</strong>, et tous les clients compatibles savent l'utiliser.</p>
 <p>Un serveur MCP expose trois types de capacités :</p>
@@ -1763,16 +1766,410 @@ $client-&gt;disconnect();</code></pre>
 
 <h3>Aller plus loin</h3>
 <p>Le SDK fournit aussi un transport HTTP (Streamable HTTP) pour héberger un serveur distant partagé par une équipe, avec gestion des sessions et de l'autorisation, et il prend en charge les deux générations du protocole, y compris la révision sans état <code>2026-07-28</code>. Côté frameworks, <code>symfony/mcp-bundle</code> intègre le SDK à Symfony (vos services deviennent des outils MCP, avec l'injection de dépendances), et <code>api-platform/mcp</code> expose directement vos ressources API Platform.</p>
-<p>C'est l'approche que j'utilise pour connecter des assistants IA aux données métier : quelques outils bien délimités, en lecture seule, avec des descriptions précises, et l'IA devient capable de répondre à des questions qui demandaient auparavant une requête SQL ou un export manuel.</p>`
+<p>C'est l'approche que j'utilise pour connecter des assistants IA aux données métier : quelques outils bien délimités, en lecture seule, avec des descriptions précises, et l'IA devient capable de répondre à des questions qui demandaient auparavant une requête SQL ou un export manuel.</p>`,
+    category: 'PHP',
+    date: '22 Sep 2026',
+    readTime: '14 min',
+    tags: ['PHP', 'MCP', 'IA', 'Symfony'],
+    translations: {
+      en: {
+        title: 'Building an MCP server in PHP',
+        description: 'Expose your PHP tools to Claude and other AI assistants with the Model Context Protocol and the official PHP SDK: tools, resources, prompts, testing and integration.',
+        content: `<h2>MCP: giving an AI assistant a pair of hands</h2>
+<p>The <strong>Model Context Protocol</strong> (MCP) is an open protocol that standardizes how an AI application (Claude, an IDE, an agent) connects to external data sources and actions. Instead of writing a dedicated integration for every assistant, you write <strong>one MCP server</strong>, and every compatible client can use it.</p>
+<p>An MCP server exposes three kinds of capabilities:</p>
+<ul>
+<li><strong>Tools</strong>: actions the model can call (check a service, create a ticket, run a read-only SQL query…)</li>
+<li><strong>Resources</strong>: data the client can read (configuration, documentation, server state)</li>
+<li><strong>Prompts</strong>: reusable message templates, parameterized by the user</li>
+</ul>
+<p>Client and server exchange <strong>JSON-RPC 2.0</strong> messages, either over standard input/output (<code>stdio</code>, ideal locally) or over HTTP (Streamable HTTP, for a remote server).</p>
+
+<h3>The official PHP SDK</h3>
+<p>Since 2025, PHP has an official SDK: <code>mcp/sdk</code>, built jointly by the <strong>PHP Foundation</strong> and the <strong>Symfony project</strong>, on top of the work done in PHP-MCP and Symfony AI. It is framework-agnostic and follows Symfony's backward compatibility promise. It is still flagged experimental until 1.0: pin the version in your <code>composer.json</code>.</p>
+<p>Requirements: PHP 8.1 or later. Installation:</p>
+<pre><code>composer require mcp/sdk symfony/finder</code></pre>
+<p><strong>Pitfall #1</strong>: <code>symfony/finder</code> is only a <em>suggested</em> dependency, yet it is required for attribute-based discovery. Without it, the server fails at startup… and since the error goes to standard error, the client simply sees a server with no tools at all.</p>
+
+<h3>A first server: a DevOps assistant</h3>
+<p>Let's build a server that is useful day to day: it checks that a URL responds, checks disk space, exposes system information and offers an incident report prompt. Start by declaring the autoloading of your classes:</p>
+<pre><code>{
+    "require": {
+        "mcp/sdk": "^0.8",
+        "symfony/finder": "^8.1"
+    },
+    "autoload": {
+        "psr-4": { "App\\\\": "src/" }
+    }
+}</code></pre>
+<p>Capabilities are plain annotated PHP methods. The SDK generates the JSON schema of the parameters from the PHP types, and the description from the docblock:</p>
+<pre><code>&lt;?php
+
+namespace App;
+
+use Mcp\\Capability\\Attribute\\McpPrompt;
+use Mcp\\Capability\\Attribute\\McpResource;
+use Mcp\\Capability\\Attribute\\McpTool;
+use Mcp\\Capability\\Attribute\\Schema;
+use Mcp\\Exception\\ToolCallException;
+
+final class DevOpsTools
+{
+    /**
+     * Checks that a URL responds and returns its HTTP status and response time.
+     */
+    #[McpTool(name: 'check_url')]
+    public function checkUrl(
+        #[Schema(format: 'uri', description: 'Full URL, e.g. https://benmacha.tn')]
+        string $url,
+    ): array {
+        if (!preg_match('#^https?://#', $url)) {
+            throw new ToolCallException('Only http(s) URLs are accepted.');
+        }
+
+        $start = microtime(true);
+        $context = stream_context_create(['http' =&gt; ['method' =&gt; 'HEAD', 'timeout' =&gt; 5, 'ignore_errors' =&gt; true]]);
+        $headers = @get_headers($url, true, $context);
+
+        if ($headers === false) {
+            return ['url' =&gt; $url, 'up' =&gt; false, 'error' =&gt; 'Host unreachable'];
+        }
+
+        preg_match('#\\s(\\d{3})\\s#', $headers[0], $m);
+        $status = (int) ($m[1] ?? 0);
+
+        return [
+            'url' =&gt; $url,
+            'up' =&gt; $status &gt; 0 &amp;&amp; $status &lt; 400,
+            'status' =&gt; $status,
+            'time_ms' =&gt; (int) round((microtime(true) - $start) * 1000),
+        ];
+    }
+
+    /**
+     * Returns the used and available disk space for a path.
+     */
+    #[McpTool(name: 'disk_usage')]
+    public function diskUsage(
+        #[Schema(description: 'Path to inspect')]
+        string $path = '/',
+    ): array {
+        $total = @disk_total_space($path);
+        $free = @disk_free_space($path);
+
+        if ($total === false || $free === false) {
+            throw new ToolCallException(sprintf('Unreadable path: %s', $path));
+        }
+
+        return [
+            'path' =&gt; $path,
+            'total_gb' =&gt; round($total / 1e9, 1),
+            'free_gb' =&gt; round($free / 1e9, 1),
+            'used_percent' =&gt; round(100 * ($total - $free) / $total, 1),
+        ];
+    }
+
+    #[McpResource(uri: 'server://info', name: 'server_info', mimeType: 'application/json')]
+    public function serverInfo(): array
+    {
+        return ['hostname' =&gt; gethostname(), 'os' =&gt; PHP_OS_FAMILY, 'php' =&gt; PHP_VERSION];
+    }
+
+    /**
+     * Prepares an incident report from a service and a symptom.
+     */
+    #[McpPrompt(name: 'incident_report')]
+    public function incidentReport(string $service, string $symptom): array
+    {
+        return [[
+            'role' =&gt; 'user',
+            'content' =&gt; "The \\"$service\\" service shows this symptom: $symptom. "
+                . "Use check_url and disk_usage to diagnose it, then write a short "
+                . "incident report: impact, probable cause, immediate actions.",
+        ]];
+    }
+}</code></pre>
+<p>The entry point is only a few lines long: declare the server, tell it to scan the <code>src</code> directory, and run it on the stdio transport.</p>
+<pre><code>#!/usr/bin/env php
+&lt;?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Mcp\\Server;
+use Mcp\\Server\\Transport\\StdioTransport;
+
+exit(Server::builder()
+    -&gt;setServerInfo('DevOps Assistant', '1.0.0')
+    -&gt;setDiscovery(__DIR__, ['src'])
+    -&gt;build()
+    -&gt;run(new StdioTransport()));</code></pre>
+
+<h3>What the client sees</h3>
+<p>From the <code>checkUrl(string $url)</code> signature, the docblock and the <code>#[Schema]</code> attribute, the SDK publishes this tool definition:</p>
+<pre><code>{
+  "name": "check_url",
+  "description": "Checks that a URL responds and returns its HTTP status and response time.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "format": "uri", "description": "Full URL, e.g. https://benmacha.tn" }
+    },
+    "required": ["url"]
+  }
+}</code></pre>
+<p>For <code>disk_usage</code>, the <code>'/'</code> default value becomes a <code>"default"</code> and the parameter is optional. When a tool returns an array, the SDK sends it both as JSON text and as <code>structuredContent</code>, ready for the client to use.</p>
+
+<h3>Handling errors properly</h3>
+<p><strong>Pitfall #2</strong>: not every exception will do. A generic exception (<code>InvalidArgumentException</code>, <code>RuntimeException</code>…) is turned into a generic JSON-RPC error, "Error while executing tool": the model has no idea what went wrong. Throw a <code>Mcp\\Exception\\ToolCallException</code> instead: its message is returned in a result flagged <code>isError: true</code>, which the model can read to fix its call (for instance, retry with an https URL).</p>
+
+<h3>Testing without an assistant: the PHP client and the Inspector</h3>
+<p>The SDK also ships a client, perfect for automated tests:</p>
+<pre><code>use Mcp\\Client;
+use Mcp\\Client\\Transport\\StdioTransport;
+
+$client = Client::builder()-&gt;setClientInfo('Tests', '1.0.0')-&gt;build();
+$client-&gt;connect(new StdioTransport(command: 'php', args: [__DIR__.'/server.php']));
+
+foreach ($client-&gt;listTools()-&gt;tools as $tool) {
+    echo $tool-&gt;name, ': ', $tool-&gt;description, PHP_EOL;
+}
+
+$result = $client-&gt;callTool('check_url', ['url' =&gt; 'https://benmacha.tn']);
+var_dump($result-&gt;structuredContent); // ['url' =&gt; ..., 'up' =&gt; true, 'status' =&gt; 200, 'time_ms' =&gt; ...]
+
+$client-&gt;disconnect();</code></pre>
+<p>To explore the server visually, the official <strong>MCP Inspector</strong> starts the server and lists its tools, resources and prompts:</p>
+<pre><code>npx @modelcontextprotocol/inspector php server.php</code></pre>
+
+<h3>Plugging the server into Claude</h3>
+<p>With <strong>Claude Code</strong>, a single command is enough:</p>
+<pre><code>claude mcp add devops -- php /absolute/path/to/server.php</code></pre>
+<p>With <strong>Claude Desktop</strong>, add the server to <code>claude_desktop_config.json</code>:</p>
+<pre><code>{
+  "mcpServers": {
+    "devops": {
+      "command": "php",
+      "args": ["/absolute/path/to/server.php"]
+    }
+  }
+}</code></pre>
+<p>Then ask: "Is benmacha.tn responding correctly, and is there any disk space left?". The assistant calls <code>check_url</code>, then <code>disk_usage</code>, and summarizes the results.</p>
+
+<h3>Golden rules for production</h3>
+<ul>
+<li><strong>Never write to stdout</strong> in stdio mode: standard output is reserved for the protocol. A forgotten <code>echo</code> or <code>var_dump</code> corrupts the exchange. Log to stderr or to a file (the builder accepts a PSR-3 logger).</li>
+<li><strong>Narrow tools rather than a "run a command" tool</strong>: exposing a shell or free-form SQL means handing the keys of the server to the model.</li>
+<li><strong>Validate every input</strong>: the JSON schema guides the model, but it does not replace server-side validation (allow-lists of paths, hosts, tables).</li>
+<li><strong>Least privilege</strong>: run the server under a dedicated system user, with a read-only database account whenever possible.</li>
+<li><strong>Carefully written descriptions</strong>: they are the only documentation the model reads to choose the right tool and the right parameter.</li>
+</ul>
+
+<h3>Going further</h3>
+<p>The SDK also provides an HTTP transport (Streamable HTTP) to host a remote server shared by a team, with session and authorization handling, and it supports both generations of the protocol, including the stateless <code>2026-07-28</code> revision. On the framework side, <code>symfony/mcp-bundle</code> integrates the SDK into Symfony (your services become MCP tools, with dependency injection), and <code>api-platform/mcp</code> exposes your API Platform resources directly.</p>
+<p>This is the approach I use to connect AI assistants to business data: a few well-scoped, read-only tools with precise descriptions, and the AI can answer questions that used to require an SQL query or a manual export.</p>`,
+      },
+      ar: {
+        title: 'إنشاء خادم MCP باستخدام PHP',
+        description: 'اجعل أدوات PHP الخاصة بك متاحة لـ Claude ولمساعدي الذكاء الاصطناعي الآخرين عبر بروتوكول Model Context Protocol وحزمة SDK الرسمية لـ PHP: الأدوات والموارد والقوالب والاختبار والدمج.',
+        content: `<h2>MCP: أيدٍ لمساعد الذكاء الاصطناعي</h2>
+<p><strong>Model Context Protocol</strong> (MCP) بروتوكول مفتوح يوحّد طريقة اتصال تطبيقات الذكاء الاصطناعي (Claude، محرر الشيفرة، الوكلاء) بمصادر البيانات والإجراءات الخارجية. بدلاً من كتابة تكامل خاص لكل مساعد، تكتب <strong>خادم MCP واحداً</strong> ويستطيع كل عميل متوافق استخدامه.</p>
+<p>يعرض خادم MCP ثلاثة أنواع من القدرات:</p>
+<ul>
+<li><strong>الأدوات (Tools)</strong>: إجراءات يستطيع النموذج استدعاءها (فحص خدمة، إنشاء تذكرة، تنفيذ استعلام SQL للقراءة فقط…)</li>
+<li><strong>الموارد (Resources)</strong>: بيانات يستطيع العميل قراءتها (الإعدادات، التوثيق، حالة الخادم)</li>
+<li><strong>القوالب (Prompts)</strong>: نماذج رسائل قابلة لإعادة الاستخدام يحدد المستخدم معاملاتها</li>
+</ul>
+<p>يتبادل العميل والخادم رسائل <strong>JSON-RPC 2.0</strong>، إما عبر الإدخال والإخراج القياسيين (<code>stdio</code>، وهو مثالي محلياً) أو عبر HTTP (Streamable HTTP، لخادم بعيد).</p>
+
+<h3>حزمة SDK الرسمية لـ PHP</h3>
+<p>منذ عام 2025 أصبح لـ PHP حزمة SDK رسمية: <code>mcp/sdk</code>، طوّرتها <strong>PHP Foundation</strong> و<strong>مشروع Symfony</strong> معاً انطلاقاً من عمل PHP-MCP وSymfony AI. الحزمة مستقلة عن أي إطار عمل وتلتزم بوعد التوافق العكسي الخاص بـ Symfony، لكنها ما زالت تجريبية قبل الإصدار 1.0: ثبّت رقم الإصدار في ملف <code>composer.json</code>.</p>
+<p>المتطلبات: PHP 8.1 على الأقل. التثبيت:</p>
+<pre><code>composer require mcp/sdk symfony/finder</code></pre>
+<p><strong>الفخ الأول</strong>: الحزمة <code>symfony/finder</code> مجرد اعتمادية <em>مقترحة</em>، لكنها ضرورية لاكتشاف الأدوات تلقائياً عبر السمات (attributes). بدونها يفشل الخادم عند الإقلاع، وبما أن الخطأ يُكتب في مخرج الأخطاء القياسي، يرى العميل ببساطة خادماً بلا أي أداة.</p>
+
+<h3>خادم أول: مساعد DevOps</h3>
+<p>لنبنِ خادماً مفيداً في العمل اليومي: يتحقق من أن رابطاً ما يستجيب، ويفحص المساحة المتبقية على القرص، ويعرض معلومات النظام، ويقترح قالباً لتقرير حادث. ابدأ بتعريف التحميل التلقائي لأصنافك:</p>
+<pre><code>{
+    "require": {
+        "mcp/sdk": "^0.8",
+        "symfony/finder": "^8.1"
+    },
+    "autoload": {
+        "psr-4": { "App\\\\": "src/" }
+    }
+}</code></pre>
+<p>القدرات مجرد دوال PHP عادية مزوّدة بسمات. تولّد الحزمة مخطط JSON للمعاملات من أنواع PHP، والوصف من تعليق docblock:</p>
+<pre><code>&lt;?php
+
+namespace App;
+
+use Mcp\\Capability\\Attribute\\McpPrompt;
+use Mcp\\Capability\\Attribute\\McpResource;
+use Mcp\\Capability\\Attribute\\McpTool;
+use Mcp\\Capability\\Attribute\\Schema;
+use Mcp\\Exception\\ToolCallException;
+
+final class DevOpsTools
+{
+    /**
+     * Checks that a URL responds and returns its HTTP status and response time.
+     */
+    #[McpTool(name: 'check_url')]
+    public function checkUrl(
+        #[Schema(format: 'uri', description: 'Full URL, e.g. https://benmacha.tn')]
+        string $url,
+    ): array {
+        if (!preg_match('#^https?://#', $url)) {
+            throw new ToolCallException('Only http(s) URLs are accepted.');
+        }
+
+        $start = microtime(true);
+        $context = stream_context_create(['http' =&gt; ['method' =&gt; 'HEAD', 'timeout' =&gt; 5, 'ignore_errors' =&gt; true]]);
+        $headers = @get_headers($url, true, $context);
+
+        if ($headers === false) {
+            return ['url' =&gt; $url, 'up' =&gt; false, 'error' =&gt; 'Host unreachable'];
+        }
+
+        preg_match('#\\s(\\d{3})\\s#', $headers[0], $m);
+        $status = (int) ($m[1] ?? 0);
+
+        return [
+            'url' =&gt; $url,
+            'up' =&gt; $status &gt; 0 &amp;&amp; $status &lt; 400,
+            'status' =&gt; $status,
+            'time_ms' =&gt; (int) round((microtime(true) - $start) * 1000),
+        ];
+    }
+
+    /**
+     * Returns the used and available disk space for a path.
+     */
+    #[McpTool(name: 'disk_usage')]
+    public function diskUsage(
+        #[Schema(description: 'Path to inspect')]
+        string $path = '/',
+    ): array {
+        $total = @disk_total_space($path);
+        $free = @disk_free_space($path);
+
+        if ($total === false || $free === false) {
+            throw new ToolCallException(sprintf('Unreadable path: %s', $path));
+        }
+
+        return [
+            'path' =&gt; $path,
+            'total_gb' =&gt; round($total / 1e9, 1),
+            'free_gb' =&gt; round($free / 1e9, 1),
+            'used_percent' =&gt; round(100 * ($total - $free) / $total, 1),
+        ];
+    }
+
+    #[McpResource(uri: 'server://info', name: 'server_info', mimeType: 'application/json')]
+    public function serverInfo(): array
+    {
+        return ['hostname' =&gt; gethostname(), 'os' =&gt; PHP_OS_FAMILY, 'php' =&gt; PHP_VERSION];
+    }
+
+    /**
+     * Prepares an incident report from a service and a symptom.
+     */
+    #[McpPrompt(name: 'incident_report')]
+    public function incidentReport(string $service, string $symptom): array
+    {
+        return [[
+            'role' =&gt; 'user',
+            'content' =&gt; "The \\"$service\\" service shows this symptom: $symptom. "
+                . "Use check_url and disk_usage to diagnose it, then write a short "
+                . "incident report: impact, probable cause, immediate actions.",
+        ]];
+    }
+}</code></pre>
+<p>نقطة الدخول لا تتجاوز بضعة أسطر: نعرّف الخادم، ونطلب منه فحص المجلد <code>src</code>، ثم نشغّله على ناقل stdio.</p>
+<pre><code>#!/usr/bin/env php
+&lt;?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Mcp\\Server;
+use Mcp\\Server\\Transport\\StdioTransport;
+
+exit(Server::builder()
+    -&gt;setServerInfo('DevOps Assistant', '1.0.0')
+    -&gt;setDiscovery(__DIR__, ['src'])
+    -&gt;build()
+    -&gt;run(new StdioTransport()));</code></pre>
+
+<h3>ما يراه العميل</h3>
+<p>انطلاقاً من توقيع الدالة <code>checkUrl(string $url)</code> وتعليق docblock والسمة <code>#[Schema]</code>، تنشر الحزمة تعريف الأداة التالي:</p>
+<pre><code>{
+  "name": "check_url",
+  "description": "Checks that a URL responds and returns its HTTP status and response time.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "format": "uri", "description": "Full URL, e.g. https://benmacha.tn" }
+    },
+    "required": ["url"]
+  }
+}</code></pre>
+<p>بالنسبة إلى <code>disk_usage</code>، تصبح القيمة الافتراضية <code>'/'</code> حقلاً <code>"default"</code> ويصبح المعامل اختيارياً. وعندما تُرجع الأداة مصفوفة، ترسلها الحزمة نصاً بصيغة JSON وأيضاً في الحقل <code>structuredContent</code> الجاهز للاستخدام من طرف العميل.</p>
+
+<h3>معالجة الأخطاء بشكل صحيح</h3>
+<p><strong>الفخ الثاني</strong>: ليس كل استثناء مناسباً. أي استثناء عام (<code>InvalidArgumentException</code> أو <code>RuntimeException</code>…) يتحول إلى خطأ JSON-RPC عام بعنوان "Error while executing tool"، ولا يعرف النموذج ما الذي حدث. استخدم بدلاً منه <code>Mcp\\Exception\\ToolCallException</code>: تُعاد رسالته ضمن نتيجة معلَّمة بـ <code>isError: true</code>، فيستطيع النموذج قراءتها وتصحيح استدعائه (مثلاً إعادة المحاولة برابط https).</p>
+
+<h3>الاختبار دون مساعد: عميل PHP وأداة Inspector</h3>
+<p>تحتوي الحزمة أيضاً على عميل، وهو مثالي للاختبارات الآلية:</p>
+<pre><code>use Mcp\\Client;
+use Mcp\\Client\\Transport\\StdioTransport;
+
+$client = Client::builder()-&gt;setClientInfo('Tests', '1.0.0')-&gt;build();
+$client-&gt;connect(new StdioTransport(command: 'php', args: [__DIR__.'/server.php']));
+
+foreach ($client-&gt;listTools()-&gt;tools as $tool) {
+    echo $tool-&gt;name, ': ', $tool-&gt;description, PHP_EOL;
+}
+
+$result = $client-&gt;callTool('check_url', ['url' =&gt; 'https://benmacha.tn']);
+var_dump($result-&gt;structuredContent); // ['url' =&gt; ..., 'up' =&gt; true, 'status' =&gt; 200, 'time_ms' =&gt; ...]
+
+$client-&gt;disconnect();</code></pre>
+<p>ولاستكشاف الخادم بصرياً، تشغّل أداة <strong>MCP Inspector</strong> الرسمية الخادمَ وتعرض أدواته وموارده وقوالبه:</p>
+<pre><code>npx @modelcontextprotocol/inspector php server.php</code></pre>
+
+<h3>ربط الخادم بـ Claude</h3>
+<p>مع <strong>Claude Code</strong> يكفي أمر واحد:</p>
+<pre><code>claude mcp add devops -- php /absolute/path/to/server.php</code></pre>
+<p>ومع <strong>Claude Desktop</strong> أضف الخادم إلى الملف <code>claude_desktop_config.json</code>:</p>
+<pre><code>{
+  "mcpServers": {
+    "devops": {
+      "command": "php",
+      "args": ["/absolute/path/to/server.php"]
+    }
+  }
+}</code></pre>
+<p>ثم اسأل: "هل يستجيب الموقع benmacha.tn بشكل صحيح، وهل بقيت مساحة على القرص؟". سيستدعي المساعد <code>check_url</code> ثم <code>disk_usage</code> ويلخّص النتائج.</p>
+
+<h3>القواعد الذهبية في بيئة الإنتاج</h3>
+<ul>
+<li><strong>لا تكتب أبداً في stdout</strong> في وضع stdio: المخرج القياسي محجوز للبروتوكول، وأي <code>echo</code> أو <code>var_dump</code> منسيّ يفسد التبادل. سجّل في stderr أو في ملف (يقبل الـ builder مسجِّلاً متوافقاً مع PSR-3).</li>
+<li><strong>أدوات محددة بدلاً من أداة "نفّذ أمراً"</strong>: كشف سطر الأوامر أو SQL حرّ يعني تسليم مفاتيح الخادم للنموذج.</li>
+<li><strong>تحقّق من كل مُدخل</strong>: مخطط JSON يوجّه النموذج لكنه لا يغني عن التحقق في الخادم (قوائم مسموح بها للمسارات والمضيفين والجداول).</li>
+<li><strong>أقل الصلاحيات</strong>: شغّل الخادم بمستخدم نظام مخصص، وبحساب قاعدة بيانات للقراءة فقط كلما أمكن.</li>
+<li><strong>أوصاف مكتوبة بعناية</strong>: فهي التوثيق الوحيد الذي يقرؤه النموذج لاختيار الأداة والمعامل المناسبين.</li>
+</ul>
+
+<h3>للتعمق أكثر</h3>
+<p>توفّر الحزمة أيضاً ناقل HTTP (Streamable HTTP) لاستضافة خادم بعيد يتشاركه فريق كامل، مع إدارة الجلسات والتفويض، وتدعم جيلَي البروتوكول بما فيهما المراجعة عديمة الحالة <code>2026-07-28</code>. أما على مستوى أطر العمل، فتدمج <code>symfony/mcp-bundle</code> الحزمة في Symfony (تصبح خدماتك أدوات MCP مع حقن الاعتماديات)، وتعرض <code>api-platform/mcp</code> موارد API Platform مباشرة.</p>
+<p>هذا هو النهج الذي أعتمده لربط مساعدي الذكاء الاصطناعي ببيانات العمل: بضع أدوات محددة النطاق وللقراءة فقط بأوصاف دقيقة، فيصبح الذكاء الاصطناعي قادراً على الإجابة عن أسئلة كانت تتطلب سابقاً استعلام SQL أو تصديراً يدوياً.</p>`,
+      },
+    },
   },
   {
     slug: 'nuxt-cloudflare-pages',
     title: 'Déployer un site Nuxt sur Cloudflare Pages (et éviter les pièges)',
     description: 'Retour d\'expérience sur le déploiement de ce portfolio Nuxt 3 sur Cloudflare Pages : configuration du build, branche de production, version de Node, lockfile npm et redirections.',
-    category: 'DevOps',
-    date: '26 Sep 2026',
-    readTime: '8 min',
-    tags: ['Nuxt', 'Cloudflare', 'DevOps', 'CI/CD'],
     content: `<h2>Un portfolio servi depuis le réseau de Cloudflare</h2>
 <p>Ce site est une application <strong>Nuxt 3</strong> dont toutes les pages sont pré-rendues au build : l'accueil, les pages de CV et chacun des articles du blog. Cloudflare Pages est un hébergement idéal pour ce cas : HTML servi depuis le réseau mondial de Cloudflare, HTTPS automatique, un déploiement à chaque push, et un aperçu par branche. Voici la configuration, et surtout les trois pièges rencontrés lors de la dernière refonte.</p>
 
@@ -1840,16 +2237,162 @@ npm run build</code></pre>
 <li>Générez le <strong>lockfile</strong> avec la même version de npm que la CI, et testez <code>npm ci</code> en local</li>
 <li>Générez les routes pré-rendues et le sitemap <strong>depuis vos données</strong></li>
 </ul>
-<p>Une fois ces points réglés, le cycle devient idéal : un <code>git push</code>, une minute de build, et le site est à jour partout dans le monde.</p>`
+<p>Une fois ces points réglés, le cycle devient idéal : un <code>git push</code>, une minute de build, et le site est à jour partout dans le monde.</p>`,
+    category: 'DevOps',
+    date: '26 Sep 2026',
+    readTime: '8 min',
+    tags: ['Nuxt', 'Cloudflare', 'DevOps', 'CI/CD'],
+    translations: {
+      en: {
+        title: 'Deploying a Nuxt site to Cloudflare Pages (and avoiding the pitfalls)',
+        description: 'Lessons learned deploying this Nuxt 3 portfolio to Cloudflare Pages: build settings, production branch, Node version, npm lockfile and redirects.',
+        content: `<h2>A portfolio served from Cloudflare's network</h2>
+<p>This site is a <strong>Nuxt 3</strong> application where every page is prerendered at build time: the home page, the resume pages and every blog article. Cloudflare Pages is an ideal host for this: HTML served from Cloudflare's global network, automatic HTTPS, a deployment on every push and a preview for every branch. Here is the setup, and above all the three pitfalls I ran into during the latest redesign.</p>
+
+<h3>Build settings</h3>
+<p>In the dashboard (<em>Workers &amp; Pages → your project → Settings → Build</em>):</p>
+<ul>
+<li><strong>Build command</strong>: <code>npm run build</code></li>
+<li><strong>Output directory</strong>: <code>dist</code></li>
+<li><strong>Production branch</strong>: <code>master</code> (or <code>main</code>)</li>
+</ul>
+<p>Nuxt automatically detects the Cloudflare Pages environment and uses the <code>cloudflare-pages</code> Nitro preset: prerendered routes become static HTML files in <code>dist/</code>, and everything else is served by a Worker. For a 100% static site, declare the routes to prerender in <code>nuxt.config.ts</code>. Generating them from your data means you never forget an article:</p>
+<pre><code>import { blogArticles } from './data/blog'
+
+const staticPages = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+const blogPages = blogArticles.map(article =&gt; \`/blog/\${article.slug}\`)
+
+export default defineNuxtConfig({
+  nitro: {
+    prerender: {
+      routes: [...staticPages, ...blogPages],
+      crawlLinks: true,
+    },
+  },
+})</code></pre>
+<p>The same array feeds the sitemap: a new article is prerendered and listed automatically, without touching anything else.</p>
+
+<h3>Pitfall #1: the production branch</h3>
+<p>After the redesign was pushed to <code>master</code>, the live site had not changed, even though the build succeeded. The project's production branch was still set to an old work branch, so every push to <code>master</code> only produced a <strong>preview deployment</strong> on a <code>*.pages.dev</code> URL, without touching the main domain.</p>
+<p>Check it under <em>Settings → Build → Branch control</em>. And changing the production branch does not redeploy anything: you need a new commit on that branch (or to retry a deployment) for production to be updated.</p>
+
+<h3>Pitfall #2: the Node version</h3>
+<p>Nuxt 3.21, Vite 7 and Nitro require <strong>Node <code>^20.19</code> or <code>&gt;=22.12</code></strong>. Cloudflare's build system reads the version from a <code>.node-version</code> or <code>.nvmrc</code> file at the root of the repository (or from the <code>NODE_VERSION</code> environment variable). A bare <code>20</code> is ambiguous: pin a recent major version that is clearly compatible.</p>
+<pre><code>echo 22 &gt; .node-version
+echo 22 &gt; .nvmrc</code></pre>
+
+<h3>Pitfall #3: the lockfile and <code>npm ci</code></h3>
+<p>The build failed within seconds with this message:</p>
+<pre><code>npm error \`npm ci\` can only install packages when your package.json and
+package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: oxc-parser@0.151.0 from lock file
+npm error Missing: esbuild@0.28.2 from lock file
+...</code></pre>
+<p>Yet <code>npm install</code> and the build worked perfectly locally. The cause: the <code>package-lock.json</code> had been generated with <strong>npm 11</strong> (shipped with Node 24), while Cloudflare installs dependencies with <code>npm ci</code> on <strong>npm 10</strong>. The two versions do not resolve optional dependencies the same way, and npm 10 considered the lockfile out of sync.</p>
+<p>The fix: regenerate the lockfile with the same npm version as the CI, declared in the <code>packageManager</code> field of <code>package.json</code>:</p>
+<pre><code>npx npm@10.9.4 install --package-lock-only</code></pre>
+<p>And above all, <strong>reproduce the CI locally</strong> before pushing, on a clean copy of the repository:</p>
+<pre><code>git clone . /tmp/ci-check &amp;&amp; cd /tmp/ci-check
+npx npm@10.9.4 ci
+npm run build</code></pre>
+<p>If these two commands succeed, the Cloudflare build will too.</p>
+
+<h3>Trailing slash redirects</h3>
+<p>Once live, <code>curl -I https://benmacha.tn/experience</code> returns a <strong>308</strong> to <code>/experience/</code>. This is not a bug: each prerendered page is an <code>experience/index.html</code> file, and Cloudflare Pages redirects to the directory URL. For SEO, keep internal links and canonical URLs consistent with this behavior to avoid a redirect on every click.</p>
+
+<h3>Following a deployment without opening the dashboard</h3>
+<p>Cloudflare reports the status of each build to GitHub as a <em>check run</em> attached to the commit. With the GitHub CLI, you can follow the deployment from the terminal:</p>
+<pre><code>gh api repos/MOI/MON-REPO/commits/$(git rev-parse HEAD)/check-runs \\
+  --jq '.check_runs[] | select(.name=="Cloudflare Pages") | "\\(.status) \\(.conclusion)"'</code></pre>
+<p>The result goes from <code>in_progress</code> to <code>completed success</code>, or <code>completed failure</code>. In the latter case, the check's <code>details_url</code> link leads straight to the build logs.</p>
+
+<h3>In short</h3>
+<ul>
+<li>Make sure the <strong>production branch</strong> is the one you push to</li>
+<li>Pin the <strong>Node version</strong> in <code>.node-version</code>, compatible with your dependencies</li>
+<li>Generate the <strong>lockfile</strong> with the same npm version as the CI, and test <code>npm ci</code> locally</li>
+<li>Generate the prerendered routes and the sitemap <strong>from your data</strong></li>
+</ul>
+<p>Once these points are sorted, the workflow is ideal: one <code>git push</code>, a minute of build, and the site is up to date all over the world.</p>`,
+      },
+      ar: {
+        title: 'نشر موقع Nuxt على Cloudflare Pages (وتجنّب الأخطاء الشائعة)',
+        description: 'خلاصة تجربة نشر هذا الموقع المبني بـ Nuxt 3 على Cloudflare Pages: إعدادات البناء، فرع الإنتاج، إصدار Node، ملف قفل npm وعمليات إعادة التوجيه.',
+        content: `<h2>موقع شخصي يُقدَّم من شبكة Cloudflare</h2>
+<p>هذا الموقع تطبيق <strong>Nuxt 3</strong> تُولَّد جميع صفحاته مسبقاً أثناء البناء: الصفحة الرئيسية وصفحات السيرة الذاتية وكل مقالات المدونة. وCloudflare Pages استضافة مثالية لهذه الحالة: صفحات HTML تُقدَّم من شبكة Cloudflare العالمية، وHTTPS تلقائي، ونشر مع كل عملية push، ومعاينة لكل فرع. إليك الإعداد، والأهم من ذلك الأخطاء الثلاثة التي واجهتها أثناء إعادة التصميم الأخيرة.</p>
+
+<h3>إعدادات البناء</h3>
+<p>في لوحة التحكم (<em>Workers &amp; Pages ← مشروعك ← الإعدادات ← البناء</em>):</p>
+<ul>
+<li><strong>أمر البناء</strong>: <code>npm run build</code></li>
+<li><strong>مجلد المخرجات</strong>: <code>dist</code></li>
+<li><strong>فرع الإنتاج</strong>: <code>master</code> (أو <code>main</code>)</li>
+</ul>
+<p>يكتشف Nuxt بيئة Cloudflare Pages تلقائياً ويستخدم إعداد Nitro المسبق <code>cloudflare-pages</code>: تصبح المسارات المولَّدة مسبقاً ملفات HTML ثابتة في <code>dist/</code>، ويخدم Worker كل ما عداها. ولموقع ثابت بالكامل، صرّح بالمسارات المطلوب توليدها في <code>nuxt.config.ts</code>. وتوليدها من بياناتك يضمن ألّا تنسى أي مقال:</p>
+<pre><code>import { blogArticles } from './data/blog'
+
+const staticPages = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+const blogPages = blogArticles.map(article =&gt; \`/blog/\${article.slug}\`)
+
+export default defineNuxtConfig({
+  nitro: {
+    prerender: {
+      routes: [...staticPages, ...blogPages],
+      crawlLinks: true,
+    },
+  },
+})</code></pre>
+<p>المصفوفة نفسها تغذّي خريطة الموقع (sitemap): أي مقال جديد يُولَّد ويُفهرس تلقائياً دون تعديل أي شيء آخر.</p>
+
+<h3>الفخ الأول: فرع الإنتاج</h3>
+<p>بعد دفع التصميم الجديد إلى <code>master</code> لم يتغير الموقع المنشور، مع أن البناء نجح. السبب أن فرع الإنتاج في المشروع كان ما يزال مضبوطاً على فرع عمل قديم، فكانت كل عملية push إلى <code>master</code> تنتج <strong>نشر معاينة</strong> فقط على رابط <code>*.pages.dev</code> دون المساس بالنطاق الرئيسي.</p>
+<p>تحقق من ذلك في <em>الإعدادات ← البناء ← التحكم في الفروع</em>. وتغيير فرع الإنتاج لا يعيد النشر وحده: تحتاج إلى commit جديد على ذلك الفرع (أو إعادة تشغيل عملية نشر) لتحديث بيئة الإنتاج.</p>
+
+<h3>الفخ الثاني: إصدار Node</h3>
+<p>يتطلب Nuxt 3.21 وVite 7 وNitro الإصدار <strong>Node <code>^20.19</code> أو <code>&gt;=22.12</code></strong>. يقرأ نظام البناء في Cloudflare الإصدار من ملف <code>.node-version</code> أو <code>.nvmrc</code> في جذر المستودع (أو من متغير البيئة <code>NODE_VERSION</code>). القيمة <code>20</code> وحدها غامضة: ثبّت إصداراً رئيسياً حديثاً متوافقاً بوضوح.</p>
+<pre><code>echo 22 &gt; .node-version
+echo 22 &gt; .nvmrc</code></pre>
+
+<h3>الفخ الثالث: ملف القفل و<code>npm ci</code></h3>
+<p>كان البناء يفشل خلال ثوانٍ بهذه الرسالة:</p>
+<pre><code>npm error \`npm ci\` can only install packages when your package.json and
+package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: oxc-parser@0.151.0 from lock file
+npm error Missing: esbuild@0.28.2 from lock file
+...</code></pre>
+<p>ومع ذلك كان <code>npm install</code> والبناء يعملان محلياً دون أي مشكلة. السبب أن الملف <code>package-lock.json</code> وُلِّد باستخدام <strong>npm 11</strong> (المرفق مع Node 24)، بينما تثبّت Cloudflare الاعتماديات بالأمر <code>npm ci</code> على <strong>npm 10</strong>. لا يحلّ الإصداران الاعتماديات الاختيارية بالطريقة نفسها، فاعتبر npm 10 ملف القفل غير متزامن.</p>
+<p>الحل: إعادة توليد ملف القفل بإصدار npm نفسه المستخدم في بيئة CI، والمصرَّح به في الحقل <code>packageManager</code> من ملف <code>package.json</code>:</p>
+<pre><code>npx npm@10.9.4 install --package-lock-only</code></pre>
+<p>والأهم: <strong>أعد إنتاج بيئة CI محلياً</strong> قبل الدفع، على نسخة نظيفة من المستودع:</p>
+<pre><code>git clone . /tmp/ci-check &amp;&amp; cd /tmp/ci-check
+npx npm@10.9.4 ci
+npm run build</code></pre>
+<p>إذا نجح هذان الأمران فسينجح البناء على Cloudflare أيضاً.</p>
+
+<h3>إعادة التوجيه إلى الشرطة المائلة الختامية</h3>
+<p>بعد النشر، يُرجع الأمر <code>curl -I https://benmacha.tn/experience</code> الرمز <strong>308</strong> نحو <code>/experience/</code>. هذا ليس خطأ: كل صفحة مولَّدة مسبقاً هي ملف <code>experience/index.html</code>، وتعيد Cloudflare Pages التوجيه إلى رابط المجلد. ولتحسين محركات البحث، اجعل الروابط الداخلية والروابط القانونية (canonical) متسقة مع هذا السلوك لتجنّب إعادة توجيه عند كل نقرة.</p>
+
+<h3>متابعة النشر دون فتح لوحة التحكم</h3>
+<p>تنشر Cloudflare حالة كل عملية بناء على GitHub على شكل <em>check run</em> مرتبط بالـ commit. وباستخدام أداة GitHub CLI يمكنك متابعة النشر من الطرفية:</p>
+<pre><code>gh api repos/MOI/MON-REPO/commits/$(git rev-parse HEAD)/check-runs \\
+  --jq '.check_runs[] | select(.name=="Cloudflare Pages") | "\\(.status) \\(.conclusion)"'</code></pre>
+<p>تنتقل النتيجة من <code>in_progress</code> إلى <code>completed success</code> أو <code>completed failure</code>، وفي الحالة الأخيرة يقودك الرابط <code>details_url</code> مباشرة إلى سجلات البناء.</p>
+
+<h3>باختصار</h3>
+<ul>
+<li>تأكد أن <strong>فرع الإنتاج</strong> هو الفرع الذي تدفع إليه</li>
+<li>ثبّت <strong>إصدار Node</strong> في <code>.node-version</code> بما يتوافق مع اعتمادياتك</li>
+<li>ولّد <strong>ملف القفل</strong> بإصدار npm نفسه المستخدم في CI، واختبر <code>npm ci</code> محلياً</li>
+<li>ولّد المسارات المسبقة وخريطة الموقع <strong>من بياناتك</strong></li>
+</ul>
+<p>بعد ضبط هذه النقاط تصبح دورة العمل مثالية: <code>git push</code> واحد، ودقيقة من البناء، ويصبح الموقع محدَّثاً في كل أنحاء العالم.</p>`,
+      },
+    },
   },
   {
     slug: 'symfony-vps-deployment',
     title: 'Déployer une application Symfony sur un VPS : Nginx, PHP-FPM, MySQL et HTTPS',
     description: 'Configurer un serveur Ubuntu de A à Z pour héberger une application Symfony en production : Nginx, pool PHP-FPM dédié, MySQL, HTTPS avec Let\'s Encrypt, workers Messenger et crons.',
-    category: 'Linux',
-    date: '08 Sep 2026',
-    readTime: '13 min',
-    tags: ['Linux', 'Symfony', 'Nginx', 'PHP-FPM', 'MySQL'],
     content: `<h2>Du VPS nu à l'application en production</h2>
 <p>Docker et les PaaS sont pratiques, mais un simple VPS bien configuré reste une option solide, économique et parfaitement maîtrisée pour une application Symfony. Ce guide part d'un serveur <strong>Ubuntu 24.04 LTS</strong> fraîchement installé et aboutit à une application servie en HTTPS, avec ses workers et ses tâches planifiées.</p>
 <p>La sécurisation de base (utilisateur non-root, clés SSH, pare-feu, fail2ban) est détaillée dans l'article <a href="/blog/linux-server-hardening">Sécurisation d'un serveur Linux</a> : faites-la en premier.</p>
@@ -2014,16 +2557,356 @@ sudo systemctl enable --now app-messenger@1 app-messenger@2</code></pre>
 <li>Sauvegardes automatiques et <strong>testées</strong> de la base et des fichiers uploadés</li>
 <li>Monitoring des erreurs (Sentry) et de la disponibilité</li>
 </ul>
-<p>Cette configuration encaisse sans difficulté plusieurs milliers d'utilisateurs quotidiens sur un VPS à quelques euros par mois. Et comme chaque brique est standard, elle se diagnostique facilement quand quelque chose ne va pas.</p>`
+<p>Cette configuration encaisse sans difficulté plusieurs milliers d'utilisateurs quotidiens sur un VPS à quelques euros par mois. Et comme chaque brique est standard, elle se diagnostique facilement quand quelque chose ne va pas.</p>`,
+    category: 'Linux',
+    date: '08 Sep 2026',
+    readTime: '13 min',
+    tags: ['Linux', 'Symfony', 'Nginx', 'PHP-FPM', 'MySQL'],
+    translations: {
+      en: {
+        title: 'Deploying a Symfony application on a VPS: Nginx, PHP-FPM, MySQL and HTTPS',
+        description: 'Set up an Ubuntu server from scratch to host a Symfony application in production: Nginx, a dedicated PHP-FPM pool, MySQL, HTTPS with Let\'s Encrypt, Messenger workers and cron jobs.',
+        content: `<h2>From a bare VPS to a production application</h2>
+<p>Docker and PaaS platforms are convenient, but a well-configured VPS remains a solid, affordable and fully controlled option for a Symfony application. This guide starts from a freshly installed <strong>Ubuntu 24.04 LTS</strong> server and ends with an application served over HTTPS, with its workers and scheduled tasks.</p>
+<p>Basic hardening (non-root user, SSH keys, firewall, fail2ban) is covered in the <a href="/blog/linux-server-hardening">Linux server hardening</a> article: do it first.</p>
+
+<h3>1. Base packages</h3>
+<p>Ubuntu 24.04 ships PHP 8.3 in its official repositories, with the extensions Symfony and Doctrine need:</p>
+<pre><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y nginx mysql-server unzip git \\
+  php8.3-fpm php8.3-cli php8.3-mysql php8.3-intl php8.3-mbstring \\
+  php8.3-xml php8.3-curl php8.3-zip php8.3-opcache
+
+# Composer
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer</code></pre>
+<p>Open the firewall for the web (in addition to SSH):</p>
+<pre><code>sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable</code></pre>
+
+<h3>2. One system user per application</h3>
+<p>Each application runs under its own user: a flaw in one of them does not give access to the files of the others.</p>
+<pre><code>sudo adduser --system --group --home /var/www/app --shell /bin/bash app
+sudo mkdir -p /var/www/app &amp;&amp; sudo chown app:app /var/www/app</code></pre>
+
+<h3>3. A dedicated PHP-FPM pool</h3>
+<p>Instead of the default <code>www</code> pool, create <code>/etc/php/8.3/fpm/pool.d/app.conf</code>. The pool runs as the <code>app</code> user, and only Nginx (<code>www-data</code>) can talk to its socket:</p>
+<pre><code>[app]
+user = app
+group = app
+
+listen = /run/php/app.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+
+pm = dynamic
+pm.max_children = 20
+pm.start_servers = 4
+pm.min_spare_servers = 2
+pm.max_spare_servers = 6
+pm.max_requests = 500
+
+php_admin_value[memory_limit] = 256M
+php_admin_value[error_log] = /var/log/php/app-error.log
+php_admin_flag[log_errors] = on</code></pre>
+<p>To size <code>pm.max_children</code>, divide the RAM you give to PHP by the average memory of a process (see <code>ps -o rss -C php-fpm8.3</code>). On a 4 GB VPS, 20 processes at 80 MB leave room for MySQL.</p>
+<pre><code>sudo mkdir -p /var/log/php &amp;&amp; sudo chown app:app /var/log/php
+sudo systemctl restart php8.3-fpm</code></pre>
+
+<h3>4. OPcache tuned for production</h3>
+<p>In <code>/etc/php/8.3/fpm/conf.d/99-production.ini</code>:</p>
+<pre><code>opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+<p>With <code>validate_timestamps=0</code>, PHP no longer checks whether files have changed: you must <strong>reload PHP-FPM on every deployment</strong>. That is the price of a significant performance gain.</p>
+
+<h3>5. MySQL: a dedicated database and user</h3>
+<pre><code>sudo mysql</code></pre>
+<pre><code>CREATE DATABASE app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'app'@'localhost' IDENTIFIED BY 'a-long-random-password';
+GRANT ALL PRIVILEGES ON app.* TO 'app'@'localhost';
+FLUSH PRIVILEGES;</code></pre>
+<p>On Ubuntu, MySQL only listens on <code>127.0.0.1</code> by default: keep it that way, and never expose it to the Internet.</p>
+
+<h3>6. The Nginx virtual host</h3>
+<p>Here is the recommended configuration for Symfony, in <code>/etc/nginx/sites-available/app</code>. Only <code>index.php</code> can be executed: any other <code>.php</code> file returns a 404, which neutralizes scripts that may have been uploaded.</p>
+<pre><code>server {
+    listen 80;
+    server_name app.example.com;
+    root /var/www/app/current/public;
+
+    client_max_body_size 20M;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\\.php(/|$) {
+        fastcgi_pass unix:/run/php/app.sock;
+        fastcgi_split_path_info ^(.+\\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \\.php$ {
+        return 404;
+    }
+
+    location ~* \\.(?:css|js|woff2|svg|png|jpg|webp)$ {
+        expires 30d;
+        access_log off;
+    }
+
+    error_log /var/log/nginx/app_error.log;
+    access_log /var/log/nginx/app_access.log;
+}</code></pre>
+<p><code>$realpath_root</code> (instead of <code>$document_root</code>) is essential if you deploy through a <code>current</code> symlink: Nginx resolves the real path, and OPcache does not keep serving the old release after a switch.</p>
+<pre><code>sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code></pre>
+
+<h3>7. HTTPS with Let's Encrypt</h3>
+<p>Once the DNS points to the server, Certbot obtains the certificate, updates the Nginx configuration and adds the HTTP to HTTPS redirect:</p>
+<pre><code>sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d app.example.com
+sudo certbot renew --dry-run   # checks automatic renewal</code></pre>
+
+<h3>8. Deploying the code</h3>
+<p>A <code>releases/</code> directory plus a <code>current</code> symlink gives atomic deployments and instant rollbacks:</p>
+<pre><code>sudo -iu app
+cd /var/www/app
+RELEASE=releases/$(date +%Y%m%d%H%M%S)
+git clone --depth 1 git@github.com:me/app.git "$RELEASE"
+cd "$RELEASE"
+
+composer install --no-dev --optimize-autoloader --classmap-authoritative
+composer dump-env prod          # compiles .env into .env.local.php
+php bin/console cache:clear
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console asset-map:compile   # if you use AssetMapper
+
+cd /var/www/app &amp;&amp; ln -sfn "$RELEASE" current
+exit
+sudo systemctl reload php8.3-fpm</code></pre>
+<p>Secrets (<code>DATABASE_URL</code>, <code>APP_SECRET</code>) go in a <code>.env.local</code> file shared between releases or, better, in Symfony's secrets vault (<code>secrets:set</code>). Tools such as Deployer automate exactly this cycle.</p>
+
+<h3>9. Messenger workers with systemd</h3>
+<p>A Messenger worker must restart if it crashes, and be restarted regularly to free memory. Create <code>/etc/systemd/system/app-messenger@.service</code>:</p>
+<pre><code>[Unit]
+Description=Symfony Messenger worker %i
+After=network.target mysql.service
+
+[Service]
+User=app
+WorkingDirectory=/var/www/app/current
+ExecStart=/usr/bin/php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now app-messenger@1 app-messenger@2</code></pre>
+<p>Add <code>php bin/console messenger:stop-workers</code> at the end of the deployment: workers finish their current message, then systemd restarts them on the new code.</p>
+
+<h3>10. Scheduled tasks</h3>
+<p>With Symfony Scheduler, a single worker is enough (<code>messenger:consume scheduler_default</code>). Otherwise, use the <code>app</code> user's crontab (<code>sudo crontab -u app -e</code>):</p>
+<pre><code>*/5 * * * * cd /var/www/app/current &amp;&amp; php bin/console app:sync-data --no-interaction &gt;&gt; /var/log/php/cron.log 2&gt;&amp;1</code></pre>
+
+<h3>Final checklist</h3>
+<ul>
+<li><code>APP_ENV=prod</code> and <code>APP_DEBUG=0</code>: never the profiler in production</li>
+<li>Firewall enabled, only ports 22, 80 and 443 open</li>
+<li>MySQL and Redis only listen on localhost</li>
+<li>Certificate renewed automatically (<code>systemctl list-timers | grep certbot</code>)</li>
+<li>Logs rotated (<code>logrotate</code> handles Nginx; add <code>/var/log/php/*.log</code>)</li>
+<li>Automatic, <strong>tested</strong> backups of the database and uploaded files</li>
+<li>Error monitoring (Sentry) and uptime monitoring</li>
+</ul>
+<p>This setup easily handles several thousand daily users on a VPS costing a few euros a month. And since every building block is standard, it is easy to troubleshoot when something goes wrong.</p>`,
+      },
+      ar: {
+        title: 'نشر تطبيق Symfony على خادم VPS: Nginx وPHP-FPM وMySQL وHTTPS',
+        description: 'إعداد خادم Ubuntu من الصفر لاستضافة تطبيق Symfony في بيئة الإنتاج: Nginx، مجموعة PHP-FPM مخصصة، MySQL، شهادة HTTPS من Let\'s Encrypt، عمّال Messenger والمهام المجدولة.',
+        content: `<h2>من خادم VPS فارغ إلى تطبيق في بيئة الإنتاج</h2>
+<p>Docker ومنصات PaaS عملية، لكن خادم VPS مضبوطاً بعناية يبقى خياراً متيناً واقتصادياً وتحت سيطرتك الكاملة لتشغيل تطبيق Symfony. ينطلق هذا الدليل من خادم <strong>Ubuntu 24.04 LTS</strong> مثبَّت حديثاً، وينتهي بتطبيق يُقدَّم عبر HTTPS مع عمّاله ومهامه المجدولة.</p>
+<p>التأمين الأساسي (مستخدم غير root، مفاتيح SSH، جدار ناري، fail2ban) مشروح في مقال <a href="/blog/linux-server-hardening">تأمين خادم Linux</a>: ابدأ به أولاً.</p>
+
+<h3>1. الحزم الأساسية</h3>
+<p>توفّر Ubuntu 24.04 الإصدار PHP 8.3 في مستودعاتها الرسمية، مع الإضافات التي يحتاجها Symfony وDoctrine:</p>
+<pre><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y nginx mysql-server unzip git \\
+  php8.3-fpm php8.3-cli php8.3-mysql php8.3-intl php8.3-mbstring \\
+  php8.3-xml php8.3-curl php8.3-zip php8.3-opcache
+
+# Composer
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer</code></pre>
+<p>افتح الجدار الناري لحركة الويب (إضافة إلى SSH):</p>
+<pre><code>sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable</code></pre>
+
+<h3>2. مستخدم نظام لكل تطبيق</h3>
+<p>يعمل كل تطبيق بمستخدمه الخاص، فلا تمنح ثغرة في أحدها الوصول إلى ملفات التطبيقات الأخرى.</p>
+<pre><code>sudo adduser --system --group --home /var/www/app --shell /bin/bash app
+sudo mkdir -p /var/www/app &amp;&amp; sudo chown app:app /var/www/app</code></pre>
+
+<h3>3. مجموعة PHP-FPM مخصصة</h3>
+<p>بدلاً من المجموعة الافتراضية <code>www</code>، أنشئ الملف <code>/etc/php/8.3/fpm/pool.d/app.conf</code>. تعمل المجموعة بالمستخدم <code>app</code>، ولا يستطيع التواصل مع المقبس (socket) الخاص بها سوى Nginx (<code>www-data</code>):</p>
+<pre><code>[app]
+user = app
+group = app
+
+listen = /run/php/app.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+
+pm = dynamic
+pm.max_children = 20
+pm.start_servers = 4
+pm.min_spare_servers = 2
+pm.max_spare_servers = 6
+pm.max_requests = 500
+
+php_admin_value[memory_limit] = 256M
+php_admin_value[error_log] = /var/log/php/app-error.log
+php_admin_flag[log_errors] = on</code></pre>
+<p>لتحديد قيمة <code>pm.max_children</code>، اقسم الذاكرة المخصصة لـ PHP على متوسط ذاكرة العملية الواحدة (يظهر عبر <code>ps -o rss -C php-fpm8.3</code>). على خادم بذاكرة 4 غيغابايت، تترك 20 عملية بحجم 80 ميغابايت مساحة كافية لـ MySQL.</p>
+<pre><code>sudo mkdir -p /var/log/php &amp;&amp; sudo chown app:app /var/log/php
+sudo systemctl restart php8.3-fpm</code></pre>
+
+<h3>4. ضبط OPcache لبيئة الإنتاج</h3>
+<p>في الملف <code>/etc/php/8.3/fpm/conf.d/99-production.ini</code>:</p>
+<pre><code>opcache.enable=1
+opcache.memory_consumption=256
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+realpath_cache_size=4096K
+realpath_cache_ttl=600</code></pre>
+<p>مع <code>validate_timestamps=0</code> لا يتحقق PHP من تغيّر الملفات، لذا يجب <strong>إعادة تحميل PHP-FPM مع كل عملية نشر</strong>. هذا هو ثمن مكسب كبير في الأداء.</p>
+
+<h3>5. MySQL: قاعدة بيانات ومستخدم مخصصان</h3>
+<pre><code>sudo mysql</code></pre>
+<pre><code>CREATE DATABASE app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'app'@'localhost' IDENTIFIED BY 'a-long-random-password';
+GRANT ALL PRIVILEGES ON app.* TO 'app'@'localhost';
+FLUSH PRIVILEGES;</code></pre>
+<p>في Ubuntu لا يستمع MySQL افتراضياً إلا على <code>127.0.0.1</code>: أبقِه كذلك ولا تكشفه أبداً على الإنترنت.</p>
+
+<h3>6. المضيف الافتراضي في Nginx</h3>
+<p>إليك الإعداد الموصى به لـ Symfony في الملف <code>/etc/nginx/sites-available/app</code>. الملف <code>index.php</code> وحده قابل للتنفيذ، وأي ملف <code>.php</code> آخر يُرجع الخطأ 404، مما يعطّل أي سكربت ربما رُفع إلى الخادم.</p>
+<pre><code>server {
+    listen 80;
+    server_name app.example.com;
+    root /var/www/app/current/public;
+
+    client_max_body_size 20M;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\\.php(/|$) {
+        fastcgi_pass unix:/run/php/app.sock;
+        fastcgi_split_path_info ^(.+\\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \\.php$ {
+        return 404;
+    }
+
+    location ~* \\.(?:css|js|woff2|svg|png|jpg|webp)$ {
+        expires 30d;
+        access_log off;
+    }
+
+    error_log /var/log/nginx/app_error.log;
+    access_log /var/log/nginx/app_access.log;
+}</code></pre>
+<p>استخدام <code>$realpath_root</code> (بدلاً من <code>$document_root</code>) ضروري إذا كنت تنشر عبر رابط رمزي <code>current</code>: يحلّ Nginx المسار الحقيقي، فلا يستمر OPcache في تقديم الإصدار القديم بعد التبديل.</p>
+<pre><code>sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code></pre>
+
+<h3>7. HTTPS مع Let's Encrypt</h3>
+<p>بعد توجيه النطاق (DNS) إلى الخادم، يحصل Certbot على الشهادة ويعدّل إعدادات Nginx ويضيف إعادة التوجيه من HTTP إلى HTTPS:</p>
+<pre><code>sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d app.example.com
+sudo certbot renew --dry-run   # checks automatic renewal</code></pre>
+
+<h3>8. نشر الشيفرة</h3>
+<p>بنية تعتمد على مجلد <code>releases/</code> ورابط رمزي <code>current</code> تتيح نشراً ذرّياً (atomic) وتراجعاً فورياً عند الحاجة:</p>
+<pre><code>sudo -iu app
+cd /var/www/app
+RELEASE=releases/$(date +%Y%m%d%H%M%S)
+git clone --depth 1 git@github.com:me/app.git "$RELEASE"
+cd "$RELEASE"
+
+composer install --no-dev --optimize-autoloader --classmap-authoritative
+composer dump-env prod          # compiles .env into .env.local.php
+php bin/console cache:clear
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console asset-map:compile   # if you use AssetMapper
+
+cd /var/www/app &amp;&amp; ln -sfn "$RELEASE" current
+exit
+sudo systemctl reload php8.3-fpm</code></pre>
+<p>توضع الأسرار (<code>DATABASE_URL</code> و<code>APP_SECRET</code>) في ملف <code>.env.local</code> مشترك بين الإصدارات، أو الأفضل في خزنة الأسرار الخاصة بـ Symfony (<code>secrets:set</code>). وتؤتمت أدوات مثل Deployer هذه الدورة بالضبط.</p>
+
+<h3>9. عمّال Messenger مع systemd</h3>
+<p>يجب أن يُعاد تشغيل عامل Messenger إذا توقف، وأن يُعاد تشغيله بانتظام لتحرير الذاكرة. أنشئ الملف <code>/etc/systemd/system/app-messenger@.service</code>:</p>
+<pre><code>[Unit]
+Description=Symfony Messenger worker %i
+After=network.target mysql.service
+
+[Service]
+User=app
+WorkingDirectory=/var/www/app/current
+ExecStart=/usr/bin/php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now app-messenger@1 app-messenger@2</code></pre>
+<p>أضف <code>php bin/console messenger:stop-workers</code> في نهاية عملية النشر: ينهي العمّال الرسالة الجارية، ثم يعيد systemd تشغيلهم على الشيفرة الجديدة.</p>
+
+<h3>10. المهام المجدولة</h3>
+<p>مع Symfony Scheduler يكفي عامل واحد (<code>messenger:consume scheduler_default</code>). وإلا فاستخدم crontab الخاص بالمستخدم <code>app</code> (<code>sudo crontab -u app -e</code>):</p>
+<pre><code>*/5 * * * * cd /var/www/app/current &amp;&amp; php bin/console app:sync-data --no-interaction &gt;&gt; /var/log/php/cron.log 2&gt;&amp;1</code></pre>
+
+<h3>قائمة التحقق النهائية</h3>
+<ul>
+<li><code>APP_ENV=prod</code> و<code>APP_DEBUG=0</code>: لا profiler أبداً في بيئة الإنتاج</li>
+<li>جدار ناري مفعّل، والمنافذ المفتوحة 22 و80 و443 فقط</li>
+<li>MySQL وRedis لا يستمعان إلا على localhost</li>
+<li>تجديد تلقائي للشهادة (<code>systemctl list-timers | grep certbot</code>)</li>
+<li>تدوير السجلات (يتكفّل <code>logrotate</code> بسجلات Nginx، وأضف <code>/var/log/php/*.log</code>)</li>
+<li>نسخ احتياطية تلقائية <strong>ومختبَرة</strong> لقاعدة البيانات والملفات المرفوعة</li>
+<li>مراقبة الأخطاء (Sentry) ومراقبة توفر الخدمة</li>
+</ul>
+<p>يتحمّل هذا الإعداد بسهولة عدة آلاف من المستخدمين يومياً على خادم VPS لا تتجاوز كلفته بضعة يوروهات شهرياً. ولأن كل مكوّن فيه معياري، يسهل تشخيصه عندما يحدث خلل.</p>`,
+      },
+    },
   },
   {
     slug: 'traefik-docker-https',
     title: 'Traefik et Docker : reverse proxy et HTTPS automatique',
     description: 'Héberger plusieurs applications Docker sur un même serveur avec Traefik : routage par nom de domaine, certificats Let\'s Encrypt automatiques, middlewares de sécurité et tableau de bord protégé.',
-    category: 'Docker',
-    date: '25 Aug 2026',
-    readTime: '10 min',
-    tags: ['Docker', 'Traefik', 'HTTPS', 'Reverse proxy'],
     content: `<h2>Pourquoi Traefik ?</h2>
 <p>Dès qu'un serveur héberge plusieurs applications conteneurisées, il faut un <strong>reverse proxy</strong> devant elles : un seul point d'entrée sur les ports 80 et 443, qui route chaque domaine vers le bon conteneur et gère le HTTPS. Nginx sait très bien le faire, mais chaque nouvelle application demande d'écrire un virtual host, de recharger la configuration et de générer un certificat.</p>
 <p><strong>Traefik</strong> inverse la logique : il lit l'API Docker, découvre les conteneurs, et les configure à partir de leurs <strong>labels</strong>. Démarrer un conteneur suffit pour le publier en HTTPS, avec un certificat Let's Encrypt obtenu et renouvelé automatiquement.</p>
@@ -2156,16 +3039,292 @@ secrets:
 <li><strong>Certificat auto-signé « TRAEFIK DEFAULT CERT »</strong> : le challenge ACME a échoué. Consultez les logs de Traefik ; le DNS pointe-t-il vers le serveur, et le port 80 est-il ouvert ?</li>
 <li><strong>Limite de Let's Encrypt</strong> : pendant vos essais, utilisez le serveur de test (<code>--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory</code>) pour ne pas atteindre les quotas.</li>
 </ul>
-<p>Une fois en place, ajouter une application revient à écrire trois ou quatre labels. C'est ce qui rend Traefik si agréable pour un serveur personnel ou une petite infrastructure qui héberge beaucoup de services.</p>`
+<p>Une fois en place, ajouter une application revient à écrire trois ou quatre labels. C'est ce qui rend Traefik si agréable pour un serveur personnel ou une petite infrastructure qui héberge beaucoup de services.</p>`,
+    category: 'Docker',
+    date: '25 Aug 2026',
+    readTime: '10 min',
+    tags: ['Docker', 'Traefik', 'HTTPS', 'Reverse proxy'],
+    translations: {
+      en: {
+        title: 'Traefik and Docker: reverse proxy and automatic HTTPS',
+        description: 'Host several Docker applications on the same server with Traefik: routing by domain name, automatic Let\'s Encrypt certificates, security middlewares and a protected dashboard.',
+        content: `<h2>Why Traefik?</h2>
+<p>As soon as a server hosts several containerized applications, you need a <strong>reverse proxy</strong> in front of them: a single entry point on ports 80 and 443 that routes each domain to the right container and handles HTTPS. Nginx does this very well, but every new application means writing a virtual host, reloading the configuration and generating a certificate.</p>
+<p><strong>Traefik</strong> flips the logic: it reads the Docker API, discovers containers and configures them from their <strong>labels</strong>. Starting a container is enough to publish it over HTTPS, with a Let's Encrypt certificate obtained and renewed automatically.</p>
+
+<h3>The shared network</h3>
+<p>Traefik and the applications it exposes must share a Docker network. Create it once and for all:</p>
+<pre><code>docker network create proxy</code></pre>
+
+<h3>Traefik itself</h3>
+<p>A <code>/opt/traefik/compose.yaml</code> file:</p>
+<pre><code>services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=contact@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(\`traefik.example.com\`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=le
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=dashboard-auth
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$Hq3vN2kS$$exempleDeHashAremplacer
+
+networks:
+  proxy:
+    external: true</code></pre>
+<p>A few important points:</p>
+<ul>
+<li><strong><code>exposedbydefault=false</code></strong>: no container is published without <code>traefik.enable=true</code>. Without this option, a database started by mistake could end up exposed.</li>
+<li>The <strong>HTTP → HTTPS redirect</strong> is declared once, on the <code>web</code> entrypoint.</li>
+<li>The <strong>Docker socket</strong> is mounted read-only. It still gives a lot of power over the host: for extra hardening, put a socket proxy (such as <code>tecnativa/docker-socket-proxy</code>) between Traefik and Docker.</li>
+<li>In a Compose file, the <code>$</code> signs of the hash must be doubled (<code>$$</code>). Generate the hash with <code>htpasswd -nb admin password</code> (from the <code>apache2-utils</code> package).</li>
+</ul>
+<pre><code>cd /opt/traefik &amp;&amp; docker compose up -d
+docker compose logs -f traefik</code></pre>
+
+<h3>Publishing an application</h3>
+<p>On the application side, all it takes is joining the <code>proxy</code> network and describing the routing with labels. Example with a Symfony container (PHP-FPM + Nginx in the image, on port 8080):</p>
+<pre><code>services:
+  app:
+    image: ghcr.io/moi/app:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    networks:
+      - proxy
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(\`app.example.com\`) || Host(\`www.app.example.com\`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=le
+      - traefik.http.routers.app.middlewares=secure-headers,rate-limit
+      - traefik.http.services.app.loadbalancer.server.port=8080
+      - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.secure-headers.headers.frameDeny=true
+      - traefik.http.middlewares.rate-limit.ratelimit.average=50
+      - traefik.http.middlewares.rate-limit.ratelimit.burst=100
+
+  database:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external: true
+  internal:
+
+volumes:
+  db-data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt</code></pre>
+<p>The database is only attached to the <code>internal</code> network: Traefik cannot reach it, and it publishes no port. On the first <code>docker compose up -d</code>, Traefik detects the container, obtains the certificate for both domains and starts routing traffic, within seconds and without any restart.</p>
+
+<h3>Reading a routing label</h3>
+<p>Labels all follow the same grammar: <code>traefik.http.&lt;type&gt;.&lt;name&gt;.&lt;option&gt;</code>.</p>
+<ul>
+<li><strong>routers</strong>: which request (<code>Host</code> rule, <code>PathPrefix</code>…) arrives on which entrypoint, with which TLS settings and which middlewares</li>
+<li><strong>services</strong>: which container port the traffic is sent to (required if the image exposes several ports)</li>
+<li><strong>middlewares</strong>: the transformations applied along the way (headers, authentication, rate limiting, redirects, compression)</li>
+</ul>
+<p>A middleware declared on one container can be reused by the others: define your security headers once, on the Traefik container, then reference them with the <code>@docker</code> suffix, for example <code>secure-headers@docker</code>.</p>
+
+<h3>Wildcard certificates with the DNS challenge</h3>
+<p>The HTTP challenge requires the server to be reachable on port 80. For a <code>*.example.com</code> certificate, or a server that is not exposed, use the DNS challenge. With Cloudflare, for example:</p>
+<pre><code>      - --certificatesresolvers.le.acme.dnschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_token</code></pre>
+<p>The Cloudflare token only needs the <em>Zone → DNS → Edit</em> permission on the relevant zone.</p>
+
+<h3>Troubleshooting</h3>
+<ul>
+<li><strong>404 "page not found"</strong>: the router does not exist. Check <code>traefik.enable=true</code> and the <code>Host</code> rule (the backticks are mandatory).</li>
+<li><strong>502 Bad Gateway</strong>: Traefik finds the container but cannot reach it. Is the container on the <code>proxy</code> network? Is the <code>loadbalancer</code> port correct?</li>
+<li><strong>Self-signed "TRAEFIK DEFAULT CERT" certificate</strong>: the ACME challenge failed. Check Traefik's logs; does the DNS point to the server, and is port 80 open?</li>
+<li><strong>Let's Encrypt rate limits</strong>: while experimenting, use the staging server (<code>--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory</code>) so you do not hit the quotas.</li>
+</ul>
+<p>Once in place, adding an application comes down to writing three or four labels. That is what makes Traefik so pleasant for a personal server or a small infrastructure hosting many services.</p>`,
+      },
+      ar: {
+        title: 'Traefik وDocker: وكيل عكسي وHTTPS تلقائي',
+        description: 'استضافة عدة تطبيقات Docker على الخادم نفسه باستخدام Traefik: توجيه حسب اسم النطاق، شهادات Let\'s Encrypt تلقائية، طبقات أمان وسيطة ولوحة تحكم محمية.',
+        content: `<h2>لماذا Traefik؟</h2>
+<p>بمجرد أن يستضيف خادمٌ عدة تطبيقات داخل حاويات، تحتاج إلى <strong>وكيل عكسي</strong> (reverse proxy) أمامها: نقطة دخول واحدة على المنفذين 80 و443، توجّه كل نطاق إلى الحاوية المناسبة وتتولى HTTPS. يؤدي Nginx هذه المهمة جيداً، لكن كل تطبيق جديد يتطلب كتابة مضيف افتراضي وإعادة تحميل الإعدادات وتوليد شهادة.</p>
+<p>أما <strong>Traefik</strong> فيعكس المنطق: يقرأ واجهة Docker البرمجية، ويكتشف الحاويات، ويضبطها انطلاقاً من <strong>الوسوم</strong> (labels) الخاصة بها. يكفي تشغيل حاوية لنشرها عبر HTTPS بشهادة Let's Encrypt يُحصل عليها وتُجدَّد تلقائياً.</p>
+
+<h3>الشبكة المشتركة</h3>
+<p>يجب أن يتشارك Traefik والتطبيقات التي يعرضها شبكة Docker واحدة. أنشئها مرة واحدة:</p>
+<pre><code>docker network create proxy</code></pre>
+
+<h3>Traefik نفسه</h3>
+<p>ملف <code>/opt/traefik/compose.yaml</code>:</p>
+<pre><code>services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=contact@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(\`traefik.example.com\`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=le
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=dashboard-auth
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$Hq3vN2kS$$exempleDeHashAremplacer
+
+networks:
+  proxy:
+    external: true</code></pre>
+<p>بعض النقاط المهمة:</p>
+<ul>
+<li><strong><code>exposedbydefault=false</code></strong>: لا تُنشر أي حاوية دون الوسم <code>traefik.enable=true</code>. بدون هذا الخيار قد تُكشف قاعدة بيانات شُغّلت عن طريق الخطأ.</li>
+<li><strong>إعادة التوجيه من HTTP إلى HTTPS</strong> مصرَّح بها مرة واحدة على مستوى نقطة الدخول <code>web</code>.</li>
+<li><strong>مقبس Docker</strong> مركَّب للقراءة فقط، لكنه يمنح مع ذلك صلاحيات واسعة على المضيف: لتأمين إضافي، ضع وكيلاً للمقبس (مثل <code>tecnativa/docker-socket-proxy</code>) بين Traefik وDocker.</li>
+<li>في ملف Compose يجب مضاعفة علامات <code>$</code> في التجزئة (<code>$$</code>). ولّد التجزئة بالأمر <code>htpasswd -nb admin password</code> (من الحزمة <code>apache2-utils</code>).</li>
+</ul>
+<pre><code>cd /opt/traefik &amp;&amp; docker compose up -d
+docker compose logs -f traefik</code></pre>
+
+<h3>نشر تطبيق</h3>
+<p>من جهة التطبيق، يكفي الانضمام إلى الشبكة <code>proxy</code> ووصف التوجيه بالوسوم. مثال بحاوية Symfony (PHP-FPM وNginx داخل الصورة، على المنفذ 8080):</p>
+<pre><code>services:
+  app:
+    image: ghcr.io/moi/app:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    networks:
+      - proxy
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(\`app.example.com\`) || Host(\`www.app.example.com\`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=le
+      - traefik.http.routers.app.middlewares=secure-headers,rate-limit
+      - traefik.http.services.app.loadbalancer.server.port=8080
+      - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.secure-headers.headers.frameDeny=true
+      - traefik.http.middlewares.rate-limit.ratelimit.average=50
+      - traefik.http.middlewares.rate-limit.ratelimit.burst=100
+
+  database:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external: true
+  internal:
+
+volumes:
+  db-data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt</code></pre>
+<p>قاعدة البيانات مرتبطة بالشبكة <code>internal</code> فقط: لا يستطيع Traefik الوصول إليها، ولا تنشر أي منفذ. عند أول تنفيذ للأمر <code>docker compose up -d</code> يكتشف Traefik الحاوية، ويحصل على الشهادة للنطاقين، ويبدأ توجيه الحركة خلال ثوانٍ ودون أي إعادة تشغيل.</p>
+
+<h3>قراءة وسم توجيه</h3>
+<p>تتبع كل الوسوم القواعد نفسها: <code>traefik.http.&lt;type&gt;.&lt;name&gt;.&lt;option&gt;</code>.</p>
+<ul>
+<li><strong>routers</strong>: أي طلب (قاعدة <code>Host</code> أو <code>PathPrefix</code>…) يصل إلى أي نقطة دخول، مع أي إعدادات TLS وأي طبقات وسيطة</li>
+<li><strong>services</strong>: إلى أي منفذ في الحاوية تُرسَل الحركة (ضروري إذا كانت الصورة تعرض عدة منافذ)</li>
+<li><strong>middlewares</strong>: التحويلات المطبَّقة في الطريق (الترويسات، المصادقة، تحديد معدل الطلبات، إعادة التوجيه، الضغط)</li>
+</ul>
+<p>يمكن إعادة استخدام طبقة وسيطة معرَّفة على حاوية ما في الحاويات الأخرى: عرّف ترويسات الأمان مرة واحدة على حاوية Traefik، ثم أشر إليها باللاحقة <code>@docker</code>، مثل <code>secure-headers@docker</code>.</p>
+
+<h3>شهادات wildcard عبر تحدي DNS</h3>
+<p>يتطلب تحدي HTTP أن يكون الخادم متاحاً على المنفذ 80. وللحصول على شهادة <code>*.example.com</code>، أو لخادم غير مكشوف، استخدم تحدي DNS. مع Cloudflare مثلاً:</p>
+<pre><code>      - --certificatesresolvers.le.acme.dnschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_token</code></pre>
+<p>لا يحتاج رمز Cloudflare إلا إلى صلاحية <em>Zone ← DNS ← Edit</em> على النطاق المعني.</p>
+
+<h3>استكشاف الأخطاء</h3>
+<ul>
+<li><strong>الخطأ 404 "page not found"</strong>: الموجِّه غير موجود. تحقق من <code>traefik.enable=true</code> ومن قاعدة <code>Host</code> (علامات backtick إلزامية).</li>
+<li><strong>الخطأ 502 Bad Gateway</strong>: يجد Traefik الحاوية لكنه لا يصل إليها. هل الحاوية على الشبكة <code>proxy</code>؟ وهل منفذ <code>loadbalancer</code> صحيح؟</li>
+<li><strong>شهادة موقَّعة ذاتياً "TRAEFIK DEFAULT CERT"</strong>: فشل تحدي ACME. راجع سجلات Traefik: هل يشير DNS إلى الخادم، وهل المنفذ 80 مفتوح؟</li>
+<li><strong>حدود Let's Encrypt</strong>: أثناء التجارب استخدم خادم الاختبار (<code>--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory</code>) حتى لا تستنفد الحصص.</li>
+</ul>
+<p>بعد الإعداد، تصبح إضافة تطبيق جديد مسألة ثلاثة أو أربعة وسوم. وهذا ما يجعل Traefik مريحاً جداً لخادم شخصي أو بنية تحتية صغيرة تستضيف خدمات كثيرة.</p>`,
+      },
+    },
   },
   {
     slug: 'server-backups-restic',
     title: 'Sauvegardes automatisées d\'un serveur : MySQL, fichiers et restic',
     description: 'Mettre en place des sauvegardes fiables : dump MySQL cohérent, sauvegarde chiffrée et dédupliquée avec restic vers un stockage S3, rotation, planification systemd, alertes et tests de restauration.',
-    category: 'Linux',
-    date: '11 Aug 2026',
-    readTime: '11 min',
-    tags: ['Linux', 'Sauvegarde', 'MySQL', 'restic', 'systemd'],
     content: `<h2>Une sauvegarde qui n'a jamais été restaurée n'existe pas</h2>
 <p>Tout le monde « a des sauvegardes », jusqu'au jour où il faut restaurer : le dump est vide depuis trois mois, l'archive est sur le même disque que le serveur, ou personne ne connaît le mot de passe de chiffrement. Une bonne stratégie tient en une règle, la <strong>règle 3-2-1</strong> : 3 copies des données, sur 2 supports différents, dont 1 hors site. Et en une discipline : <strong>tester la restauration</strong>.</p>
 <p>Ce guide met en place, sur un serveur Linux qui héberge une application web :</p>
@@ -2291,6 +3450,272 @@ mysql -e 'SELECT COUNT(*) FROM app_restore_test.user'</code></pre>
 <li>Planification systemd avec <code>Persistent=true</code>, et une alerte si le ping n'arrive pas</li>
 <li>Mot de passe du dépôt conservé ailleurs que sur le serveur</li>
 <li>Restauration testée régulièrement et chronométrée</li>
-</ul>`
-  }
+</ul>`,
+    category: 'Linux',
+    date: '11 Aug 2026',
+    readTime: '11 min',
+    tags: ['Linux', 'Sauvegarde', 'MySQL', 'restic', 'systemd'],
+    translations: {
+      en: {
+        title: 'Automated server backups: MySQL, files and restic',
+        description: 'Set up reliable backups: a consistent MySQL dump, encrypted and deduplicated backups with restic to S3 storage, retention, systemd scheduling, alerts and restore tests.',
+        content: `<h2>A backup that has never been restored does not exist</h2>
+<p>Everyone "has backups", until the day they need to restore: the dump has been empty for three months, the archive sits on the same disk as the server, or nobody knows the encryption password. A good strategy fits in one rule, the <strong>3-2-1 rule</strong>: 3 copies of the data, on 2 different media, 1 of them off-site. And in one discipline: <strong>test the restore</strong>.</p>
+<p>This guide sets up the following on a Linux server hosting a web application:</p>
+<ul>
+<li>a consistent MySQL dump, without blocking the application;</li>
+<li>an <strong>encrypted, deduplicated and incremental</strong> backup with restic to S3 object storage;</li>
+<li>a retention policy, systemd scheduling and an alert on failure.</li>
+</ul>
+
+<h3>1. The MySQL dump</h3>
+<p>Copying the files in <code>/var/lib/mysql</code> while the server is running gives an inconsistent backup. Use <code>mysqldump</code> with <code>--single-transaction</code>: for InnoDB tables, the dump is taken inside a transaction, so it is consistent, without locking writes.</p>
+<p>First, a dedicated backup user with only what it needs:</p>
+<pre><code>CREATE USER 'backup'@'localhost' IDENTIFIED BY 'long-password';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, PROCESS ON *.* TO 'backup'@'localhost';</code></pre>
+<p>Its credentials go in a file readable by root only, so they never show up in the process list:</p>
+<pre><code># /root/.my-backup.cnf  (chmod 600)
+[client]
+user=backup
+password=long-password</code></pre>
+<pre><code>mysqldump --defaults-extra-file=/root/.my-backup.cnf \\
+  --single-transaction --quick --routines --triggers --events \\
+  --databases app | gzip &gt; /var/backups/mysql/app.sql.gz</code></pre>
+<p><code>--quick</code> reads rows one by one instead of loading each table into memory: essential for large tables. Beyond a few tens of GB, switch to a physical backup (Percona XtraBackup or MySQL Enterprise Backup).</p>
+
+<h3>2. Why restic</h3>
+<p>A daily <code>tar.gz</code> archive copies everything, every day. <strong>restic</strong> splits files into chunks, stores each chunk only once, and encrypts everything client-side (AES-256) before upload. The result: daily backups that only cost the size of the changes, remote storage that never sees your data in clear text, and the ability to restore any retained point in time.</p>
+<pre><code>sudo apt install -y restic</code></pre>
+<p>The repository settings go in a protected environment file, <code>/etc/restic/env</code> (<code>chmod 600</code>). Any S3-compatible storage works (AWS, Scaleway, OVH, Backblaze B2, Cloudflare R2…):</p>
+<pre><code>RESTIC_REPOSITORY=s3:https://s3.fr-par.scw.cloud/my-backup-bucket/web-server
+RESTIC_PASSWORD_FILE=/etc/restic/password
+AWS_ACCESS_KEY_ID=xxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxx</code></pre>
+<pre><code>sudo sh -c 'openssl rand -base64 48 &gt; /etc/restic/password &amp;&amp; chmod 600 /etc/restic/password'
+sudo sh -c 'set -a; . /etc/restic/env; restic init'</code></pre>
+<p><strong>Keep the restic password off the server</strong>, in a password manager. Without it, the repository cannot be recovered, and that is by design. If the server burns down with the only copy of the password, your backups burn with it.</p>
+
+<h3>3. The backup script</h3>
+<p><code>/usr/local/bin/backup.sh</code>:</p>
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+set -a; . /etc/restic/env; set +a
+
+DUMP_DIR=/var/backups/mysql
+mkdir -p "$DUMP_DIR"
+
+# 1. MySQL dump (temporary file, then rename: never a half-written dump)
+mysqldump --defaults-extra-file=/root/.my-backup.cnf \\
+  --single-transaction --quick --routines --triggers --events \\
+  --databases app | gzip &gt; "$DUMP_DIR/app.sql.gz.tmp"
+mv "$DUMP_DIR/app.sql.gz.tmp" "$DUMP_DIR/app.sql.gz"
+
+# 2. Back up the dumps, the uploaded files and the configuration
+restic backup \\
+  "$DUMP_DIR" \\
+  /var/www/app/shared \\
+  /etc/nginx /etc/php \\
+  --tag daily \\
+  --exclude-caches
+
+# 3. Retention: 7 days, 4 weeks, 6 months
+restic forget --tag daily --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+
+# 4. Verify a sample of the data
+restic check --read-data-subset=5%</code></pre>
+<p><code>set -euo pipefail</code> is crucial: without <code>pipefail</code>, a failing <code>mysqldump</code> followed by a successful <code>gzip</code> goes unnoticed, and you back up an empty file for months.</p>
+<pre><code>sudo chmod 700 /usr/local/bin/backup.sh</code></pre>
+
+<h3>4. Scheduling with a systemd timer</h3>
+<p>A systemd timer has two advantages over cron: logs go to journald, and <code>Persistent=true</code> catches up on a missed run if the server was off.</p>
+<pre><code># /etc/systemd/system/backup.service
+[Unit]
+Description=MySQL + files backup to restic
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+Nice=10
+IOSchedulingClass=idle</code></pre>
+<pre><code># /etc/systemd/system/backup.timer
+[Unit]
+Description=Daily backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now backup.timer
+systemctl list-timers backup.timer      # next run
+sudo systemctl start backup.service     # first manual run
+journalctl -u backup.service -e         # logs</code></pre>
+
+<h3>5. Getting notified when it fails</h3>
+<p>A backup that fails silently is the worst-case scenario. The simplest solution is a "dead man's switch" service (Healthchecks.io, Uptime Kuma, Better Stack…): the script sends a ping on every success, and the service alerts you if nothing arrives within the expected window. Add this at the end of <code>backup.sh</code>:</p>
+<pre><code>curl -fsS -m 10 --retry 3 https://hc-ping.com/your-uuid &gt; /dev/null</code></pre>
+<p>Thanks to <code>set -e</code>, the ping is only sent if every previous step succeeded.</p>
+
+<h3>6. Testing the restore (for real)</h3>
+<p>Schedule a regular restore test, for example every month, on another machine:</p>
+<pre><code>set -a; . /etc/restic/env; set +a
+
+restic snapshots --tag daily                       # list the backups
+restic restore latest --target /tmp/restore        # latest version
+restic restore latest --target /tmp/restore --include /var/www/app/shared/uploads
+
+# Restore the database into a test database
+mysql -e 'CREATE DATABASE app_restore_test'
+zcat /tmp/restore/var/backups/mysql/app.sql.gz \\
+  | sed 's/\`app\`/\`app_restore_test\`/g' | mysql
+mysql -e 'SELECT COUNT(*) FROM app_restore_test.user'</code></pre>
+<p>Time the whole operation: that is your real <strong>RTO</strong> (the time it takes to get back into service). The age of the last successful backup is your <strong>RPO</strong> (the amount of data you accept to lose). If these two values do not suit the business, now is the time to find out, not during an incident.</p>
+
+<h3>In short</h3>
+<ul>
+<li>A consistent dump with <code>--single-transaction</code>, credentials kept off the command line</li>
+<li>restic: encrypted, deduplicated, off-site, with a clear retention policy</li>
+<li>systemd scheduling with <code>Persistent=true</code>, and an alert if the ping does not arrive</li>
+<li>The repository password stored somewhere other than the server</li>
+<li>Restores tested regularly and timed</li>
+</ul>`,
+      },
+      ar: {
+        title: 'النسخ الاحتياطي التلقائي للخادم: MySQL والملفات وrestic',
+        description: 'إعداد نسخ احتياطية موثوقة: تفريغ متّسق لقاعدة MySQL، ونسخ مشفّرة وخالية من التكرار عبر restic إلى تخزين S3، وسياسة احتفاظ، وجدولة بـ systemd، وتنبيهات، واختبارات استعادة.',
+        content: `<h2>النسخة الاحتياطية التي لم تُستعَد قط غير موجودة</h2>
+<p>الجميع "لديه نسخ احتياطية" إلى أن يأتي يوم الاستعادة: التفريغ فارغ منذ ثلاثة أشهر، أو الأرشيف موجود على قرص الخادم نفسه، أو لا أحد يعرف كلمة مرور التشفير. الاستراتيجية الجيدة تختصرها <strong>قاعدة 3-2-1</strong>: ثلاث نسخ من البيانات، على وسيطين مختلفين، إحداها خارج الموقع. ويختصرها انضباط واحد: <strong>اختبار الاستعادة</strong>.</p>
+<p>يُعدّ هذا الدليل على خادم Linux يستضيف تطبيق ويب ما يلي:</p>
+<ul>
+<li>تفريغاً متّسقاً لقاعدة MySQL دون تعطيل التطبيق؛</li>
+<li>نسخاً احتياطياً <strong>مشفّراً وخالياً من التكرار وتزايدياً</strong> عبر restic إلى تخزين كائنات S3؛</li>
+<li>سياسة احتفاظ وجدولة عبر systemd وتنبيهاً عند الفشل.</li>
+</ul>
+
+<h3>1. تفريغ MySQL</h3>
+<p>نسخ ملفات <code>/var/lib/mysql</code> أثناء عمل الخادم يعطي نسخة غير متّسقة. استخدم <code>mysqldump</code> مع الخيار <code>--single-transaction</code>: بالنسبة لجداول InnoDB يُؤخذ التفريغ داخل معاملة (transaction)، فيكون متّسقاً دون قفل عمليات الكتابة.</p>
+<p>أولاً، مستخدم مخصص للنسخ الاحتياطي بالحد الأدنى من الصلاحيات:</p>
+<pre><code>CREATE USER 'backup'@'localhost' IDENTIFIED BY 'long-password';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, PROCESS ON *.* TO 'backup'@'localhost';</code></pre>
+<p>توضع بيانات اعتماده في ملف لا يقرؤه إلا root، حتى لا تظهر أبداً في قائمة العمليات:</p>
+<pre><code># /root/.my-backup.cnf  (chmod 600)
+[client]
+user=backup
+password=long-password</code></pre>
+<pre><code>mysqldump --defaults-extra-file=/root/.my-backup.cnf \\
+  --single-transaction --quick --routines --triggers --events \\
+  --databases app | gzip &gt; /var/backups/mysql/app.sql.gz</code></pre>
+<p>يقرأ الخيار <code>--quick</code> الصفوف واحداً تلو الآخر بدلاً من تحميل كل جدول في الذاكرة، وهذا ضروري للجداول الكبيرة. وبعد بضع عشرات من الغيغابايتات انتقل إلى نسخ احتياطي فيزيائي (Percona XtraBackup أو MySQL Enterprise Backup).</p>
+
+<h3>2. لماذا restic</h3>
+<p>الأرشيف اليومي بصيغة <code>tar.gz</code> ينسخ كل شيء كل يوم. أما <strong>restic</strong> فيقسّم الملفات إلى كتل، ويخزّن كل كتلة مرة واحدة فقط، ويشفّر كل شيء على جهازك (AES-256) قبل الإرسال. النتيجة: نسخ يومية لا تكلّف إلا حجم التغييرات، وتخزين بعيد لا يرى بياناتك مكشوفة أبداً، وإمكانية الاستعادة إلى أي نقطة زمنية محفوظة.</p>
+<pre><code>sudo apt install -y restic</code></pre>
+<p>توضع إعدادات المستودع في ملف بيئة محمي هو <code>/etc/restic/env</code> (<code>chmod 600</code>). ويصلح أي تخزين متوافق مع S3 (AWS وScaleway وOVH وBackblaze B2 وCloudflare R2…):</p>
+<pre><code>RESTIC_REPOSITORY=s3:https://s3.fr-par.scw.cloud/my-backup-bucket/web-server
+RESTIC_PASSWORD_FILE=/etc/restic/password
+AWS_ACCESS_KEY_ID=xxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxx</code></pre>
+<pre><code>sudo sh -c 'openssl rand -base64 48 &gt; /etc/restic/password &amp;&amp; chmod 600 /etc/restic/password'
+sudo sh -c 'set -a; . /etc/restic/env; restic init'</code></pre>
+<p><strong>احتفظ بكلمة مرور restic خارج الخادم</strong> في مدير كلمات مرور. بدونها لا يمكن استرجاع المستودع، وهذا مقصود. فإذا احترق الخادم ومعه النسخة الوحيدة من كلمة المرور، احترقت نسخك الاحتياطية معه.</p>
+
+<h3>3. سكربت النسخ الاحتياطي</h3>
+<p>الملف <code>/usr/local/bin/backup.sh</code>:</p>
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+set -a; . /etc/restic/env; set +a
+
+DUMP_DIR=/var/backups/mysql
+mkdir -p "$DUMP_DIR"
+
+# 1. MySQL dump (temporary file, then rename: never a half-written dump)
+mysqldump --defaults-extra-file=/root/.my-backup.cnf \\
+  --single-transaction --quick --routines --triggers --events \\
+  --databases app | gzip &gt; "$DUMP_DIR/app.sql.gz.tmp"
+mv "$DUMP_DIR/app.sql.gz.tmp" "$DUMP_DIR/app.sql.gz"
+
+# 2. Back up the dumps, the uploaded files and the configuration
+restic backup \\
+  "$DUMP_DIR" \\
+  /var/www/app/shared \\
+  /etc/nginx /etc/php \\
+  --tag daily \\
+  --exclude-caches
+
+# 3. Retention: 7 days, 4 weeks, 6 months
+restic forget --tag daily --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+
+# 4. Verify a sample of the data
+restic check --read-data-subset=5%</code></pre>
+<p>السطر <code>set -euo pipefail</code> حاسم: بدون <code>pipefail</code> يمرّ فشل <code>mysqldump</code> متبوعاً بنجاح <code>gzip</code> دون أن يلاحظه أحد، فتنسخ ملفاً فارغاً لأشهر.</p>
+<pre><code>sudo chmod 700 /usr/local/bin/backup.sh</code></pre>
+
+<h3>4. الجدولة بمؤقّت systemd</h3>
+<p>لمؤقّت systemd ميزتان مقارنة بـ cron: السجلات تذهب إلى journald، والخيار <code>Persistent=true</code> يعوّض أي تنفيذ فائت إذا كان الخادم مطفأً.</p>
+<pre><code># /etc/systemd/system/backup.service
+[Unit]
+Description=MySQL + files backup to restic
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+Nice=10
+IOSchedulingClass=idle</code></pre>
+<pre><code># /etc/systemd/system/backup.timer
+[Unit]
+Description=Daily backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now backup.timer
+systemctl list-timers backup.timer      # next run
+sudo systemctl start backup.service     # first manual run
+journalctl -u backup.service -e         # logs</code></pre>
+
+<h3>5. التنبيه عند الفشل</h3>
+<p>النسخة الاحتياطية التي تفشل بصمت هي أسوأ سيناريو. أبسط حل هو خدمة من نوع "dead man's switch" (مثل Healthchecks.io أو Uptime Kuma أو Better Stack): يرسل السكربت إشارة (ping) عند كل نجاح، وتنبّهك الخدمة إذا لم يصلها شيء في المهلة المتوقعة. أضف في نهاية <code>backup.sh</code>:</p>
+<pre><code>curl -fsS -m 10 --retry 3 https://hc-ping.com/your-uuid &gt; /dev/null</code></pre>
+<p>بفضل <code>set -e</code> لا تُرسَل الإشارة إلا إذا نجحت كل الخطوات السابقة.</p>
+
+<h3>6. اختبار الاستعادة (فعلياً)</h3>
+<p>خطّط لاختبار استعادة منتظم، شهرياً مثلاً، على جهاز آخر:</p>
+<pre><code>set -a; . /etc/restic/env; set +a
+
+restic snapshots --tag daily                       # list the backups
+restic restore latest --target /tmp/restore        # latest version
+restic restore latest --target /tmp/restore --include /var/www/app/shared/uploads
+
+# Restore the database into a test database
+mysql -e 'CREATE DATABASE app_restore_test'
+zcat /tmp/restore/var/backups/mysql/app.sql.gz \\
+  | sed 's/\`app\`/\`app_restore_test\`/g' | mysql
+mysql -e 'SELECT COUNT(*) FROM app_restore_test.user'</code></pre>
+<p>احسب الوقت الذي تستغرقه العملية: إنه <strong>RTO</strong> الحقيقي لديك (الوقت اللازم للعودة إلى الخدمة). وعمر آخر نسخة ناجحة هو <strong>RPO</strong> (كمية البيانات التي تقبل خسارتها). إذا لم تناسب هاتان القيمتان احتياجات العمل، فالآن هو وقت اكتشاف ذلك، لا أثناء حادث.</p>
+
+<h3>باختصار</h3>
+<ul>
+<li>تفريغ متّسق بالخيار <code>--single-transaction</code>، وبيانات اعتماد بعيدة عن سطر الأوامر</li>
+<li>restic: مشفّر، بلا تكرار، خارج الموقع، مع سياسة احتفاظ واضحة</li>
+<li>جدولة systemd مع <code>Persistent=true</code>، وتنبيه إذا لم تصل الإشارة</li>
+<li>كلمة مرور المستودع محفوظة في مكان آخر غير الخادم</li>
+<li>استعادة تُختبر بانتظام ويُقاس وقتها</li>
+</ul>`,
+      },
+    },
+  },
 ]

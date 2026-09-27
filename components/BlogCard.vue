@@ -9,17 +9,16 @@
         <span>{{ article.date }}</span>
         <span>· {{ article.readTime }} {{ $t('blogUi.readTime') }}</span>
       </div>
-      <h3 class="post__title">{{ article.title }}</h3>
+      <h3 class="post__title" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h3>
       <span class="post__more">{{ $t('blog.readMore') }} →</span>
     </div>
   </NuxtLink>
 </template>
 
 <script setup lang="ts">
-import type { BlogArticle } from '~/data/blog'
 import { blogCategories, type BlogCategory } from '~/data/site'
 
-const props = defineProps<{ article: BlogArticle }>()
+const props = defineProps<{ article: LocalizedArticle }>()
 
 const category = computed(() => blogCategories[props.article.category as BlogCategory] ?? blogCategories.DevOps)
 const badgeInk = computed(() => (props.article.category === 'Linux' ? '#10132a' : '#fff'))

@@ -7,7 +7,7 @@
         <span class="badge" :style="{ background: category.color, color: article.category === 'Linux' ? '#10132a' : '#fff' }">
           {{ $t(`blog.categories.${category.key}`) }}
         </span>
-        <h1 class="title pixel">{{ article.title }}</h1>
+        <h1 class="title pixel" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h1>
         <div class="meta">
           <span>{{ $t('blog.publishedOn') }} {{ article.date }}</span>
           <span>· {{ article.readTime }} {{ $t('blogUi.readTime') }}</span>
@@ -18,17 +18,17 @@
       </header>
 
       <!-- Article bodies are trusted, first-party HTML from data/blog.ts -->
-      <article class="content card" v-html="article.content" />
+      <article class="content card" :lang="article.lang" :dir="articleDir(article)" v-html="article.content" />
 
       <nav class="pager">
         <NuxtLink v-if="prev" :to="`/blog/${prev.slug}`" v-lift class="pager__link card">
           <span class="pager__label pixel">◀ {{ $t('blog.previousArticle') }}</span>
-          <span class="pager__title">{{ prev.title }}</span>
+          <span class="pager__title" :lang="prev.lang" :dir="articleDir(prev)">{{ prev.title }}</span>
         </NuxtLink>
         <span v-else />
         <NuxtLink v-if="next" :to="`/blog/${next.slug}`" v-lift class="pager__link pager__link--next card">
           <span class="pager__label pixel">{{ $t('blog.nextArticle') }} ▶</span>
-          <span class="pager__title">{{ next.title }}</span>
+          <span class="pager__title" :lang="next.lang" :dir="articleDir(next)">{{ next.title }}</span>
         </NuxtLink>
       </nav>
     </template>
@@ -43,10 +43,11 @@ import { blogCategories, type BlogCategory } from '~/data/site'
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 
-const article = computed(() => findArticle(slug.value))
-const index = computed(() => sortedArticles.findIndex(a => a.slug === slug.value))
-const prev = computed(() => (index.value > 0 ? sortedArticles[index.value - 1] : undefined))
-const next = computed(() => (index.value >= 0 ? sortedArticles[index.value + 1] : undefined))
+const articles = useLocalizedArticles()
+const index = computed(() => articles.value.findIndex(a => a.slug === slug.value))
+const article = computed(() => articles.value[index.value])
+const prev = computed(() => (index.value > 0 ? articles.value[index.value - 1] : undefined))
+const next = computed(() => (index.value >= 0 ? articles.value[index.value + 1] : undefined))
 const category = computed(() => blogCategories[article.value?.category as BlogCategory] ?? blogCategories.DevOps)
 
 if (!article.value) {
@@ -191,6 +192,11 @@ useHead(() => ({
   direction: ltr;
 }
 
+/* Long inline identifiers/URLs may break anywhere rather than widen the page */
+.content :deep(:not(pre) > code) {
+  overflow-wrap: anywhere;
+}
+
 .content :deep(pre code) {
   padding: 0;
   background: none;
@@ -217,7 +223,7 @@ useHead(() => ({
 
 .pager {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 20px;
 }
 

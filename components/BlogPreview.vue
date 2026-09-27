@@ -13,5 +13,6 @@
 </template>
 
 <script setup lang="ts">
-const latest = sortedArticles.slice(0, 3)
+const articles = useLocalizedArticles()
+const latest = computed(() => articles.value.slice(0, 3))
 </script>

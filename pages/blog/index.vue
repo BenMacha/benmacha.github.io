@@ -43,8 +43,9 @@ const filters = computed(() => [
   })),
 ])
 
+const articles = useLocalizedArticles()
 const visible = computed(() =>
-  active.value === 'all' ? sortedArticles : sortedArticles.filter(a => a.category === active.value),
+  active.value === 'all' ? articles.value : articles.value.filter(a => a.category === active.value),
 )
 
 useHead({
@@ -88,7 +89,7 @@ useHead({
 }
 
 .posts {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
 }
 
 .empty {
