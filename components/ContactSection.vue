@@ -25,7 +25,7 @@ import { socialLinks } from '~/data/site'
   align-items: center;
   justify-content: space-between;
   gap: 28px;
-  padding: 40px 32px;
+  padding: clamp(24px, 5vw, 40px) clamp(18px, 4vw, 32px);
   box-shadow: inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo), 8px 8px 0 var(--shadow);
 }
 
@@ -63,5 +63,12 @@ html.light .contact__eyebrow {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+}
+
+@media (max-width: 480px) {
+  .contact__actions,
+  .contact__actions .btn {
+    flex: 1 1 100%;
+  }
 }
 </style>

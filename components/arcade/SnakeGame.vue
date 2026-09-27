@@ -7,15 +7,17 @@
     :idle="!running"
     :message="over ? $t('arcade.gameOver') : $t('arcade.pressStart')"
     keys="← ↑ → ↓"
-    hint="/ ZQSD"
+    :hint="`/ ZQSD · ${$t('arcade.swipe')}`"
     pop-color="#e52521"
     @start="start"
   >
-    <canvas ref="canvas" :width="SIZE" :height="SIZE" />
+    <canvas ref="canvas" :width="SIZE" :height="SIZE" @pointerdown="onPointerdown" @pointerup="onPointerup" />
   </ArcadeCabinet>
 </template>
 
 <script setup lang="ts">
+import type { SwipeDirection } from '~/composables/useArcade'
+
 type Cell = [number, number]
 
 const GRID = 17
@@ -43,10 +45,16 @@ let timer: ReturnType<typeof setInterval> | undefined
 
 const { claim } = useArcadeSlot(stop)
 
-useGameKeys(() => running.value, (key) => {
-  const d = DIRECTIONS[key]
+function turn(d: Cell | undefined) {
   if (!d || (d[0] === -dir[0] && d[1] === -dir[1])) return
   next = d
+}
+
+useGameKeys(() => running.value, key => turn(DIRECTIONS[key]))
+
+const SWIPES: Record<SwipeDirection, Cell> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+const { onPointerdown, onPointerup } = useSwipe((direction) => {
+  if (running.value) turn(SWIPES[direction])
 })
 
 function randomFood(): Cell {

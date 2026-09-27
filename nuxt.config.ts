@@ -62,6 +62,7 @@ export default defineNuxtConfig({
     families: {
       'Press Start 2P': [400],
       'Fira Code': [400, 500, 600, 700],
+      'Noto Sans Arabic': [400, 600, 700],
     },
     display: 'swap',
   },
@@ -77,11 +78,8 @@ export default defineNuxtConfig({
     defaultLocale: 'fr',
     langDir: 'locales',
     strategy: 'no_prefix',
-    detectBrowserLanguage: {
-      useCookie: true,
-      cookieKey: 'i18n_locale',
-      fallbackLocale: 'fr',
-    },
+    // Applied after hydration by plugins/locale.client.ts (pages are prerendered in French)
+    detectBrowserLanguage: false,
   },
 
   site: {

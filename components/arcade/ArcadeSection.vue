@@ -18,4 +18,11 @@
   align-items: flex-start;
   gap: 28px;
 }
+
+@media (max-width: 480px) {
+  .arcade {
+    justify-content: center;
+    gap: 20px;
+  }
+}
 </style>

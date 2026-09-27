@@ -17,7 +17,7 @@ const i18nHead = useLocaleHead()
 useHead(() => ({
   htmlAttrs: {
     lang: i18nHead.value.htmlAttrs?.lang,
-    dir: i18nHead.value.htmlAttrs?.dir,
+    dir: i18nHead.value.htmlAttrs?.dir as 'ltr' | 'rtl' | undefined,
   },
 }))
 

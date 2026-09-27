@@ -10,7 +10,7 @@
     tall
     @start="start"
   >
-    <canvas ref="canvas" :width="COLS * CELL" :height="ROWS * CELL" />
+    <canvas ref="canvas" :width="COLS * CELL" :height="ROWS * CELL" @pointerdown="onPointerdown" @pointerup="onPointerup" />
 
     <template #side>
       <ul class="controls pixel">
@@ -19,6 +19,7 @@
         <li><span class="arrows">↑</span> {{ $t('arcade.rotate') }}</li>
         <li><span class="arrows">↓</span> {{ $t('arcade.down') }}</li>
         <li>{{ $t('arcade.drop') }}</li>
+        <li class="controls__touch">{{ $t('arcade.tetrisTouch') }}</li>
       </ul>
     </template>
   </ArcadeCabinet>
@@ -65,6 +66,20 @@ useGameKeys(() => running.value, (key) => {
   else if (key === 'ArrowUp' || key === 'z') rotate()
   else if (key === ' ') hardDrop()
   else return
+  draw()
+})
+
+// Touch: swipe left/right to move, down to drop, tap to rotate
+const { onPointerdown, onPointerup } = useSwipe((direction) => {
+  if (!running.value || !piece) return
+  if (direction === 'left') tryMove(-1, 0)
+  else if (direction === 'right') tryMove(1, 0)
+  else if (direction === 'down') hardDrop()
+  else rotate()
+  draw()
+}, () => {
+  if (!running.value || !piece) return
+  rotate()
   draw()
 })
 
@@ -203,6 +218,12 @@ onMounted(draw)
   font-size: 8px;
   line-height: 2;
   color: #1a1a2e;
+}
+
+.controls__touch {
+  font-size: 7px;
+  line-height: 1.8;
+  opacity: .8;
 }
 
 .arrows {

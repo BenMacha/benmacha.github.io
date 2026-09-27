@@ -224,6 +224,26 @@ useHead({
   border: 2px solid #000;
 }
 
+@media (max-width: 480px) {
+  .level-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .pipe__lip {
+    width: 36px;
+    height: 20px;
+  }
+
+  .pipe__body {
+    width: 26px;
+  }
+
+  .job__body {
+    padding: 16px;
+  }
+}
+
 .start-label {
   font-size: 10px;
   color: var(--muted);

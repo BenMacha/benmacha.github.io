@@ -121,6 +121,35 @@ export function usePointer(canvas: Ref<HTMLCanvasElement | null>) {
 }
 
 // ---------------------------------------------------------------------------
+// Touch: swipe in one of 4 directions, or tap. Bind the returned handlers to
+// the canvas (which has `touch-action: none`, so swipes don't scroll the page).
+// ---------------------------------------------------------------------------
+export type SwipeDirection = 'up' | 'down' | 'left' | 'right'
+
+export function useSwipe(onSwipe: (direction: SwipeDirection) => void, onTap?: () => void, threshold = 24) {
+  let startX = 0
+  let startY = 0
+
+  function onPointerdown(event: PointerEvent) {
+    startX = event.clientX
+    startY = event.clientY
+  }
+
+  function onPointerup(event: PointerEvent) {
+    const dx = event.clientX - startX
+    const dy = event.clientY - startY
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) {
+      onTap?.()
+      return
+    }
+    if (Math.abs(dx) > Math.abs(dy)) onSwipe(dx > 0 ? 'right' : 'left')
+    else onSwipe(dy > 0 ? 'down' : 'up')
+  }
+
+  return { onPointerdown, onPointerup }
+}
+
+// ---------------------------------------------------------------------------
 // Drawing helpers
 // ---------------------------------------------------------------------------
 export function context2d(canvas: Ref<HTMLCanvasElement | null>): CanvasRenderingContext2D | null {

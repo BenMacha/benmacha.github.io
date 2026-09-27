@@ -8,7 +8,7 @@
       :class="{ 'is-active': item.code === locale }"
       :aria-pressed="item.code === locale"
       :title="item.name"
-      @click="setLocale(item.code)"
+      @click="select(item.code)"
     >
       {{ item.code.toUpperCase() }}
     </button>
@@ -16,7 +16,15 @@
 </template>
 
 <script setup lang="ts">
+import { LOCALE_COOKIE } from '~/data/site'
+
 const { locale, locales, setLocale } = useI18n()
+const savedLocale = useCookie(LOCALE_COOKIE, { maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
+
+function select(code: typeof locale.value) {
+  savedLocale.value = code
+  setLocale(code)
+}
 </script>
 
 <style scoped>

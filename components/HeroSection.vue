@@ -10,7 +10,7 @@
 
       <div class="hero__main">
         <div class="hero__text">
-          <p class="hero__role pixel">{{ $t('home.title') }}</p>
+          <p class="hero__role pixel">{{ pixelCaps($t('home.title')) }}</p>
           <h1 ref="heroName" class="hero__name pixel">Ben Macha <span>Ali</span></h1>
 
           <div class="terminal">
@@ -56,7 +56,7 @@
           <span>{{ $t('hero.level') }}</span>
           <span class="xp__years">{{ $t('hero.xpLabel') }}</span>
         </div>
-        <div class="xp__bar" role="progressbar" aria-valuemin="0" aria-valuemax="18" aria-valuenow="14">
+        <div class="xp__bar" role="progressbar" :aria-label="$t('hero.xpLabel')" aria-valuemin="0" aria-valuemax="18" aria-valuenow="14">
           <span v-for="i in 18" :key="i" :class="{ 'is-full': i <= 14 }" />
         </div>
       </div>
@@ -104,7 +104,7 @@ onMounted(() => {
     animate(heroName.value, { opacity: [0, 1], y: [-40, 0], scale: [0.9, 1] }, { type: 'spring', bounce: 0.5, duration: 0.9 })
   }
   if (blocksEl.value) {
-    animate(blocksEl.value.children, { y: [-60, 0], opacity: [0, 1] }, { type: 'spring', bounce: 0.55, delay: stagger(0.09, { startDelay: 0.3 }) })
+    animate([...blocksEl.value.children], { y: [-60, 0], opacity: [0, 1] }, { type: 'spring', bounce: 0.55, delay: stagger(0.09, { startDelay: 0.3 }) })
   }
 })
 </script>
@@ -118,6 +118,26 @@ onMounted(() => {
 
 .hero__inner {
   padding-block: 40px 48px;
+}
+
+@media (max-width: 480px) {
+  .hero__inner {
+    padding-block: 28px 36px;
+  }
+
+  .hud {
+    margin-bottom: 28px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .terminal__body {
+    padding: 14px;
+    font-size: 13px;
+  }
+
+  .hero__cta .btn {
+    flex: 1 1 100%;
+  }
 }
 
 /* ---- HUD ---- */
@@ -158,11 +178,11 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 48px;
+  gap: clamp(28px, 6vw, 48px);
 }
 
 .hero__text {
-  flex: 1 1 520px;
+  flex: 1 1 min(520px, 100%);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -174,13 +194,12 @@ onMounted(() => {
   font-size: 11px;
   line-height: 1.8;
   letter-spacing: .08em;
-  text-transform: uppercase;
   color: var(--accent);
 }
 
 .hero__name {
   margin: 0;
-  font-size: clamp(30px, 5vw, 56px);
+  font-size: clamp(26px, 7vw, 56px);
   line-height: 1.25;
   color: var(--hero-fg);
   text-shadow: 4px 4px 0 #000;
@@ -306,8 +325,9 @@ onMounted(() => {
 
 .xp__labels {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px 12px;
   margin-bottom: 8px;
   font-size: 9px;
   line-height: 1.6;

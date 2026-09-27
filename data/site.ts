@@ -6,6 +6,9 @@ export const socialLinks = {
   cv: '/CV.pdf',
 }
 
+/** Cookie remembering the language chosen by the visitor. */
+export const LOCALE_COOKIE = 'i18n_locale'
+
 export const navPages = ['experience', 'skills', 'projects', 'education', 'blog'] as const
 
 export type BlogCategory = 'Docker' | 'Linux' | 'PHP' | 'DevOps'

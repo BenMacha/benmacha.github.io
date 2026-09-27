@@ -346,7 +346,9 @@
     "orMouse": "أو الفأرة",
     "shoot": "SPACE إطلاق",
     "points": "7 نقاط",
-    "breakout": "كسر الطوب"
+    "breakout": "كسر الطوب",
+    "swipe": "اسحب",
+    "tetrisTouch": "على الهاتف: اسحب للتحريك واضغط للتدوير"
   },
   "contactUi": {
     "eyebrow": "INSERT COIN · PLAYER 2 ?",
@@ -357,5 +359,8 @@
     "day": "نهار",
     "night": "ليل",
     "toggle": "تغيير المظهر"
+  },
+  "menu": {
+    "toggle": "فتح القائمة أو إغلاقها"
   }
 }

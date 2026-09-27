@@ -82,6 +82,8 @@ const year = new Date().getFullYear()
 }
 
 .footer__prompt {
+  direction: ltr;
+  text-align: start;
   font-size: 14px;
   font-weight: 700;
   color: #00ff41;
@@ -114,7 +116,7 @@ const year = new Date().getFullYear()
   padding-top: 14px;
   border-top: 2px dotted #2b3160;
   font-size: 11px;
-  color: #6d76a3;
+  color: #8a93c0;
   text-align: center;
 }
 </style>

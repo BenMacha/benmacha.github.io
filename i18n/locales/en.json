@@ -346,7 +346,9 @@
     "orMouse": "or mouse",
     "shoot": "SPACE shoot",
     "points": "7 pts",
-    "breakout": "BREAKOUT"
+    "breakout": "BREAKOUT",
+    "swipe": "swipe",
+    "tetrisTouch": "Mobile: swipe to move, tap to rotate"
   },
   "contactUi": {
     "eyebrow": "INSERT COIN · PLAYER 2 ?",
@@ -357,5 +359,8 @@
     "day": "DAY",
     "night": "NIGHT",
     "toggle": "Toggle theme"
+  },
+  "menu": {
+    "toggle": "Open or close the menu"
   }
 }

@@ -295,14 +295,14 @@
     "jump": "Saute !"
   },
   "sections": {
-    "experience": "MONDE 1 · CARRIÈRE",
+    "experience": "MONDE 1 · CARRIERE",
     "skills": "MONDE 2 · INVENTAIRE",
     "projects": "MONDE 3 · BLOCS BONUS",
     "blog": "MONDE 4 · LOGS",
     "arcade": "MONDE 6 · ARCADE",
     "seeAll": "Tout voir",
     "openInventory": "Ouvrir l'inventaire",
-    "education": "MONDE 5 · SUCCÈS",
+    "education": "MONDE 5 · SUCCES",
     "bestExperience": "Mes meilleures expériences"
   },
   "experienceUi": {
@@ -346,7 +346,9 @@
     "orMouse": "ou souris",
     "shoot": "ESPACE tirer",
     "points": "7 pts",
-    "breakout": "CASSE-BRIQUES"
+    "breakout": "CASSE-BRIQUES",
+    "swipe": "glisser",
+    "tetrisTouch": "Mobile : glisser pour bouger, toucher pour tourner"
   },
   "contactUi": {
     "eyebrow": "INSERT COIN · PLAYER 2 ?",
@@ -357,5 +359,8 @@
     "day": "JOUR",
     "night": "NUIT",
     "toggle": "Changer de thème"
+  },
+  "menu": {
+    "toggle": "Ouvrir ou fermer le menu"
   }
 }

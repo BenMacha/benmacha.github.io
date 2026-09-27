@@ -53,7 +53,8 @@ watch(() => props.score, () => {
 
 <style scoped>
 .cabinet {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
   max-width: 100%;
   display: flex;
   flex-direction: column;
@@ -77,7 +78,7 @@ watch(() => props.score, () => {
 }
 
 .cabinet--breakout {
-  --c-bg: #2496ed; --c-hi: #6fc0ff; --c-lo: #11579a; --c-fg: #fff;
+  --c-bg: #1a73c2; --c-hi: #5aa8f0; --c-lo: #0e4a85; --c-fg: #fff;
   --s-border: #000; --s-bg: #05070f; --o-bg: rgba(5, 7, 15, .82); --o-fg: #fbd000; --o-hint: #e8ecff;
   --b-bg: #fbd000; --b-fg: #1a1a2e; --b-border: #000;
 }
@@ -96,9 +97,11 @@ watch(() => props.score, () => {
 
 .cabinet__hud {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px 12px;
+  line-height: 1.6;
   font-size: 10px;
   color: var(--c-fg);
 }
@@ -109,6 +112,7 @@ watch(() => props.score, () => {
 
 .cabinet__body {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 12px;
 }
