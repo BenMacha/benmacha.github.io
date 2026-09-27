@@ -349,14 +349,14 @@ export const blogArticles: BlogArticle[] = [
   {
     slug: 'my-journey-tech-lead',
     title: 'Mon parcours : de développeur junior à Tech Lead',
-    description: 'Retour sur mon parcours de développeur PHP junior à Tech Lead, en passant par la création de Keytchens et mes expériences chez CCM Benchmark et ORPI.',
+    description: 'Retour sur mon parcours de développeur PHP junior à Tech Lead, en passant par la food-tech, CCM Benchmark et ORPI.',
     category: 'PHP',
     date: '15 Dec 2024',
     readTime: '11 min',
     tags: ['Carrière', 'Tech Lead', 'Symfony', 'DevOps'],
     translations: {
-      en: { title: 'My journey: from junior developer to Tech Lead', description: 'A look back at my path from junior PHP developer to Tech Lead, including founding Keytchens and my experience at CCM Benchmark and ORPI.' },
-      ar: { title: 'مسيرتي: من مطوّر مبتدئ إلى Tech Lead', description: 'نظرة على مسيرتي من مطوّر PHP مبتدئ إلى Tech Lead، مروراً بتأسيس Keytchens وتجاربي في CCM Benchmark وORPI.' },
+      en: { title: 'My journey: from junior developer to Tech Lead', description: 'A look back at my path from junior PHP developer to Tech Lead, through food tech, CCM Benchmark and ORPI.' },
+      ar: { title: 'مسيرتي: من مطوّر مبتدئ إلى Tech Lead', description: 'نظرة على مسيرتي من مطوّر PHP مبتدئ إلى Tech Lead، مروراً بمجال food-tech وCCM Benchmark وORPI.' },
     },
   },
   {

@@ -28,4 +28,4 @@ CMD ["php-fpm"]</code></pre>
 <pre><code>RUN echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini</code></pre>
-<p>This approach has been used successfully on platforms such as Keytchens to deploy Symfony applications with build times reduced by 60%.</p>
+<p>I have used this approach in production to deploy Symfony applications, with build times reduced by 60%.</p>
