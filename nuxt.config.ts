@@ -48,7 +48,8 @@ export default defineNuxtConfig({
         { rel: 'canonical', href: SITE_URL },
         { rel: 'icon', type: 'image/jpeg', href: '/logo.jpeg' },
         // Markdown profile for AI assistants (https://llmstxt.org)
-        { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'Ben Macha Ali — profil pour les IA' },
+        { rel: 'alternate', type: 'text/plain', href: '/llms.txt', hreflang: 'fr', title: 'Ben Macha Ali — profil pour les IA' },
+        { rel: 'alternate', type: 'text/plain', href: '/en/llms.txt', hreflang: 'en', title: 'Ben Macha Ali — profile for AI assistants' },
       ],
     },
     pageTransition: { name: 'page', mode: 'out-in' },
@@ -99,7 +100,7 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
-      routes: [...staticPages, ...blogPages, '/llms.txt', '/llms-full.txt'],
+      routes: [...staticPages, ...blogPages, '/llms.txt', '/llms-full.txt', '/en/llms.txt', '/en/llms-full.txt'],
       crawlLinks: true,
     },
   },
