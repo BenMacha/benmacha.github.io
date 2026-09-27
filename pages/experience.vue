@@ -72,7 +72,7 @@ function visibleTasks(tasks: string[], index: number) {
 useHead({
   title: `${t('experience.title')} - Ben Macha Ali | ORPI, CCM Benchmark, Keytchens, Matalto`,
   meta: [
-    { name: 'description', content: 'Expériences professionnelles de Ben Macha Ali - Chef de projet SI chez ORPI, Lead Dev PHP chez CCM Benchmark, Tech Lead chez Keytchens, Consultant chez Matalto/Manymore. Symfony, React, Vue.js, Docker, GraphQL.' },
+    { name: 'description', content: 'Parcours de Ben Macha Ali : Chef de projet SI chez ORPI, Lead Dev PHP chez CCM Benchmark (groupe Le Figaro), créateur et Tech Lead du projet Keytchens, consultant Symfony chez Manymore / Matalto, développeur chez UKN, Argolife et Pixel Trade. Fondateur de Pepprio.' },
   ],
 })
 </script>

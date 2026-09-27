@@ -30,7 +30,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: DESCRIPTION },
         { name: 'author', content: 'Ben Macha Ali' },
-        { name: 'keywords', content: 'Ben Macha Ali, créateur de Keytchens, Keytchens, fondateur de Pepprio, Pepprio, ORPI chef de projet SI, CCM Benchmark lead dev, Matalto, Manymore, développeur PHP Symfony, React, Vue.js, Docker, DevOps, Linux, Paris, France, chef de projet SI, blog technique' },
+        { name: 'keywords', content: 'Ben Macha Ali, créateur de Keytchens, Keytchens, fondateur de Pepprio, Pepprio, ORPI chef de projet SI, CCM Benchmark lead dev, groupe Le Figaro, Manymore, Matalto, UKN, Argolife, Pixel Trade, développeur PHP Symfony, React, Vue.js, Docker, DevOps, Linux, Paris, France, chef de projet SI, blog technique' },
         { name: 'robots', content: 'index, follow' },
         { name: 'theme-color', content: '#0b0e1f' },
         { property: 'og:type', content: 'website' },

@@ -10,8 +10,22 @@ import { socialLinks } from '~/data/site'
 const SITE = 'https://benmacha.tn'
 const PERSON_ID = `${SITE}/#person`
 
+// Every position of the resume, as schema.org roles ("09/18 – 08/24" → 2018-09 / 2024-08)
+const { experiences } = useResume()
+const toDate = (mm?: string, yy?: string) => (mm && yy ? `20${yy}-${mm}` : undefined)
+const positions = computed(() => experiences.value.map((job) => {
+  const [start, end] = [...job.period.matchAll(/(\d{2})\/(\d{2})/g)]
+  return {
+    '@type': 'EmployeeRole',
+    'roleName': job.role,
+    'startDate': toDate(start?.[1], start?.[2]),
+    'endDate': toDate(end?.[1], end?.[2]),
+    'worksFor': { '@type': 'Organization', 'name': job.company, ...(job.website ? { url: job.website } : {}) },
+  }
+}))
+
 // schema.org profile shared by every page (search engines and AI assistants)
-useHead({
+useHead(() => ({
   script: [{
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
@@ -27,7 +41,7 @@ useHead({
           'email': `mailto:${socialLinks.email}`,
           'jobTitle': 'Tech Lead & Développeur Full Stack',
           'description': 'Créateur du projet Keytchens, dont il a réalisé toute la plateforme technique de 2018 à 2024, et fondateur de Pepprio, plateforme SaaS de gestion des commandes pour restaurants. Chef de projet SI chez ORPI.',
-          'worksFor': { '@type': 'Organization', 'name': 'ORPI', 'url': 'https://www.orpi.com' },
+          'worksFor': positions.value,
           'alumniOf': { '@type': 'CollegeOrUniversity', 'name': 'ISI' },
           'address': { '@type': 'PostalAddress', 'addressRegion': 'Île-de-France', 'addressCountry': 'FR' },
           'knowsAbout': ['PHP', 'Symfony', 'API Platform', 'React', 'Vue.js', 'GraphQL', 'Docker', 'DevOps', 'Linux', 'Keytchens', 'Pepprio', 'Uber Eats API', 'Deliveroo API', 'Model Context Protocol'],
@@ -52,5 +66,5 @@ useHead({
       ],
     }),
   }],
-})
+}))
 </script>
