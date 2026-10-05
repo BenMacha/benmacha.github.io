@@ -9,6 +9,16 @@ export interface Experience {
   tasks: string[]
   stack: string[]
   website?: string
+  /** Successive contracts within the same company (e.g. freelance, then permanent). */
+  phases: ExperiencePhase[]
+}
+
+export interface ExperiencePhase {
+  /** `freelance` is drawn on the yellow branch pipe, `permanent` on the green trunk. */
+  kind: 'freelance' | 'permanent'
+  label: string
+  period: string
+  text: string
 }
 
 export interface Project {
@@ -56,6 +66,12 @@ export function useResume() {
       tasks: list(item.tasks),
       stack: str(item.stack)?.split(', ') ?? [],
       website: str(item.website),
+      phases: ((item.phases as Raw[] | undefined) ?? []).map(phase => ({
+        kind: rt(phase.kind) as ExperiencePhase['kind'],
+        label: rt(phase.label),
+        period: rt(phase.period),
+        text: rt(phase.text),
+      })),
     })),
   )
 

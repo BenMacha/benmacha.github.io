@@ -18,27 +18,19 @@
       {
         "company": "ORPI",
         "period": "09/25 – Present",
-        "role": "IT Project Manager",
+        "role": "IT & Generative AI Project Manager",
         "location": "Clichy, Île-de-France, France · Hybrid",
         "tasks": [
-          "Maintain and evolve the commercial management dashboard",
-          "Collect, clean and aggregate data (mandates, sales, leads, etc.)",
-          "Develop new metrics or KPIs per management requirements",
-          "Ensure data reliability from CRMs (Sweepbright, JEMS, etc.)",
-          "Write functional documentation and user guides",
-          "Ensure GDPR compliance in data processing",
-          "Monitor technical evolutions of Orpi tools and partners",
-          "Identify relevant innovations (AI, automation, data visualization)",
-          "Propose Proof of Concepts (POC) and new technical architectures",
-          "Continuously improve application performance and internal processes",
-          "Gather requirements from business teams (commercial, marketing, agencies)",
-          "Analyze data flows between tools (Sweepbright, Ubiflow, EDD, Digitaleo, ActiveCampaign, Modelo, etc.)",
-          "Map business processes and data flows",
-          "Identify friction points or duplicates between existing systems",
-          "Propose improvements or automations (via Zapier, internal APIs, or custom connectors)",
-          "Define the technical project roadmap (schedule, deliverables, priorities)"
+          "Leading several IT projects in parallel: scoping, requirements gathering, specifications, planning and delivery follow-up",
+          "Designed and built OrpiHub, the network data platform: sales steering, mapping, exports, agency audits",
+          "AI business assistant: LLM agents, more than 120 business tools, MCP server in production, Claude plugin for the teams",
+          "RAG over business documentation and AI-generated audit reports",
+          "Extracting and consolidating network figures (revenue, mandates, sales, GIE), building KPIs and briefing notes for management",
+          "Making CRM data reliable (SweepBright, JEMS) and mapping flows between tools (Ubiflow, Digitaleo, ActiveCampaign, Modelo), API automations",
+          "GDPR compliance of data processing",
+          "Functional documentation, training and support for business teams"
         ],
-        "stack": "PHP, Zapier, Sweepbright, JEMS, Ubiflow, Digitaleo, ActiveCampaign, Modelo, REST API",
+        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker, MCP, LLM, Zapier",
         "website": "https://www.orpi.com"
       },
       {
@@ -76,8 +68,22 @@
       {
         "company": "KEYTCHENS",
         "period": "09/18 – 08/24",
-        "role": "Technical Lead PHP/Symfony, ReactJS, GraphQL",
+        "role": "Full Stack Developer → Tech Lead PHP/Symfony, ReactJS, GraphQL",
         "location": "Paris, Île-de-France, France · Hybrid",
+        "phases": [
+          {
+            "kind": "freelance",
+            "label": "Freelance · remote",
+            "period": "09/18 – 08/20",
+            "text": "Web development alongside my jobs in Tunisia, then at Matalto"
+          },
+          {
+            "kind": "permanent",
+            "label": "Permanent contract",
+            "period": "09/20 – 08/24",
+            "text": "Symfony / React developer (09/20 – 10/21), then Tech Lead PHP/Symfony, ReactJS, GraphQL (10/21 – 08/24)"
+          }
+        ],
         "tasks": [
           "Developed applications with Symfony, ReactJS and Ionic Capacitor",
           "Led Symfony migration from version 2.8 to 6.4 without service interruption",
@@ -94,7 +100,7 @@
       },
       {
         "company": "MANYMORE / MATALTO",
-        "period": "07/19 – 07/20",
+        "period": "07/19 – 08/20",
         "role": "PHP Symfony Consultant",
         "location": "Paris & Nanterre, Île-de-France, France",
         "tasks": [
@@ -324,7 +330,11 @@
     "eyebrow": "WORLD 1 · LEVEL MAP",
     "more": "+{n} quests",
     "less": "Collapse",
-    "start": "START · 2016"
+    "start": "START · 2016",
+    "freelanceBranch": "FREELANCE",
+    "legendTrunk": "Green pipe: salaried job",
+    "legendBranch": "Yellow pipe: freelance or side project",
+    "countryChange": "✈ 2019 · TUNISIA → FRANCE"
   },
   "skillsUi": {
     "eyebrow": "WORLD 2 · INVENTORY",

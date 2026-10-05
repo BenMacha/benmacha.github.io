@@ -18,27 +18,19 @@
       {
         "company": "ORPI",
         "period": "09/25 – Aujourd'hui",
-        "role": "Chef de projet SI",
+        "role": "Chef de projet SI & IA générative",
         "location": "Clichy, Île-de-France, France · Hybride",
         "tasks": [
-          "Maintenir et faire évoluer le tableau de pilotage commercial",
-          "Collecter, nettoyer et agréger les données (mandats, ventes, leads, etc.)",
-          "Développer de nouvelles métriques ou KPI selon les demandes de la direction",
-          "Assurer la fiabilité des données issues des CRM (Sweepbright, JEMS, etc.)",
-          "Rédiger la documentation fonctionnelle et les guides utilisateurs",
-          "Veiller à la conformité RGPD dans les traitements de données",
-          "Suivre les évolutions techniques des outils Orpi et des partenaires",
-          "Identifier les innovations pertinentes (IA, automatisation, data-visualisation)",
-          "Proposer des Proof of Concept (POC) et de nouvelles architectures techniques",
-          "Améliorer en continu la performance des applications et des processus internes",
-          "Recueillir les besoins auprès des équipes métier (direction commerciale, marketing, GIE, agences locales)",
-          "Analyser les flux entre les différents outils (Sweepbright, Ubiflow, EDD, Digitaleo, ActiveCampaign, Modelo, etc.)",
-          "Cartographier les processus métier et les flux de données",
-          "Identifier les points de friction ou doublons entre les systèmes existants",
-          "Proposer des améliorations ou automatisations (via Zapier, API internes, ou connecteurs personnalisés)",
-          "Définir la feuille de route des projets techniques (planning, livrables, priorités)"
+          "Conduite de plusieurs projets SI en parallèle : cadrage, recueil des besoins, spécifications, planning et suivi des livrables",
+          "Conception et développement d'OrpiHub, la plateforme data du réseau : pilotage commercial, cartographie, exports, audits d'agence",
+          "Assistant métier IA : agents LLM, plus de 120 outils métier, serveur MCP en production, plugin Claude pour les équipes",
+          "RAG sur la documentation métier et comptes rendus d'audit générés par IA",
+          "Extraction et consolidation des chiffres du réseau (CA, mandats, ventes, GIE), création de KPI et de notes de synthèse pour la direction",
+          "Fiabilisation des données CRM (SweepBright, JEMS) et cartographie des flux entre outils (Ubiflow, Digitaleo, ActiveCampaign, Modelo), automatisations API",
+          "Conformité RGPD des traitements de données",
+          "Documentation fonctionnelle, formation et support des équipes métier"
         ],
-        "stack": "PHP, Zapier, Sweepbright, JEMS, Ubiflow, Digitaleo, ActiveCampaign, Modelo, API REST",
+        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker, MCP, LLM, Zapier",
         "website": "https://www.orpi.com"
       },
       {
@@ -76,8 +68,22 @@
       {
         "company": "KEYTCHENS",
         "period": "09/18 – 08/24",
-        "role": "Technical Lead PHP/Symfony, ReactJS, GraphQL",
+        "role": "Développeur Full Stack → Tech Lead PHP/Symfony, ReactJS, GraphQL",
         "location": "Paris, Île-de-France, France · Hybride",
+        "phases": [
+          {
+            "kind": "freelance",
+            "label": "Freelance · à distance",
+            "period": "09/18 – 08/20",
+            "text": "Développement web en parallèle de mes postes en Tunisie, puis chez Matalto"
+          },
+          {
+            "kind": "permanent",
+            "label": "CDI",
+            "period": "09/20 – 08/24",
+            "text": "Développeur Symfony / React (09/20 – 10/21), puis Tech Lead PHP/Symfony, ReactJS, GraphQL (10/21 – 08/24)"
+          }
+        ],
         "tasks": [
           "Développement d'applications avec Symfony, ReactJS et Ionic Capacitor",
           "Migration de Symfony de la version 2.8 vers la version 6.4 sans interruption de service",
@@ -94,7 +100,7 @@
       },
       {
         "company": "MANYMORE / MATALTO",
-        "period": "07/19 – 07/20",
+        "period": "07/19 – 08/20",
         "role": "Consultant PHP Symfony",
         "location": "Paris & Nanterre, Île-de-France, France",
         "tasks": [
@@ -324,7 +330,11 @@
     "eyebrow": "MONDE 1 · CARTE DES NIVEAUX",
     "more": "+{n} quêtes",
     "less": "Réduire",
-    "start": "START · 2016"
+    "start": "START · 2016",
+    "freelanceBranch": "FREELANCE",
+    "legendTrunk": "Tuyau vert : poste salarié",
+    "legendBranch": "Tuyau jaune : freelance ou projet en parallèle",
+    "countryChange": "✈ 2019 · TUNISIE → FRANCE"
   },
   "skillsUi": {
     "eyebrow": "MONDE 2 · INVENTAIRE",
