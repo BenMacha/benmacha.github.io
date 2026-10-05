@@ -25,12 +25,11 @@
           "Designed and built OrpiHub, the network data platform: sales steering, mapping, exports, agency audits",
           "AI business assistant: LLM agents, more than 120 business tools, MCP server in production, Claude plugin for the teams",
           "RAG over business documentation and AI-generated audit reports",
-          "Extracting and consolidating network figures (revenue, mandates, sales, GIE), building KPIs and briefing notes for management",
-          "Making CRM data reliable (SweepBright, JEMS) and mapping flows between tools (Ubiflow, Digitaleo, ActiveCampaign, Modelo), API automations",
-          "GDPR compliance of data processing",
+          "Extracting and consolidating network figures (revenue, mandates, sales, GIE), KPIs and briefing notes for management",
+          "Making CRM data reliable (SweepBright, JEMS), mapping flows between tools (Ubiflow, Digitaleo, ActiveCampaign, Modelo), API automations, GDPR compliance",
           "Functional documentation, training and support for business teams"
         ],
-        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker, MCP, LLM, Zapier",
+        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker",
         "website": "https://www.orpi.com"
       },
       {
@@ -39,30 +38,30 @@
         "role": "Founder & Full Stack Developer",
         "location": "Paris, Île-de-France, France · Hybrid",
         "tasks": [
-          "Designed a SaaS that brings Uber Eats, Deliveroo, Just Eat and Glovo orders together on a single tablet",
+          "Uber Eats, Deliveroo, Just Eat and Glovo orders gathered on a single screen, with automatic printing",
           "Point of sale (POS), kitchen display (KDS), self-order kiosk and a single menu synced to every platform",
           "Automatic detection and dispute of platform claims and refunds",
           "Stripe subscriptions, real-time webhooks, continuous deployment on a self-hosted server",
+          "For independent restaurants, dark kitchens, multi-site chains and quick-commerce players",
           "Product vision, development, deployment and day-to-day operations"
         ],
         "stack": "PHP 8.4, Symfony 7, GraphQL, Vue 3, TypeScript, MySQL, Redis, Stripe, Docker, Traefik",
         "website": "https://www.pepprio.com"
       },
       {
-        "company": "CCM BENCHMARK",
+        "company": "CCM BENCHMARK · GROUPE LE FIGARO",
         "period": "09/24 – 08/25",
         "role": "Lead PHP Developer",
         "location": "Paris, Île-de-France, France · Hybrid",
         "tasks": [
-          "Development and maintenance of essential internal products",
-          "Mentoring and supporting other technical teams",
-          "Native PHP development, fully leveraging its capabilities for custom solutions",
-          "Using various Symfony versions and API Platform for robust, scalable applications",
-          "Setting up Docker environments for deployment and continuous integration",
-          "Designing and developing internal tools to optimize process efficiency",
-          "Technology watch to propose innovative solutions"
+          "Lead Developer in the Core team, made up of Lead Developers, which works on every project and supports the other squads",
+          "Work across all CCM Benchmark projects (CommentÇaMarche, Journal des Femmes…)",
+          "Set up cache tags on Akamai to purge the cache in a targeted way",
+          "Built internal data imports",
+          "Technical support for the other development squads",
+          "Native PHP, Symfony (several versions) and API Platform; Docker environments for deployment and continuous integration"
         ],
-        "stack": "PHP, Symfony, API Platform, Docker, MySQL",
+        "stack": "PHP, Symfony, API Platform, Akamai, Docker, MySQL",
         "website": "https://www.commentcamarche.net"
       },
       {
@@ -75,41 +74,38 @@
             "kind": "freelance",
             "label": "Freelance · remote",
             "period": "09/18 – 08/20",
-            "text": "Web development alongside my jobs in Tunisia, then at Matalto"
+            "text": "Built the platform alone, from Tunisia: Uber Eats invoicing rebuilt through scraping, explanatory emails to restaurants about their Uber Eats and Deliveroo invoices"
           },
           {
             "kind": "permanent",
             "label": "Permanent contract",
             "period": "09/20 – 08/24",
-            "text": "Symfony / React developer (09/20 – 10/21), then Tech Lead PHP/Symfony, ReactJS, GraphQL (10/21 – 08/24)"
+            "text": "Symfony / React developer (09/20 – 10/21): launched the order aggregator, hired the team, Jira, dailies and weekly retrospectives; then Tech Lead PHP/Symfony, ReactJS, GraphQL (10/21 – 08/24)"
           }
         ],
         "tasks": [
-          "Developed applications with Symfony, ReactJS and Ionic Capacitor",
-          "Led Symfony migration from version 2.8 to 6.4 without service interruption",
-          "Optimized PROD/DEV environment configuration",
-          "Integrated CLOUD and Bluetooth printing systems, and Uber/Deliveroo APIs",
-          "Led a team of 4 developers, fostering collaboration and innovation",
-          "Supervised real-time order management on delivery platforms",
-          "Managed a distributed environment across multiple servers with high traffic",
-          "Assigned tasks via JIRA and reviewed code to ensure quality",
-          "Configured operational environments on Debian/Ubuntu with Jenkins, Postfix, Apache2"
+          "Migrated Symfony from 2.8 to 6.4 with zero downtime",
+          "Led a team of 4 developers: task assignment (JIRA), code review, delivery quality",
+          "Integrated the Uber Eats and Deliveroo APIs, real-time order management",
+          "Cloud and Bluetooth order printing",
+          "Symfony, ReactJS and Ionic Capacitor applications; GraphQL API",
+          "High-traffic multi-server Debian/Ubuntu infrastructure: Jenkins, Docker, Redis, MySQL, Apache2, Postfix, Sentry"
         ],
-        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-6.4, MySQL, Docker, Redis, GraphQL, Sentry, JIRA",
+        "stack": "PHP 7.4, Symfony 2.8 → 6.4, ReactJS, Ionic Capacitor, GraphQL, MySQL, Redis, Docker, Jenkins, Sentry, JIRA",
         "website": "https://keytchens.com"
       },
       {
-        "company": "MANYMORE / MATALTO",
+        "company": "MATALTO",
         "period": "07/19 – 08/20",
-        "role": "PHP Symfony Consultant",
-        "location": "Paris & Nanterre, Île-de-France, France",
+        "role": "PHP Symfony Consultant (assignment at Manymore)",
+        "location": "Nanterre, Île-de-France, France · On site",
         "tasks": [
-          "PHP / Symfony consulting at Manymore",
-          "Symfony migration from version 2.8 to 3.4",
-          "Bug fixing and corrective maintenance (TMA)",
-          "Implemented GraphQL for optimized data management"
+          "Consultant for Matalto, on assignment at Manymore (Nanterre)",
+          "Migrated Symfony from 2.8 to 3.4",
+          "Corrective maintenance (TMA) and performance improvements",
+          "Evaluated and implemented GraphQL to optimise data access"
         ],
-        "stack": "PHP, Symfony, GraphQL, Git"
+        "stack": "PHP, Symfony 2.8 / 3.4, GraphQL, Git"
       },
       {
         "company": "MOBELITE",
@@ -117,11 +113,12 @@
         "role": "Symfony Developer (assignment)",
         "location": "Tunis, Tunisia",
         "tasks": [
+          "Short assignment just before moving to France",
+          "Built a Symfony module that consumes and reads Apache Kafka messages",
           "Designed and developed applications with Symfony and Node.js",
-          "Built a new push notification delivery system",
-          "Evaluated Apache Kafka for stream processing"
+          "New push notification delivery system"
         ],
-        "stack": "Symfony, Node.js, Apache Kafka, Linux, Git"
+        "stack": "Symfony, Apache Kafka, Node.js, Linux, Git"
       },
       {
         "company": "PIXELS TRADE",
@@ -141,7 +138,7 @@
         "role": "Symfony / Mobile Developer",
         "location": "Tunis, Tunisia",
         "tasks": [
-          "Developed native and hybrid mobile applications",
+          "Developed native and hybrid mobile applications, including P/T Slider for Climalife (Google Play)",
           "Symfony 2.8 development",
           "Contributed to Drupal and WordPress projects"
         ],

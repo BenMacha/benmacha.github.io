@@ -59,7 +59,7 @@ const TEXT = {
 
     notes: {
       'KEYTCHENS': 'Ben Macha Ali est le créateur du projet Keytchens et de toute sa plateforme technique (voir la section Keytchens).',
-      'CCM BENCHMARK': 'CCM Benchmark (CommentÇaMarche, Le Journal des Femmes, Linternaute) fait partie du groupe Le Figaro.',
+      'CCM BENCHMARK · GROUPE LE FIGARO': 'CCM Benchmark (CommentÇaMarche, Le Journal des Femmes, Linternaute) fait partie du groupe Le Figaro.',
       'ORPI': 'Poste actuel : pilotage des données commerciales, automatisations et modernisation du système d\'information du réseau ORPI.',
     } as Record<string, string>,
     headings: {
@@ -115,7 +115,7 @@ const TEXT = {
 
     notes: {
       'KEYTCHENS': 'Ben Macha Ali is the creator of the Keytchens project and of its entire technical platform (see the Keytchens section).',
-      'CCM BENCHMARK': 'CCM Benchmark (CommentÇaMarche, Le Journal des Femmes, Linternaute) is part of the Le Figaro group.',
+      'CCM BENCHMARK · GROUPE LE FIGARO': 'CCM Benchmark (CommentÇaMarche, Le Journal des Femmes, Linternaute) is part of the Le Figaro group.',
       'ORPI': 'Current role: commercial data management, automation and modernization of the ORPI network\'s information system.',
     } as Record<string, string>,
     headings: {
@@ -171,7 +171,7 @@ const TEXT = {
 
     notes: {
       'KEYTCHENS': 'بن ماشا علي هو مبتكر مشروع Keytchens ومنصته التقنية بالكامل (انظر قسم Keytchens).',
-      'CCM BENCHMARK': 'تنتمي CCM Benchmark (CommentÇaMarche وLe Journal des Femmes وLinternaute) إلى مجموعة Le Figaro.',
+      'CCM BENCHMARK · GROUPE LE FIGARO': 'تنتمي CCM Benchmark (CommentÇaMarche وLe Journal des Femmes وLinternaute) إلى مجموعة Le Figaro.',
       'ORPI': 'المنصب الحالي: إدارة البيانات التجارية والأتمتة وتحديث نظام المعلومات لشبكة ORPI.',
     } as Record<string, string>,
     headings: {

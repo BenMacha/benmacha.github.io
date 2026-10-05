@@ -25,12 +25,11 @@
           "تصميم وتطوير OrpiHub، منصة البيانات الخاصة بالشبكة: قيادة المبيعات، والخرائط، والتصدير، وتدقيق الوكالات",
           "مساعد أعمال بالذكاء الاصطناعي: وكلاء LLM، وأكثر من 120 أداة أعمال، وخادم MCP في بيئة الإنتاج، وإضافة Claude للفرق",
           "RAG على وثائق الأعمال وتقارير تدقيق مولّدة بالذكاء الاصطناعي",
-          "استخراج أرقام الشبكة وتجميعها (رقم المعاملات، والتفويضات، والمبيعات، وGIE)، وإعداد مؤشرات الأداء ومذكرات تلخيصية للإدارة",
-          "ضمان موثوقية بيانات CRM (SweepBright وJEMS) ورسم خرائط التدفقات بين الأدوات (Ubiflow وDigitaleo وActiveCampaign وModelo)، وأتمتة عبر API",
-          "الامتثال للائحة العامة لحماية البيانات في معالجة البيانات",
+          "استخراج أرقام الشبكة وتجميعها (رقم المعاملات، والتفويضات، والمبيعات، وGIE)، ومؤشرات أداء ومذكرات تلخيصية للإدارة",
+          "ضمان موثوقية بيانات CRM (SweepBright وJEMS)، ورسم خرائط التدفقات بين الأدوات (Ubiflow وDigitaleo وActiveCampaign وModelo)، وأتمتة عبر API، والامتثال للائحة حماية البيانات",
           "التوثيق الوظيفي، وتدريب فرق الأعمال ودعمها"
         ],
-        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker, MCP, LLM, Zapier",
+        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker",
         "website": "https://www.orpi.com"
       },
       {
@@ -39,30 +38,30 @@
         "role": "مؤسس ومطور ويب شامل",
         "location": "باريس، إيل دو فرانس، فرنسا · هجين",
         "tasks": [
-          "تصميم منصة SaaS تجمع طلبات Uber Eats وDeliveroo وJust Eat وGlovo على جهاز لوحي واحد",
+          "جمع طلبات Uber Eats وDeliveroo وJust Eat وGlovo على شاشة واحدة مع طباعة تلقائية",
           "نقطة بيع (POS) وشاشة مطبخ (KDS) وكشك طلب ذاتي وقائمة موحدة متزامنة مع جميع المنصات",
           "الكشف التلقائي عن نزاعات المنصات واستردادات المبالغ والاعتراض عليها",
           "اشتراكات Stripe وwebhooks في الوقت الفعلي ونشر مستمر على خادم مستضاف ذاتيًا",
+          "للمطاعم المستقلة والمطابخ الافتراضية وسلاسل المطاعم وفاعلي التجارة السريعة",
           "رؤية المنتج والتطوير والنشر والتشغيل اليومي"
         ],
         "stack": "PHP 8.4, Symfony 7, GraphQL, Vue 3, TypeScript, MySQL, Redis, Stripe, Docker, Traefik",
         "website": "https://www.pepprio.com"
       },
       {
-        "company": "CCM BENCHMARK",
+        "company": "CCM BENCHMARK · GROUPE LE FIGARO",
         "period": "09/24 – 08/25",
         "role": "قائد مطوري PHP",
         "location": "باريس، إيل دو فرانس، فرنسا · هجين",
         "tasks": [
-          "تطوير وصيانة المنتجات الداخلية الأساسية للشركة",
-          "إرشاد ودعم الفرق التقنية الأخرى",
-          "تطوير PHP الأصلي لحلول مخصصة",
-          "استخدام إصدارات مختلفة من Symfony و API Platform لتطبيقات قوية وقابلة للتطوير",
-          "إعداد بيئات Docker للنشر والتكامل المستمر",
-          "تصميم وتطوير أدوات داخلية لتحسين كفاءة العمليات",
-          "مراقبة التكنولوجيا لاقتراح حلول مبتكرة"
+          "قائد مطوري PHP ضمن فريق Core المكوّن من قادة مطورين، والذي يعمل على جميع المشاريع ويدعم بقية الفرق",
+          "العمل على جميع مشاريع CCM Benchmark (CommentÇaMarche وJournal des Femmes…)",
+          "إعداد وسوم التخزين المؤقت على Akamai لتفريغ ذاكرة التخزين المؤقت بشكل موجّه",
+          "تطوير عمليات استيراد البيانات الداخلية",
+          "الدعم التقني لبقية فرق التطوير",
+          "PHP الأصلي وSymfony (عدة إصدارات) وAPI Platform؛ بيئات Docker للنشر والتكامل المستمر"
         ],
-        "stack": "PHP, Symfony, API Platform, Docker, MySQL",
+        "stack": "PHP, Symfony, API Platform, Akamai, Docker, MySQL",
         "website": "https://www.commentcamarche.net"
       },
       {
@@ -75,41 +74,38 @@
             "kind": "freelance",
             "label": "عمل حر · عن بُعد",
             "period": "09/18 – 08/20",
-            "text": "تطوير ويب بالتوازي مع وظائفي في تونس، ثم في Matalto"
+            "text": "تطوير المنصة بمفردي من تونس: إعادة بناء فواتير Uber Eats عبر استخراج البيانات، ورسائل توضيحية للمطاعم حول فواتير Uber Eats وDeliveroo"
           },
           {
             "kind": "permanent",
             "label": "عقد دائم",
             "period": "09/20 – 08/24",
-            "text": "مطور Symfony / React (09/20 – 10/21)، ثم قائد تقني PHP/Symfony وReactJS وGraphQL (10/21 – 08/24)"
+            "text": "مطور Symfony / React (09/20 – 10/21): إطلاق مجمّع الطلبات، وتوظيف الفريق، وJira، واجتماعات يومية ومراجعات أسبوعية؛ ثم قائد تقني PHP/Symfony وReactJS وGraphQL (10/21 – 08/24)"
           }
         ],
         "tasks": [
-          "تطوير تطبيقات باستخدام Symfony و ReactJS و Ionic Capacitor",
-          "قيادة ترقية Symfony من الإصدار 2.8 إلى 6.4 دون انقطاع الخدمة",
-          "تحسين تكوين بيئات الإنتاج والتطوير",
-          "دمج أنظمة الطباعة السحابية والبلوتوث وواجهات برمجة Uber و Deliveroo",
-          "قيادة فريق من 4 مطورين وتشجيع التعاون والابتكار",
-          "الإشراف على إدارة الطلبات في الوقت الفعلي على منصات التوصيل",
-          "إدارة بيئة موزعة على عدة خوادم مع حركة مرور عالية",
-          "توزيع المهام عبر JIRA ومراجعة الكود لضمان الجودة",
-          "تكوين بيئة تشغيلية على Debian/Ubuntu مع Jenkins و Postfix و Apache2"
+          "ترقية Symfony من الإصدار 2.8 إلى 6.4 دون انقطاع الخدمة",
+          "قيادة فريق من 4 مطورين: توزيع المهام (JIRA)، ومراجعة الشيفرة، وجودة التسليمات",
+          "دمج واجهات Uber Eats وDeliveroo وإدارة الطلبات في الوقت الفعلي",
+          "طباعة الطلبات عبر السحابة والبلوتوث",
+          "تطبيقات Symfony وReactJS وIonic Capacitor؛ واجهة GraphQL",
+          "بنية تحتية متعددة الخوادم Debian/Ubuntu بحركة مرور عالية: Jenkins وDocker وRedis وMySQL وApache2 وPostfix وSentry"
         ],
-        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-6.4, MySQL, Docker, Redis, GraphQL, Sentry, JIRA",
+        "stack": "PHP 7.4, Symfony 2.8 → 6.4, ReactJS, Ionic Capacitor, GraphQL, MySQL, Redis, Docker, Jenkins, Sentry, JIRA",
         "website": "https://keytchens.com"
       },
       {
-        "company": "MANYMORE / MATALTO",
+        "company": "MATALTO",
         "period": "07/19 – 08/20",
-        "role": "مستشار PHP Symfony",
-        "location": "باريس ونانتير، إيل دو فرانس، فرنسا",
+        "role": "مستشار PHP Symfony (مهمة لدى Manymore)",
+        "location": "نانتير، إيل دو فرانس، فرنسا · حضوري",
         "tasks": [
-          "استشارات PHP / Symfony لدى Manymore",
+          "مستشار لصالح Matalto في مهمة لدى Manymore (نانتير)",
           "ترقية Symfony من الإصدار 2.8 إلى 3.4",
-          "إصلاح الأخطاء والصيانة التصحيحية",
-          "تنفيذ GraphQL لإدارة محسنة للبيانات"
+          "الصيانة التصحيحية (TMA) وتحسين الأداء",
+          "دراسة GraphQL وتطبيقه لتحسين الوصول إلى البيانات"
         ],
-        "stack": "PHP, Symfony, GraphQL, Git"
+        "stack": "PHP, Symfony 2.8 / 3.4, GraphQL, Git"
       },
       {
         "company": "MOBELITE",
@@ -117,11 +113,12 @@
         "role": "مطور Symfony (مهمة)",
         "location": "تونس العاصمة، تونس",
         "tasks": [
+          "مهمة قصيرة قبل انتقالي إلى فرنسا مباشرة",
+          "تطوير وحدة Symfony تستهلك رسائل Apache Kafka وتقرأها",
           "تصميم وتطوير تطبيقات باستخدام Symfony وNode.js",
-          "إنشاء نظام جديد لإرسال الإشعارات الفورية",
-          "دراسة Apache Kafka لمعالجة تدفقات البيانات"
+          "نظام جديد لإرسال الإشعارات الفورية"
         ],
-        "stack": "Symfony, Node.js, Apache Kafka, Linux, Git"
+        "stack": "Symfony, Apache Kafka, Node.js, Linux, Git"
       },
       {
         "company": "PIXELS TRADE",
@@ -141,7 +138,7 @@
         "role": "مطور Symfony وتطبيقات الهاتف",
         "location": "تونس العاصمة، تونس",
         "tasks": [
-          "تطوير تطبيقات هاتف أصلية وهجينة",
+          "تطوير تطبيقات هاتف أصلية وهجينة، منها P/T Slider لصالح Climalife (Google Play)",
           "التطوير باستخدام Symfony 2.8",
           "المشاركة في التطوير على Drupal وWordPress"
         ],

@@ -21,16 +21,15 @@
         "role": "Chef de projet SI & IA générative",
         "location": "Clichy, Île-de-France, France · Hybride",
         "tasks": [
-          "Conduite de plusieurs projets SI en parallèle : cadrage, recueil des besoins, spécifications, planning et suivi des livrables",
+          "Pilotage de plusieurs projets SI en parallèle : cadrage, recueil des besoins, spécifications, planning et suivi des livrables",
           "Conception et développement d'OrpiHub, la plateforme data du réseau : pilotage commercial, cartographie, exports, audits d'agence",
           "Assistant métier IA : agents LLM, plus de 120 outils métier, serveur MCP en production, plugin Claude pour les équipes",
           "RAG sur la documentation métier et comptes rendus d'audit générés par IA",
-          "Extraction et consolidation des chiffres du réseau (CA, mandats, ventes, GIE), création de KPI et de notes de synthèse pour la direction",
-          "Fiabilisation des données CRM (SweepBright, JEMS) et cartographie des flux entre outils (Ubiflow, Digitaleo, ActiveCampaign, Modelo), automatisations API",
-          "Conformité RGPD des traitements de données",
+          "Extraction et consolidation des chiffres du réseau (CA, mandats, ventes, GIE), KPI et notes de synthèse pour la direction",
+          "Fiabilisation des données CRM (SweepBright, JEMS), cartographie des flux entre outils (Ubiflow, Digitaleo, ActiveCampaign, Modelo), automatisations API, conformité RGPD",
           "Documentation fonctionnelle, formation et support des équipes métier"
         ],
-        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker, MCP, LLM, Zapier",
+        "stack": "Symfony, PHP 8, React, TypeScript, GraphQL, SQL Server, MySQL, PostgreSQL, BigQuery, Docker",
         "website": "https://www.orpi.com"
       },
       {
@@ -39,30 +38,30 @@
         "role": "Fondateur & Développeur Full Stack",
         "location": "Paris, Île-de-France, France · Hybride",
         "tasks": [
-          "Conception d'un SaaS qui centralise les commandes Uber Eats, Deliveroo, Just Eat et Glovo sur une seule tablette",
+          "Centralisation des commandes Uber Eats, Deliveroo, Just Eat et Glovo sur un seul écran, avec impression automatique",
           "Caisse (POS), écran cuisine (KDS), borne de commande et menu unique synchronisé sur toutes les plateformes",
           "Détection et contestation automatiques des litiges et remboursements des plateformes",
           "Abonnements Stripe, webhooks temps réel, déploiement continu sur serveur auto-hébergé",
+          "Pour les restaurants indépendants, dark kitchens, chaînes multi-établissements et acteurs du q-commerce",
           "Vision produit, développement, déploiement et exploitation au quotidien"
         ],
         "stack": "PHP 8.4, Symfony 7, GraphQL, Vue 3, TypeScript, MySQL, Redis, Stripe, Docker, Traefik",
         "website": "https://www.pepprio.com"
       },
       {
-        "company": "CCM BENCHMARK",
+        "company": "CCM BENCHMARK · GROUPE LE FIGARO",
         "period": "09/24 – 08/25",
         "role": "Lead Dev PHP",
         "location": "Paris, Île-de-France, France · Hybride",
         "tasks": [
-          "Développement et maintenance de produits internes essentiels à l'entreprise",
-          "Encadrement et soutien d'autres équipes techniques",
-          "Développement PHP natif, exploitant pleinement ses capacités pour des solutions personnalisées",
-          "Utilisation de différentes versions de Symfony et API Platform pour des applications robustes et évolutives",
-          "Mise en place d'environnements Docker pour le déploiement et l'intégration continue",
-          "Conception et développement d'outils internes pour optimiser l'efficacité des processus",
-          "Veille technologique pour proposer des solutions innovantes et accompagner les avancées"
+          "Lead Developer au sein de l'équipe Core, composée de Lead Developers, qui intervient sur tous les projets et accompagne les autres squads",
+          "Interventions sur l'ensemble des projets de CCM Benchmark (CommentÇaMarche, Journal des Femmes…)",
+          "Mise en place de tags de cache sur Akamai pour purger le cache de façon ciblée",
+          "Développement des imports de données internes",
+          "Accompagnement technique des autres squads de développement",
+          "PHP natif, Symfony (plusieurs versions) et API Platform ; environnements Docker pour le déploiement et l'intégration continue"
         ],
-        "stack": "PHP, Symfony, API Platform, Docker, MySQL",
+        "stack": "PHP, Symfony, API Platform, Akamai, Docker, MySQL",
         "website": "https://www.commentcamarche.net"
       },
       {
@@ -75,41 +74,38 @@
             "kind": "freelance",
             "label": "Freelance · à distance",
             "period": "09/18 – 08/20",
-            "text": "Développement web en parallèle de mes postes en Tunisie, puis chez Matalto"
+            "text": "Développement de la plateforme seul, depuis la Tunisie : facturation Uber Eats reconstituée par scraping, e-mails explicatifs aux restaurateurs sur leurs factures Uber Eats et Deliveroo"
           },
           {
             "kind": "permanent",
             "label": "CDI",
             "period": "09/20 – 08/24",
-            "text": "Développeur Symfony / React (09/20 – 10/21), puis Tech Lead PHP/Symfony, ReactJS, GraphQL (10/21 – 08/24)"
+            "text": "Développeur Symfony / React (09/20 – 10/21) : lancement de l'agrégateur de commandes, recrutement de l'équipe, Jira, daily et rétrospectives hebdomadaires ; puis Tech Lead PHP/Symfony, ReactJS, GraphQL (10/21 – 08/24)"
           }
         ],
         "tasks": [
-          "Développement d'applications avec Symfony, ReactJS et Ionic Capacitor",
-          "Migration de Symfony de la version 2.8 vers la version 6.4 sans interruption de service",
-          "Optimisation de la configuration des environnements PROD/DEV",
-          "Intégration de systèmes d'impression CLOUD et Bluetooth, et des APIs Uber et Deliveroo",
-          "Direction d'une équipe de 4 développeurs, encourageant la collaboration et l'innovation",
-          "Supervision de la gestion en temps réel des commandes sur les plateformes de livraison",
-          "Gestion d'un environnement distribué sur plusieurs serveurs avec trafic élevé",
-          "Attribution des tâches via JIRA et vérification du code pour garantir la qualité",
-          "Configuration d'un environnement opérationnel sur Debian/Ubuntu avec Jenkins, Postfix, Apache2"
+          "Migration de Symfony 2.8 vers 6.4 sans interruption de service",
+          "Direction d'une équipe de 4 développeurs : attribution des tâches (JIRA), revue de code, qualité des livrables",
+          "Intégration des API Uber Eats et Deliveroo, gestion en temps réel des commandes",
+          "Impression des commandes dans le cloud et en Bluetooth",
+          "Applications Symfony, ReactJS et Ionic Capacitor ; API GraphQL",
+          "Infrastructure multi-serveurs Debian/Ubuntu à fort trafic : Jenkins, Docker, Redis, MySQL, Apache2, Postfix, Sentry"
         ],
-        "stack": "Debian/Ubuntu, Jenkins, Postfix, Apache2, PHP7.4/Symfony2.8-6.4, MySQL, Docker, Redis, GraphQL, Sentry, JIRA",
+        "stack": "PHP 7.4, Symfony 2.8 → 6.4, ReactJS, Ionic Capacitor, GraphQL, MySQL, Redis, Docker, Jenkins, Sentry, JIRA",
         "website": "https://keytchens.com"
       },
       {
-        "company": "MANYMORE / MATALTO",
+        "company": "MATALTO",
         "period": "07/19 – 08/20",
-        "role": "Consultant PHP Symfony",
-        "location": "Paris & Nanterre, Île-de-France, France",
+        "role": "Consultant PHP Symfony (mission chez Manymore)",
+        "location": "Nanterre, Île-de-France, France · Sur site",
         "tasks": [
-          "Consultation PHP / Symfony chez Manymore",
-          "Migration de Symfony de la version 2.8 vers la version 3.4",
-          "Résolution de bugs et maintenance corrective (TMA)",
-          "Mise en œuvre de GraphQL pour une gestion optimisée des données"
+          "Consultant pour Matalto, en mission chez Manymore (Nanterre)",
+          "Migration de Symfony 2.8 vers 3.4",
+          "Maintenance corrective (TMA) et amélioration des performances",
+          "Étude et mise en œuvre de GraphQL pour optimiser l'accès aux données"
         ],
-        "stack": "PHP, Symfony, GraphQL, Git"
+        "stack": "PHP, Symfony 2.8 / 3.4, GraphQL, Git"
       },
       {
         "company": "MOBELITE",
@@ -117,11 +113,12 @@
         "role": "Développeur Symfony (mission)",
         "location": "Tunis, Tunisie",
         "tasks": [
+          "Courte mission juste avant mon départ pour la France",
+          "Développement d'un module Symfony qui consomme et lit les messages d'Apache Kafka",
           "Conception et développement d'applications avec Symfony et Node.js",
-          "Mise en place d'un nouveau système d'envoi de notifications push",
-          "Étude d'Apache Kafka pour le traitement de flux"
+          "Nouveau système d'envoi de notifications push"
         ],
-        "stack": "Symfony, Node.js, Apache Kafka, Linux, Git"
+        "stack": "Symfony, Apache Kafka, Node.js, Linux, Git"
       },
       {
         "company": "PIXELS TRADE",
@@ -141,7 +138,7 @@
         "role": "Développeur Symfony / Mobile",
         "location": "Tunis, Tunisie",
         "tasks": [
-          "Développement d'applications mobiles natives et hybrides",
+          "Développement d'applications mobiles natives et hybrides, dont P/T Slider pour Climalife (Google Play)",
           "Développement sous Symfony 2.8",
           "Participation au développement sur Drupal et WordPress"
         ],

@@ -1,5 +1,5 @@
 /** Best experiences, highlighted on the home page (in this order). */
-export const featuredCompanies = ['ORPI', 'PEPPRIO', 'CCM BENCHMARK']
+export const featuredCompanies = ['ORPI', 'PEPPRIO', 'CCM BENCHMARK · GROUPE LE FIGARO']
 
 /**
  * Git-like layout of the experience map, keyed by the company name used in the i18n files.
@@ -24,9 +24,9 @@ export interface Rail {
 export const rails: Record<string, Rail> = {
   'ORPI': { node: 'trunk', branch: 'open' },
   'PEPPRIO': { node: 'branch', branch: 'forkBelow' },
-  'CCM BENCHMARK': { node: 'trunk' },
+  'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'trunk' },
   'KEYTCHENS': { node: 'trunk', branch: 'mergeAtHead' },
-  'MANYMORE / MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
+  'MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
   'MOBELITE': { node: 'trunk', branch: 'through' },
   'PIXELS TRADE': { node: 'trunk', branch: 'forkAtHead' },
   'ARGOLIFE': { node: 'trunk' },
