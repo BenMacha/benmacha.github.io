@@ -7,8 +7,8 @@
     "blog": "Blog"
   },
   "home": {
-    "title": "Tech Lead & Full Stack Developer",
-    "description": "Passionate and creative Tech Lead, specialized in designing and developing web and mobile solutions. With over 10 years of experience, I have contributed to optimizing various systems using modern technologies to create high-performance and intuitive applications. With my team, I have worked on integrating connected technologies, real-time order management, custom notification systems, and data analysis. Constantly seeking new challenges to simplify and improve the end-user experience.",
+    "title": "IT & Generative AI Project Manager · PHP/Symfony Tech Lead",
+    "description": "I turn business needs into products that run in production. As IT & Generative AI Project Manager at ORPI, I designed OrpiHub, the network data platform, and an AI business assistant (LLM agents, MCP server, RAG). Alongside, I am building Pepprio, a SaaS that brings Uber Eats, Deliveroo, Just Eat and Glovo orders onto a single tablet. Before that: creator of the Keytchens technical platform (6 years, 3 of them as Tech Lead) and Lead PHP Developer in the Core team of CCM Benchmark (Le Figaro group).",
     "contact": "Contact",
     "download": "Download CV"
   },
@@ -306,7 +306,7 @@
     "world": "WORLD",
     "worldValue": "ILE-DE-FRANCE",
     "class": "CLASS",
-    "classValue": "TECH LEAD",
+    "classValue": "IT & AI PROJECT LEAD",
     "level": "LEVEL 10",
     "xpLabel": "10 YEARS OF EXPERIENCE · SINCE 2016",
     "terminal": "terminal — bash",
@@ -386,12 +386,12 @@
   },
   "seo": {
     "home": {
-      "title": "Ben Macha Ali – Tech Lead & Full Stack Developer",
-      "description": "PHP/Symfony Tech Lead, creator of the Keytchens project and founder of Pepprio. IT Project Manager at ORPI, former Lead PHP Developer at CCM Benchmark."
+      "title": "Ben Macha Ali – IT & Generative AI Project Manager, PHP/Symfony Tech Lead",
+      "description": "IT & Generative AI Project Manager at ORPI, creator of the Keytchens technical platform and founder of Pepprio. Former Lead PHP Developer at CCM Benchmark (Le Figaro group)."
     },
     "experience": {
-      "title": "Ben Macha Ali – Experience: ORPI, Keytchens",
-      "description": "Ben Macha Ali's career: IT Project Manager at ORPI, Lead PHP Developer at CCM Benchmark, creator of the Keytchens project, Symfony consultant."
+      "title": "Ben Macha Ali – Experience: ORPI, Pepprio, CCM Benchmark, Keytchens",
+      "description": "Ben Macha Ali's career: IT & Generative AI Project Manager at ORPI, founder of Pepprio, Lead PHP Developer at CCM Benchmark (Le Figaro group), technical creator of Keytchens."
     },
     "skills": {
       "title": "Skills: PHP, Symfony, React, Docker",

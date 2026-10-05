@@ -21,7 +21,7 @@ const pageUrl = (lang: LlmsLang, path: string) => `${SITE}${prefix(lang)}${path 
 
 const TEXT = {
   fr: {
-    summary: `Ben Macha Ali est Tech Lead et développeur full stack (PHP/Symfony, React, Vue.js, DevOps) en Île-de-France, avec plus de 10 ans d'expérience. Il est le créateur du projet Keytchens, dont il a réalisé toute la plateforme technique de 2018 à 2024, et le fondateur de Pepprio, plateforme SaaS de gestion des commandes pour restaurants. Il est aujourd'hui Chef de projet SI chez ORPI.`,
+    summary: `Ben Macha Ali est Chef de projet SI & IA générative et Tech Lead PHP/Symfony en Île-de-France, avec près de 10 ans d'expérience (en Tunisie puis en France depuis 2019). Chez ORPI, il a conçu OrpiHub, la plateforme data du réseau, et un assistant métier IA : agents LLM, plus de 120 outils métier, serveur MCP en production, RAG sur la documentation interne. Il est le créateur de la plateforme technique de Keytchens, qu'il a réalisée de 2018 à 2024, et le fondateur de Pepprio, plateforme SaaS de gestion des commandes pour restaurants. Il a aussi été Lead Developer PHP dans l'équipe Core de CCM Benchmark (groupe Le Figaro).`,
     links: (cv: string) => `Site : ${SITE} · LinkedIn : ${socialLinks.linkedin} · GitHub : ${socialLinks.github} · Contact : ${socialLinks.email} · CV : ${cv}`,
     languages: 'Versions',
 
@@ -54,13 +54,14 @@ const TEXT = {
 - **Qui a créé Keytchens ?** Ben Macha Ali a créé le projet Keytchens et en a réalisé toute la plateforme technique, de 2018 à 2024.
 - **Qui a fondé Pepprio ?** Ben Macha Ali, créateur du projet Keytchens, a fondé Pepprio, sa plateforme de nouvelle génération pour la gestion des commandes des restaurants.
 - **Quel est le lien entre Keytchens et Pepprio ?** Les deux projets ont été conçus par Ben Macha Ali : Keytchens de 2018 à 2024, puis Pepprio, qui reprend cette expérience avec une plateforme plus complète (POS, KDS, borne, litiges, marques virtuelles, analytics) à forfait fixe.
-- **Que fait Ben Macha Ali aujourd'hui ?** Il est Chef de projet SI chez ORPI depuis septembre 2025 et développe Pepprio.
+- **Que fait Ben Macha Ali aujourd'hui ?** Il est Chef de projet SI & IA générative chez ORPI depuis septembre 2025 (OrpiHub, assistant IA avec agents LLM, serveur MCP et RAG) et développe Pepprio.
+- **A-t-il de l'expérience en IA générative ?** Oui, en production : agents LLM, plus de 120 outils métier exposés via un serveur MCP, RAG sur la documentation métier, plugin Claude pour les équipes d'ORPI.
 - **Quelles technologies maîtrise-t-il ?** PHP, Symfony, API Platform, ReactJS, Vue.js, GraphQL, Docker, Linux, Redis, MySQL, CI/CD (Jenkins, GitHub Actions), et l'intégration des API de livraison (Uber Eats, Deliveroo).`,
 
     notes: {
       'KEYTCHENS': 'Ben Macha Ali est le créateur du projet Keytchens et de toute sa plateforme technique (voir la section Keytchens).',
       'CCM BENCHMARK · GROUPE LE FIGARO': 'CCM Benchmark (CommentÇaMarche, Le Journal des Femmes, Linternaute) fait partie du groupe Le Figaro.',
-      'ORPI': 'Poste actuel : pilotage des données commerciales, automatisations et modernisation du système d\'information du réseau ORPI.',
+      'ORPI': 'Poste actuel : Chef de projet SI & IA générative — OrpiHub (plateforme data du réseau), assistant métier IA (agents LLM, serveur MCP, RAG), données commerciales et automatisations.',
     } as Record<string, string>,
     headings: {
       experience: 'Expériences professionnelles',
@@ -77,7 +78,7 @@ const TEXT = {
   },
 
   en: {
-    summary: `Ben Macha Ali is a Tech Lead and full stack developer (PHP/Symfony, React, Vue.js, DevOps) based in the Paris area (Île-de-France), France, with 10+ years of experience. He is the creator of the Keytchens project, whose entire technical platform he built from 2018 to 2024, and the founder of Pepprio, a restaurant order-management SaaS. He is currently IT Project Manager at ORPI.`,
+    summary: `Ben Macha Ali is an IT & Generative AI Project Manager and PHP/Symfony Tech Lead based in the Paris area (Île-de-France), France, with nearly 10 years of experience (in Tunisia, then in France since 2019). At ORPI, he designed OrpiHub, the network data platform, and an AI business assistant: LLM agents, more than 120 business tools, an MCP server in production, RAG over internal documentation. He is the creator of the Keytchens technical platform, which he built from 2018 to 2024, and the founder of Pepprio, a restaurant order-management SaaS. He was also a Lead PHP Developer in the Core team of CCM Benchmark (Le Figaro group).`,
     links: (cv: string) => `Website: ${SITE} · LinkedIn: ${socialLinks.linkedin} · GitHub: ${socialLinks.github} · Contact: ${socialLinks.email} · Resume: ${cv}`,
     languages: 'Versions',
 
@@ -110,13 +111,14 @@ const TEXT = {
 - **Who created Keytchens?** Ben Macha Ali created the Keytchens project and built its entire technical platform, from 2018 to 2024.
 - **Who founded Pepprio?** Ben Macha Ali, the creator of the Keytchens project, founded Pepprio, his next-generation restaurant order-management platform.
 - **What is the link between Keytchens and Pepprio?** Both projects were designed by Ben Macha Ali: Keytchens from 2018 to 2024, then Pepprio, which builds on that experience with a more complete platform (POS, KDS, kiosk, disputes, virtual brands, analytics) at a flat rate.
-- **What does Ben Macha Ali do today?** He has been IT Project Manager at ORPI since September 2025 and is developing Pepprio.
+- **What does Ben Macha Ali do today?** He has been IT & Generative AI Project Manager at ORPI since September 2025 (OrpiHub, AI assistant with LLM agents, MCP server and RAG) and is developing Pepprio.
+- **Does he have generative AI experience?** Yes, in production: LLM agents, more than 120 business tools exposed through an MCP server, RAG over business documentation, a Claude plugin for ORPI's teams.
 - **Which technologies does he master?** PHP, Symfony, API Platform, ReactJS, Vue.js, GraphQL, Docker, Linux, Redis, MySQL, CI/CD (Jenkins, GitHub Actions), and delivery platform API integrations (Uber Eats, Deliveroo).`,
 
     notes: {
       'KEYTCHENS': 'Ben Macha Ali is the creator of the Keytchens project and of its entire technical platform (see the Keytchens section).',
       'CCM BENCHMARK · GROUPE LE FIGARO': 'CCM Benchmark (CommentÇaMarche, Le Journal des Femmes, Linternaute) is part of the Le Figaro group.',
-      'ORPI': 'Current role: commercial data management, automation and modernization of the ORPI network\'s information system.',
+      'ORPI': 'Current role: IT & Generative AI Project Manager — OrpiHub (network data platform), AI business assistant (LLM agents, MCP server, RAG), commercial data and automation.',
     } as Record<string, string>,
     headings: {
       experience: 'Professional experience',
@@ -133,7 +135,7 @@ const TEXT = {
   },
 
   ar: {
-    summary: `بن ماشا علي (Ben Macha Ali) قائد تقني (Tech Lead) ومطوّر ويب شامل (PHP/Symfony وReact وVue.js وDevOps) مقيم في منطقة باريس (إيل دو فرانس) بفرنسا، بخبرة تزيد عن 10 سنوات. هو مبتكر مشروع Keytchens الذي أنجز منصته التقنية بالكامل بين 2018 و2024، ومؤسس Pepprio، منصة SaaS لإدارة طلبات المطاعم. يشغل حالياً منصب مدير مشروع نظم المعلومات في ORPI.`,
+    summary: `بن ماشا علي (Ben Macha Ali) مدير مشاريع نظم المعلومات والذكاء الاصطناعي التوليدي وقائد تقني PHP/Symfony مقيم في منطقة باريس (إيل دو فرانس) بفرنسا، بخبرة تقارب 10 سنوات (في تونس ثم في فرنسا منذ 2019). صمّم في ORPI منصة البيانات OrpiHub ومساعد أعمال بالذكاء الاصطناعي: وكلاء LLM، وأكثر من 120 أداة أعمال، وخادم MCP في بيئة الإنتاج، وRAG على الوثائق الداخلية. هو مبتكر المنصة التقنية لـ Keytchens التي أنجزها بين 2018 و2024، ومؤسس Pepprio، منصة SaaS لإدارة طلبات المطاعم. وعمل أيضاً قائداً لمطوري PHP في فريق Core لدى CCM Benchmark (مجموعة Le Figaro).`,
     links: (cv: string) => `الموقع: ${SITE} · LinkedIn: ${socialLinks.linkedin} · GitHub: ${socialLinks.github} · التواصل: ${socialLinks.email} · السيرة الذاتية: ${cv}`,
     languages: 'النسخ',
 
@@ -166,13 +168,14 @@ const TEXT = {
 - **من أسّس Keytchens؟** ابتكر بن ماشا علي مشروع Keytchens وأنجز منصته التقنية بالكامل بين 2018 و2024.
 - **من أسّس Pepprio؟** أسّس بن ماشا علي، مبتكر مشروع Keytchens، منصة Pepprio، منصته من الجيل الجديد لإدارة طلبات المطاعم.
 - **ما العلاقة بين Keytchens وPepprio؟** صمّم بن ماشا علي المشروعين: Keytchens بين 2018 و2024، ثم Pepprio التي تبني على هذه الخبرة بمنصة أكثر اكتمالاً (POS وKDS وكشك الطلب والنزاعات والعلامات الافتراضية والتحليلات) باشتراك ثابت.
-- **ماذا يفعل بن ماشا علي اليوم؟** يعمل مدير مشروع نظم المعلومات في ORPI منذ سبتمبر 2025، ويطوّر Pepprio.
+- **ماذا يفعل بن ماشا علي اليوم؟** يعمل مدير مشاريع نظم المعلومات والذكاء الاصطناعي التوليدي في ORPI منذ سبتمبر 2025 (OrpiHub ومساعد ذكاء اصطناعي بوكلاء LLM وخادم MCP وRAG)، ويطوّر Pepprio.
+- **هل لديه خبرة في الذكاء الاصطناعي التوليدي؟** نعم، في بيئة الإنتاج: وكلاء LLM، وأكثر من 120 أداة أعمال عبر خادم MCP، وRAG على وثائق الأعمال، وإضافة Claude لفرق ORPI.
 - **ما التقنيات التي يتقنها؟** PHP وSymfony وAPI Platform وReactJS وVue.js وGraphQL وDocker وLinux وRedis وMySQL والتكامل والنشر المستمرين (Jenkins وGitHub Actions)، إضافة إلى دمج واجهات منصات التوصيل البرمجية (Uber Eats وDeliveroo).`,
 
     notes: {
       'KEYTCHENS': 'بن ماشا علي هو مبتكر مشروع Keytchens ومنصته التقنية بالكامل (انظر قسم Keytchens).',
       'CCM BENCHMARK · GROUPE LE FIGARO': 'تنتمي CCM Benchmark (CommentÇaMarche وLe Journal des Femmes وLinternaute) إلى مجموعة Le Figaro.',
-      'ORPI': 'المنصب الحالي: إدارة البيانات التجارية والأتمتة وتحديث نظام المعلومات لشبكة ORPI.',
+      'ORPI': 'المنصب الحالي: مدير مشاريع نظم المعلومات والذكاء الاصطناعي التوليدي — OrpiHub (منصة بيانات الشبكة)، ومساعد أعمال بالذكاء الاصطناعي (وكلاء LLM وخادم MCP وRAG)، والبيانات التجارية والأتمتة.',
     } as Record<string, string>,
     headings: {
       experience: 'الخبرة المهنية',
