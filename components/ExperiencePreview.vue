@@ -13,7 +13,6 @@
           <span class="job__period">{{ job.period }}</span>
         </div>
         <h3 class="job__company pixel">{{ job.company }}</h3>
-        <StarRating v-if="job.rating" :value="job.rating" />
         <p class="job__role">{{ job.role }}</p>
         <p class="job__task">▸ {{ job.tasks[0] }}</p>
       </article>

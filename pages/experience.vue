@@ -20,7 +20,6 @@
             <div>
               <div class="job__title">
                 <h2 class="job__company pixel">{{ job.company }}</h2>
-                <StarRating v-if="job.rating" :value="job.rating" />
               </div>
               <p class="job__role">{{ job.role }}</p>
               <p v-if="job.location" class="job__location">⌖ {{ job.location }}</p>
