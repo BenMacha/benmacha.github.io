@@ -1,5 +1,3 @@
-import { companyRatings } from '~/data/experience'
-
 /**
  * Typed, locale-reactive access to the resume content stored in the i18n files.
  */
@@ -11,8 +9,16 @@ export interface Experience {
   tasks: string[]
   stack: string[]
   website?: string
-  /** Personal rating out of 5, when given. */
-  rating?: number
+  /** Successive contracts within the same company (e.g. freelance, then permanent). */
+  phases: ExperiencePhase[]
+}
+
+export interface ExperiencePhase {
+  /** `freelance` is drawn on the yellow branch pipe, `permanent` on the green trunk. */
+  kind: 'freelance' | 'permanent'
+  label: string
+  period: string
+  text: string
 }
 
 export interface Project {
@@ -60,7 +66,12 @@ export function useResume() {
       tasks: list(item.tasks),
       stack: str(item.stack)?.split(', ') ?? [],
       website: str(item.website),
-      rating: companyRatings[rt(item.company)],
+      phases: ((item.phases as Raw[] | undefined) ?? []).map(phase => ({
+        kind: rt(phase.kind) as ExperiencePhase['kind'],
+        label: rt(phase.label),
+        period: rt(phase.period),
+        text: rt(phase.text),
+      })),
     })),
   )
 
