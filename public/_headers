@@ -4,3 +4,8 @@ https://:project.pages.dev/*
 
 https://:version.:project.pages.dev/*
   X-Robots-Tag: noindex
+
+# Editable CV: reachable by its direct link only, never linked from the site nor indexed
+/CV.docx
+  X-Robots-Tag: noindex, nofollow
+  Content-Disposition: attachment; filename="CV_Ali_BEN_MECHA.docx"
