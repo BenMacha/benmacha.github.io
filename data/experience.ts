@@ -12,11 +12,13 @@ export const featuredCompanies = ['ORPI', 'PEPPRIO', 'CCM BENCHMARK · GROUPE LE
  *   - `open`: runs along the whole row and is still going on above (ongoing project),
  *   - `forkBelow`: comes down to the row's pipe head, then joins the trunk at the bottom of the row,
  *   - `mergeAtHead`: leaves the trunk at the row's pipe head and goes down,
- *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head.
+ *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head,
+ *   - `endBelowHead`: comes up from below and is capped just under the row's pipe head: a freelance
+ *     mission closed at its end date, before the next contract starts (no merge into the trunk).
  */
 export interface Rail {
   node: 'trunk' | 'branch'
-  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead'
+  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead' | 'endBelowHead'
   /** i18n key of a short label written along the yellow pipe. */
   label?: string
 }
@@ -25,8 +27,9 @@ export const rails: Record<string, Rail> = {
   'ORPI': { node: 'trunk' },
   'PEPPRIO': { node: 'branch', branch: 'forkBelow' },
   'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'trunk' },
-  // The Keytchens freelance period (09/18 – 08/20) merges into the trunk when the contract became a CDI (09/20)
-  'KEYTCHENS': { node: 'trunk', branch: 'mergeAtHead' },
+  // Every freelance branch closes at its own end date: the Keytchens freelance mission ends in
+  // 08/20, before the CDI starts in 09/20, so its pipe is capped under the Keytchens pipe head
+  'KEYTCHENS': { node: 'trunk', branch: 'endBelowHead' },
   'MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
   'MOBELITE': { node: 'trunk', branch: 'through' },
   'PIXELS TRADE': { node: 'trunk', branch: 'forkAtHead' },
