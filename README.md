@@ -68,6 +68,20 @@ The workflow `.github/workflows/update-opensource.yml` runs it every day at 05:0
 
 The repositories and packages it reads are listed at the top of the script. The figures on the page (pull request machine, package shelf, organizations) are SVG strings built at render time in `utils/anatomy/` with the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy) (MIT, see `utils/anatomy/NOTICE`), coloured by `assets/css/anatomy.css`.
 
+## CV (PDF and Word)
+
+`public/CV.pdf` and `public/CV.docx` are built from the hand-written Word CV in `scripts/cv/source/CV.source.docx`:
+
+```bash
+npm run cv          # = python3 scripts/cv/build.py [--source scripts/cv/source/CV.source.docx] [--out public]
+```
+
+Prerequisites: Python 3.10+ (standard library only), LibreOffice (`soffice` on the PATH), Google Chrome (set `CHROME` to its binary if it is not at the macOS default path), poppler (`pdftotext`) and ImageMagick (`magick`).
+
+The script colours the company names by contract, draws the experience timeline (a red year axis with one branch per job: green for salaried jobs, yellow for the Keytchens freelance period turning green at the CDI), places each drawing from the measured position of the job titles (two LibreOffice passes), adds the open source section with the pull request counts of `data/opensource.ts` and the logos of `utils/anatomy/logos.mjs`, then exports the PDF. Running it twice gives the same files. Scratch files go to `scripts/cv/.build/` (ignored).
+
+Text changes go in the source `.docx`. The job dates and contracts used by the timeline (`JOBS`, `CONTRACTS`, `KEYTCHENS`) are at the top of `scripts/cv/build.py`: they mirror the experience chapter (`i18n/locales/*.json` and `data/experience.ts`), so update both when a job changes.
+
 ## Project Structure
 
 ```
@@ -81,7 +95,7 @@ The repositories and packages it reads are listed at the top of the script. The 
 ├── pages/               # File-based routing
 ├── plugins/             # Motion directives (v-reveal, v-lift, v-wiggle)
 ├── public/              # Static assets (CV.pdf, images)
-├── scripts/             # update-opensource.mjs (refreshes data/opensource.ts)
+├── scripts/             # update-opensource.mjs (refreshes data/opensource.ts), cv/ (CV build)
 ├── utils/anatomy/       # Isometric figure builders (vendored Anatomy kit)
 └── nuxt.config.ts       # Nuxt configuration
 ```

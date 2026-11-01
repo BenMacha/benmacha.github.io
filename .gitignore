@@ -25,3 +25,6 @@ logs
 
 # Wrangler local state (pages dev)
 .wrangler
+
+# CV build scratch files
+scripts/cv/.build
