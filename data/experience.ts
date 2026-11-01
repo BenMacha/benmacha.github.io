@@ -12,12 +12,11 @@ export const featuredCompanies = ['ORPI', 'PEPPRIO', 'CCM BENCHMARK · GROUPE LE
  *   - `open`: runs along the whole row and is still going on above (ongoing project),
  *   - `forkBelow`: comes down to the row's pipe head, then joins the trunk at the bottom of the row,
  *   - `mergeAtHead`: leaves the trunk at the row's pipe head and goes down,
- *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head,
- *   - `endAtHead`: runs up the row and stops at its pipe head (the branch is closed there).
+ *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head.
  */
 export interface Rail {
   node: 'trunk' | 'branch'
-  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead' | 'endAtHead'
+  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead'
   /** i18n key of a short label written along the yellow pipe. */
   label?: string
 }
@@ -26,8 +25,8 @@ export const rails: Record<string, Rail> = {
   'ORPI': { node: 'trunk' },
   'PEPPRIO': { node: 'branch', branch: 'forkBelow' },
   'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'trunk' },
-  // The Keytchens freelance period ends in 08/20: its branch stops there, it does not merge back
-  'KEYTCHENS': { node: 'trunk', branch: 'endAtHead' },
+  // The Keytchens freelance period (09/18 – 08/20) merges into the trunk when the contract became a CDI (09/20)
+  'KEYTCHENS': { node: 'trunk', branch: 'mergeAtHead' },
   'MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
   'MOBELITE': { node: 'trunk', branch: 'through' },
   'PIXELS TRADE': { node: 'trunk', branch: 'forkAtHead' },

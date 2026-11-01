@@ -28,7 +28,7 @@
             <template v-if="railOf(job).branch">
               <div class="rail__branch" :class="`rail__branch--${railOf(job).branch}`" />
               <div v-if="hasElbow(job)" class="rail__elbow" :class="`rail__elbow--${railOf(job).branch}`" />
-              <div v-if="railOf(job).node === 'branch' || ['open', 'endAtHead'].includes(railOf(job).branch ?? '')" class="rail__blip" />
+              <div v-if="railOf(job).node === 'branch' || railOf(job).branch === 'open'" class="rail__blip" />
               <span v-if="railOf(job).label" class="rail__label"><span>{{ $t(railOf(job).label!) }}</span></span>
             </template>
           </div>
@@ -222,8 +222,7 @@ usePageSeo({
   bottom: 18px;
 }
 
-.rail__branch--mergeAtHead,
-.rail__branch--endAtHead {
+.rail__branch--mergeAtHead {
   top: var(--elbow-y);
 }
 
