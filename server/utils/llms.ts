@@ -73,7 +73,7 @@ const TEXT = {
     },
     stack: 'Stack',
     internship: 'Stage',
-    pages: ['Accueil', 'Expériences', 'Compétences', 'Projets', 'Formation', 'Blog'],
+    pages: ['Accueil', 'Expériences', 'Compétences', 'Projets', 'Open source', 'Formation', 'Blog'],
     fullVersion: 'Version détaillée pour les IA',
   },
 
@@ -130,7 +130,7 @@ const TEXT = {
     },
     stack: 'Stack',
     internship: 'Internship',
-    pages: ['Home', 'Experience', 'Skills', 'Projects', 'Education', 'Blog'],
+    pages: ['Home', 'Experience', 'Skills', 'Projects', 'Open source', 'Education', 'Blog'],
     fullVersion: 'Detailed version for AI assistants',
   },
 
@@ -187,7 +187,7 @@ const TEXT = {
     },
     stack: 'التقنيات',
     internship: 'تدريب',
-    pages: ['الرئيسية', 'الخبرة', 'المهارات', 'المشاريع', 'التعليم', 'المدونة'],
+    pages: ['الرئيسية', 'الخبرة', 'المهارات', 'المشاريع', 'المصادر المفتوحة', 'التعليم', 'المدونة'],
     fullVersion: 'النسخة المفصّلة لمساعدي الذكاء الاصطناعي',
   },
 }
@@ -232,7 +232,7 @@ function articles(lang: LlmsLang, full: boolean): string {
 
 function pages(lang: LlmsLang, full: boolean): string {
   const t = TEXT[lang]
-  const paths = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+  const paths = ['/', '/experience', '/skills', '/projects', '/open-source', '/education', '/blog']
   const links = paths.map((path, i) => `- [${t.pages[i]}](${pageUrl(lang, path)})`)
   if (!full) links.push(`- [${t.fullVersion}](${SITE}${prefix(lang)}/llms-full.txt)`)
   return `## ${t.headings.pages}\n\n${links.join('\n')}`

@@ -3,6 +3,7 @@
     "experience": "Experience",
     "skills": "Skills",
     "projects": "Projects",
+    "open-source": "Open source",
     "education": "Education",
     "blog": "Blog"
   },
@@ -321,7 +322,8 @@
     "seeAll": "See all",
     "openInventory": "Open inventory",
     "education": "WORLD 5 · ACHIEVEMENTS",
-    "bestExperience": "My best experiences"
+    "bestExperience": "My best experiences",
+    "openSource": "WORLD 3-2 · OPEN SOURCE"
   },
   "experienceUi": {
     "eyebrow": "WORLD 1 · LEVEL MAP",
@@ -498,5 +500,59 @@
         ]
       }
     ]
+  },
+  "openSource": {
+    "title": "Open source contributions",
+    "intro": "Pull requests sent to the projects I use every day, the Symfony bundles I publish on Packagist and the organizations I build in the open.",
+    "previewTitle": "Contributions to open source projects",
+    "merged": "merged",
+    "open": "under review",
+    "mergedShare": "{n} % merged",
+    "packages": "packages",
+    "downloads": "installs",
+    "fig": "Fig {n}",
+    "machine": {
+      "title": "Pull request machine",
+      "hint": "Hover a project",
+      "caption": "Each pull request drops out of the pipe as a \"?\" block. The review stamp hits it, the block pays a coin, and merged pull requests pile up as coins in the brick crate; the ones still under review wait in the tray. The dial reads the share merged.",
+      "label": "An isometric pull request machine on a bench. \"?\" blocks standing for pull requests drop out of a green warp pipe onto a conveyor and pass under a review stamp that turns each one into a coin. {merged} merged pull requests are coins in the brick crate and {open} wait under review in the tray. The dial reads {share} % merged."
+    },
+    "byProject": "Pull requests by project",
+    "repo": "Repository",
+    "mergedList": "Merged",
+    "openList": "Under review",
+    "notes": {
+      "tingSqlInjection": "Reported an SQL injection in the PostgreSQL driver, fixed upstream in version 4.1.1."
+    },
+    "security": "Security report",
+    "shelf": {
+      "title": "Package shelf",
+      "hint": "Hover a crate",
+      "heading": "Packages on Packagist",
+      "caption": "One crate per Symfony bundle published on Packagist. The coins in each crate are in proportion to its installs, and the counter under it gives the Packagist total.",
+      "label": "An isometric workshop shelf holding {count} wooden crates, one per Packagist package, each with a stack of coins and a counter of installs: {list}."
+    },
+    "pkg": {
+      "diagramBundle": "Interactive Doctrine entity diagram for Symfony: a JSON API and a React studio usable from Twig, plain JS, React and Vue.",
+      "mousetracker": "Self-hosted mouse, click and scroll tracker for Symfony: heatmaps, scroll maps and session replay.",
+      "auditBundle": "Audits Doctrine entity changes with rollback, a web interface and a REST API.",
+      "templatebundle": "Generates CRUD interfaces for Symfony applications."
+    },
+    "orgs": {
+      "title": "Organizations",
+      "hint": "Hover a building",
+      "heading": "Organizations",
+      "caption": "Pepprio's restaurant, Pignelle's real-estate agency and my own workshop, where the bundles above are made.",
+      "label": "Three small isometric buildings on a grass-topped ground block: the Pepprio restaurant with a striped awning, the Pignelle real-estate agency with a red roof and a for-sale board, and Ben Macha's brick workshop with a \"?\" block sign and a green warp pipe.",
+      "pepprio": "Pepprio (TastyBox): restaurant order management.",
+      "pignelle": "Pignelle: tools for real-estate agencies: estimation, property management, notifications and electronic signature.",
+      "benmacha": "My personal GitHub: Symfony bundles, PHP SDKs and experiments."
+    },
+    "updated": "Updated {date} from GitHub and Packagist",
+    "seeAll": "Open the workshop",
+    "seo": {
+      "title": "Open source contributions: Symfony, API Platform, Caddy",
+      "description": "Ben Macha Ali's open source work: pull requests merged into Symfony, fixes proposed to API Platform, Caddy and Ting, Symfony bundles on Packagist and the Pepprio and Pignelle organizations."
+    }
   }
 }

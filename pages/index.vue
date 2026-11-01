@@ -5,6 +5,7 @@
       <ExperiencePreview />
       <SkillsPreview />
       <ProjectsPreview />
+      <OpenSourcePreview />
       <BlogPreview />
       <EducationPreview />
       <ArcadeSection />

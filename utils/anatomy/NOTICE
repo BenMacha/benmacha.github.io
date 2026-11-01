@@ -1,0 +1,7 @@
+iso-kit.mjs comes from Anatomy (https://github.com/wheresryan22/anatomy), file kit/iso-kit.mjs,
+copied without changes (apart from the two-line header) under the MIT License (see LICENSE).
+It provides the isometric camera, the shaded solids and the SVG string helpers used by the
+open source figures in this folder (pr-machine.mjs, package-shelf.mjs, org-street.mjs).
+
+Logo paths in logos.mjs come from Simple Icons (https://simpleicons.org, simple-icons@13),
+released under CC0 1.0.
