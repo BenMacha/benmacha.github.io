@@ -2,11 +2,11 @@
   <ChapterHead v-if="page" :title="title" :lead="subtitle" />
   <div v-else class="section-title">
     <div>
-      <div class="eyebrow eyebrow--red">{{ eyebrow }}</div>
+      <div v-if="eyebrow" class="eyebrow eyebrow--red">{{ eyebrow }}</div>
       <h2 class="section-title__title">{{ title }}</h2>
       <p v-if="subtitle" class="section-title__subtitle">{{ subtitle }}</p>
     </div>
-    <NuxtLink v-if="to && linkLabel" :to="localePath(to)" class="btn btn--ghost">{{ linkLabel }} →</NuxtLink>
+    <NuxtLink v-if="to && linkLabel" :to="localePath(to)" class="btn btn--ghost">{{ linkLabel }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
   </div>
 </template>
 
@@ -15,7 +15,7 @@ const localePath = useLocalePath()
 
 /** Page header (`page`: the chapter opening) or a section heading inside a page. */
 defineProps<{
-  eyebrow: string
+  eyebrow?: string
   title: string
   subtitle?: string
   page?: boolean

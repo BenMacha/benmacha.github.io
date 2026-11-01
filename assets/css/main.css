@@ -399,6 +399,15 @@ h4 {
 .contract--freelance { color: var(--amber-ink); }
 .contract--own { color: var(--red-ink); }
 
+/* Arrows in links point the reading way: mirrored in right-to-left pages */
+.dir-arrow {
+  display: inline-block;
+}
+
+[dir='rtl'] .dir-arrow {
+  transform: scaleX(-1);
+}
+
 /* ---------- Motion ---------- */
 
 /* Route transition: a page turning */

@@ -1,6 +1,6 @@
 <template>
   <NuxtLayout>
-    <GameOver @home="clearError({ redirect: '/' })" />
+    <NotFound @home="clearError({ redirect: '/' })" />
   </NuxtLayout>
 </template>
 

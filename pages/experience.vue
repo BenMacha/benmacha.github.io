@@ -83,7 +83,7 @@
         <p class="see-also__title">{{ $t('book.annexA.chapterTitle', { n: symfonyMerged }) }}</p>
         <p class="see-also__stats mono">{{ mergedCount }} {{ $t('book.annexA.merged') }} · {{ openCount }} {{ $t('book.annexA.open') }} · {{ packages.length }} {{ $t('book.annexA.bundles') }}</p>
       </div>
-      <NuxtLink :to="localePath('/open-source')" class="btn btn--green">{{ $t('book.annexA.cta') }} →</NuxtLink>
+      <NuxtLink :to="localePath('/open-source')" class="btn btn--green">{{ $t('book.annexA.cta') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
     </aside>
   </div>
 </template>

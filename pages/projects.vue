@@ -1,6 +1,6 @@
 <template>
   <div class="container page">
-    <SectionTitle page :eyebrow="$t('projectsUi.eyebrow')" :title="$t('projects.github.title')" :subtitle="$t('intro.projects')" />
+    <SectionTitle page :title="$t('projects.github.title')" :subtitle="$t('intro.projects')" />
 
     <ol class="projects">
       <li v-for="(project, i) in projects" :key="project.url" v-reveal="i" class="project card">

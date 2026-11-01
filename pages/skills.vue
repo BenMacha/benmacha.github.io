@@ -1,6 +1,6 @@
 <template>
   <div class="container page">
-    <SectionTitle page :eyebrow="$t('skillsUi.eyebrow')" :title="$t('skills.title')" :subtitle="$t('intro.skills')" />
+    <SectionTitle page :title="$t('skills.title')" :subtitle="$t('intro.skills')" />
 
     <div class="grid" style="--min: 320px; gap: 20px">
       <section v-for="(section, s) in skillSections" :key="section.key" v-reveal="s" class="bag card">

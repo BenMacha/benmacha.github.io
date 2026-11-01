@@ -1,6 +1,6 @@
 <template>
   <div class="container page os">
-    <SectionTitle page :eyebrow="$t('sections.openSource')" :title="$t('openSource.title')" :subtitle="$t('openSource.intro')" />
+    <SectionTitle page :title="$t('openSource.title')" :subtitle="$t('openSource.intro')" />
 
     <OpenSourceMachine />
 
