@@ -57,38 +57,41 @@ usePageSeo({
 
 <style scoped>
 .filters {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 5px;
+  gap: 8px;
   margin-bottom: 32px;
-  background: var(--card);
-  border: 3px solid var(--line);
-  box-shadow: 4px 4px 0 var(--shadow);
 }
 
 .filters__btn {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 8px 12px;
-  cursor: pointer;
-  border: 3px solid transparent;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
   background: transparent;
-  color: var(--nav-ink);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filters__btn:hover {
+  border-color: var(--ink-2);
 }
 
 .filters__btn.is-active {
-  background: var(--coin);
-  border-color: var(--navy);
-  color: var(--navy);
+  border-color: var(--ink);
+  color: var(--ink);
 }
 
 .filters__count {
-  opacity: .6;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .posts {
-  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
 }
 
 .empty {

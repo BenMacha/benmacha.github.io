@@ -1,11 +1,8 @@
 <template>
-  <NuxtLink v-lift :to="localePath(`/blog/${article.slug}`)" class="post card">
-    <div class="post__strip" :style="{ background: category.color }" />
+  <NuxtLink :to="localePath(`/blog/${article.slug}`)" class="post card">
     <div class="post__body">
-      <div class="post__meta">
-        <span class="post__badge" :style="{ background: category.color, color: badgeInk }">
-          {{ $t(`blog.categories.${category.key}`) }}
-        </span>
+      <div class="post__meta mono">
+        <span class="post__badge" :style="{ '--cat': category.color }">{{ $t(`blog.categories.${category.key}`) }}</span>
         <span>{{ article.date }}</span>
         <span>· {{ article.readTime }} {{ $t('blogUi.readTime') }}</span>
       </div>
@@ -22,7 +19,6 @@ const props = defineProps<{ article: LocalizedArticle }>()
 const localePath = useLocalePath()
 
 const category = computed(() => blogCategories[props.article.category as BlogCategory] ?? blogCategories.DevOps)
-const badgeInk = computed(() => (props.article.category === 'Linux' ? '#10132a' : '#fff'))
 </script>
 
 <style scoped>
@@ -30,16 +26,16 @@ const badgeInk = computed(() => (props.article.category === 'Linux' ? '#10132a' 
   display: flex;
   flex-direction: column;
   color: var(--ink);
-  box-shadow: 6px 6px 0 var(--shadow);
+  transition: border-color .2s;
 }
 
 .post:hover {
   color: var(--ink);
+  border-color: var(--rule-strong);
 }
 
-.post__strip {
-  height: 10px;
-  border-bottom: 3px solid #000;
+.post:hover .post__title {
+  color: var(--green-ink);
 }
 
 .post__body {
@@ -47,7 +43,7 @@ const badgeInk = computed(() => (props.article.category === 'Linux' ? '#10132a' 
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px;
+  padding: 22px;
 }
 
 .post__meta {
@@ -55,29 +51,38 @@ const badgeInk = computed(() => (props.article.category === 'Linux' ? '#10132a' 
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
+/* The category: a small coloured stroke and its name */
 .post__badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border: 2px solid #000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+}
+
+.post__badge::before {
+  content: '';
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cat);
 }
 
 .post__title {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.3;
   text-wrap: pretty;
+  transition: color .2s;
 }
 
 .post__more {
   margin-top: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-ink);
 }
 </style>

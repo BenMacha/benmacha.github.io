@@ -21,7 +21,7 @@ html.dark {
   --axis: #ec3b33;
 
   /* Line drawings (figures) */
-  --line: #c9d1dd;
+  --draw: #c9d1dd;
   --slab: #161c26;
   --top: #1c2330;
   --side: #121822;
@@ -44,7 +44,7 @@ html.light {
   --amber-ink: #8a6300;
   --axis: #c9302a;
 
-  --line: #14171c;
+  --draw: #14171c;
   --slab: #ecece6;
   --top: #fff;
   --side: #f1f1ec;
@@ -63,6 +63,30 @@ html.light {
   --font-mono: 'JetBrains Mono', 'Noto Sans Arabic', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   /* Older components still ask for the pixel font: they get the heading face */
   --font-pixel: var(--font-head);
+
+  /* Names kept from the previous design, mapped onto the book palette */
+  --accent: var(--green-ink);
+  --h2: var(--ink);
+  --card: var(--panel);
+  --chip: var(--panel-2);
+  --bar: var(--panel-2);
+  --term: #0b0e14;
+  --border: var(--rule);
+  --line: var(--rule);
+  --eyebrow: var(--muted);
+  --shadow: transparent;
+  --hi: transparent;
+  --lo: transparent;
+  --navy: #14171c;
+  --coin: var(--amber);
+  --coin-dark: #b58500;
+  --coin-light: #ffd666;
+  --mario: var(--red);
+  --mario-dark: #b42a24;
+  --mario-light: #ff8a84;
+  --grass: var(--green);
+  --grass-dark: #4d7d0a;
+  --pipe: var(--green);
 
   --container: 1200px;
   --radius: 14px;

@@ -1,7 +1,7 @@
 <template>
-  <section v-if="sections.length" class="prose-block card">
-    <div v-for="section in sections" :key="section.title" class="prose-block__section">
-      <h2 class="prose-block__title pixel"><span>&gt;</span> {{ section.title }}</h2>
+  <section v-if="sections.length" class="prose">
+    <div v-for="section in sections" :key="section.title" class="prose__section">
+      <h2 class="prose__title">{{ section.title }}</h2>
       <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
     </div>
   </section>
@@ -22,39 +22,23 @@ const sections = computed(() =>
 </script>
 
 <style scoped>
-.prose-block {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  margin-top: 48px;
-  padding: 28px;
+.prose {
+  margin-top: 56px;
+  padding-top: 40px;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  gap: 32px 56px;
 }
 
-.prose-block__title {
-  margin: 0 0 14px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--h2);
-}
-
-.prose-block__title span {
-  color: var(--coin);
-}
-
-.prose-block p {
+.prose__title {
   margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--muted);
+  font-size: 24px;
+  line-height: 1.25;
 }
 
-.prose-block p:last-child {
-  margin-bottom: 0;
-}
-
-@media (max-width: 600px) {
-  .prose-block {
-    padding: 20px 16px;
-  }
+.prose__section p {
+  margin: 0 0 14px;
+  color: var(--ink-2);
 }
 </style>

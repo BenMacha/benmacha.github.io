@@ -1,14 +1,16 @@
 <template>
   <div class="container container--narrow page">
-    <NuxtLink :to="localePath('/blog')" class="back">◀ {{ $t('blog.backToBlog') }}</NuxtLink>
+    <div class="running-head mono" aria-hidden="true">
+      <span>Ben Macha Ali — {{ $t('book.volume') }}</span>
+      <span>{{ label }}</span>
+    </div>
+    <NuxtLink :to="localePath('/blog')" class="back">← {{ $t('blog.backToBlog') }}</NuxtLink>
 
     <template v-if="article">
       <header class="head">
-        <span class="badge" :style="{ background: category.color, color: article.category === 'Linux' ? '#10132a' : '#fff' }">
-          {{ $t(`blog.categories.${category.key}`) }}
-        </span>
-        <h1 class="title pixel" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h1>
-        <div class="meta">
+        <span class="badge mono" :style="{ '--cat': category.color }">{{ $t(`blog.categories.${category.key}`) }}</span>
+        <h1 class="title" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h1>
+        <div class="meta mono">
           <span>{{ $t('blog.publishedOn') }} {{ article.date }}</span>
           <span>· {{ article.readTime }} {{ $t('blogUi.readTime') }}</span>
         </div>
@@ -18,16 +20,16 @@
       </header>
 
       <!-- Article bodies are trusted, first-party HTML from data/articles/ -->
-      <article v-if="body" class="content card" :lang="body.lang" :dir="articleDir(body)" v-html="body.html" />
+      <article v-if="body" class="content" :lang="body.lang" :dir="articleDir(body)" v-html="body.html" />
 
       <nav class="pager">
-        <NuxtLink v-if="prev" :to="localePath(`/blog/${prev.slug}`)" v-lift class="pager__link card">
-          <span class="pager__label pixel">◀ {{ $t('blog.previousArticle') }}</span>
+        <NuxtLink v-if="prev" :to="localePath(`/blog/${prev.slug}`)" class="pager__link card">
+          <span class="pager__label mono">← {{ $t('blog.previousArticle') }}</span>
           <span class="pager__title" :lang="prev.lang" :dir="articleDir(prev)">{{ prev.title }}</span>
         </NuxtLink>
         <span v-else />
-        <NuxtLink v-if="next" :to="localePath(`/blog/${next.slug}`)" v-lift class="pager__link pager__link--next card">
-          <span class="pager__label pixel">{{ $t('blog.nextArticle') }} ▶</span>
+        <NuxtLink v-if="next" :to="localePath(`/blog/${next.slug}`)" class="pager__link pager__link--next card">
+          <span class="pager__label mono">{{ $t('blog.nextArticle') }} →</span>
           <span class="pager__title" :lang="next.lang" :dir="articleDir(next)">{{ next.title }}</span>
         </NuxtLink>
       </nav>
@@ -41,6 +43,7 @@
 import { blogCategories, type BlogCategory } from '~/data/site'
 
 const route = useRoute()
+const { label } = useChapter()
 const localePath = useLocalePath()
 const slug = computed(() => route.params.slug as string)
 
@@ -111,12 +114,24 @@ useHead(() => ({
 </script>
 
 <style scoped>
+.running-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 18px 0;
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .back {
   display: inline-block;
-  margin-bottom: 32px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
+  margin-bottom: 28px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-ink);
 }
 
 .head {
@@ -124,64 +139,83 @@ useHead(() => ({
   flex-direction: column;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 32px;
+  padding-bottom: 32px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border: 2px solid #000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.badge::before {
+  content: '';
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cat);
 }
 
 .title {
   margin: 0;
-  font-size: clamp(18px, 3vw, 26px);
-  line-height: 1.5;
-  color: var(--h2);
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -1px;
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 12px;
-  color: var(--h2);
-  opacity: .8;
+  font-size: 13px;
+  color: var(--muted);
 }
 
+/* Article body: a readable measure, book-like rhythm */
 .content {
-  padding: clamp(20px, 4vw, 36px);
-  margin-bottom: 40px;
-  font-size: 15px;
+  max-width: 760px;
+  margin-bottom: 48px;
+  font-size: 18px;
   line-height: 1.8;
+  color: var(--ink-2);
 }
 
 .content :deep(h2),
 .content :deep(h3) {
-  font-family: var(--font-pixel);
-  line-height: 1.6;
-  color: var(--accent);
+  font-family: var(--font-head);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--ink);
 }
 
 .content :deep(h2) {
-  margin: 0 0 20px;
-  font-size: 15px;
+  margin: 48px 0 16px;
+  font-size: 28px;
+}
+
+.content :deep(h2:first-child) {
+  margin-top: 0;
 }
 
 .content :deep(h3) {
-  margin: 32px 0 14px;
-  font-size: 12px;
+  margin: 32px 0 12px;
+  font-size: 21px;
 }
 
 .content :deep(p) {
-  margin: 0 0 16px;
+  margin: 0 0 18px;
 }
 
 .content :deep(ul),
 .content :deep(ol) {
-  margin: 0 0 16px;
-  padding-inline-start: 22px;
+  margin: 0 0 18px;
+  padding-inline-start: 24px;
 }
 
 .content :deep(li) {
@@ -189,38 +223,40 @@ useHead(() => ({
 }
 
 .content :deep(li::marker) {
-  color: var(--coin);
+  color: var(--muted);
 }
 
 .content :deep(strong) {
-  color: var(--accent);
+  color: var(--ink);
 }
 
 .content :deep(a) {
-  color: var(--accent);
+  color: var(--green-ink);
   text-decoration: underline;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .content :deep(code) {
   font-family: var(--font-mono);
-  font-size: .9em;
-  padding: 1px 5px;
-  background: var(--chip);
-  border: 2px solid var(--line);
+  font-size: .85em;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  color: var(--ink);
 }
 
 .content :deep(pre) {
-  margin: 0 0 20px;
-  padding: 16px;
+  margin: 0 0 24px;
+  padding: 18px 20px;
   overflow-x: auto;
-  background: var(--term);
-  color: #b9f5c6;
-  border: 3px solid #000;
-  box-shadow: 4px 4px 0 var(--shadow);
-  font-size: 13px;
-  line-height: 1.6;
+  border-radius: 12px;
+  background: #0b0e14;
+  color: #d6dde8;
+  border: 1px solid var(--rule);
+  font-size: 14px;
+  line-height: 1.65;
   direction: ltr;
 }
 
@@ -233,42 +269,48 @@ useHead(() => ({
   padding: 0;
   background: none;
   border: 0;
+  color: inherit;
 }
 
 .content :deep(table) {
   display: block;
   overflow-x: auto;
-  margin: 0 0 20px;
+  margin: 0 0 24px;
   border-collapse: collapse;
+  font-size: 15px;
 }
 
 .content :deep(th),
 .content :deep(td) {
   padding: 8px 12px;
-  border: 2px solid var(--line);
+  border-bottom: 1px solid var(--rule);
   text-align: start;
 }
 
 .content :deep(th) {
-  background: var(--bar);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .pager {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .pager__link {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px;
+  gap: 8px;
+  padding: 20px;
   color: var(--ink);
 }
 
 .pager__link:hover {
   color: var(--ink);
+  border-color: var(--rule-strong);
 }
 
 .pager__link--next {
@@ -276,13 +318,15 @@ useHead(() => ({
 }
 
 .pager__label {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .pager__title {
-  font-size: 14px;
-  font-weight: 700;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.3;
 }
 
 .missing {
