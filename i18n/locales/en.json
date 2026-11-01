@@ -309,8 +309,7 @@
   "404": {
     "title": "Page Not Found",
     "description": "The page you're looking for doesn't exist or has been moved.",
-    "back": "Back to Home",
-    "gameOver": "GAME OVER"
+    "back": "Back to Home"
   },
   "blog": {
     "title": "Tech Blog",
@@ -332,69 +331,14 @@
     "noArticles": "No articles found in this category.",
     "articleNotFound": "Article not found."
   },
-  "footer": {
-    "rights": "All rights reserved.",
-    "built": "Built with code, coffee & curiosity // v5.0.0 — Pixel edition"
-  },
-  "hero": {
-    "player": "PLAYER",
-    "xp": "XP",
-    "years": "×10 YRS",
-    "world": "WORLD",
-    "worldValue": "ILE-DE-FRANCE",
-    "class": "CLASS",
-    "classValue": "IT & AI PROJECT LEAD",
-    "level": "LEVEL 10",
-    "xpLabel": "10 YEARS OF EXPERIENCE · SINCE 2016",
-    "terminal": "terminal — bash",
-    "jump": "Jump!"
-  },
   "sections": {
-    "experience": "WORLD 1 · CAREER",
-    "skills": "WORLD 2 · INVENTORY",
-    "projects": "WORLD 3 · BONUS BLOCKS",
-    "blog": "WORLD 4 · LOGS",
-    "seeAll": "See all",
-    "openInventory": "Open inventory",
-    "education": "WORLD 5 · ACHIEVEMENTS",
-    "bestExperience": "My best experiences",
-    "openSource": "WORLD 3-2 · OPEN SOURCE"
+    "seeAll": "See all"
   },
   "experienceUi": {
-    "eyebrow": "WORLD 1 · LEVEL MAP",
-    "more": "+{n} quests",
-    "less": "Collapse",
-    "start": "START · 2016",
-    "freelanceBranch": "KEYTCHENS FREELANCE",
-    "levelUp": "LEVEL UP · PERMANENT 09/20",
-    "legendTrunk": "Green pipe: salaried job",
-    "legendBranch": "Yellow pipe: freelance or side project",
-    "legendPermanent": "Name in red: salaried (permanent, fixed-term)",
-    "legendFreelance": "Name in green: freelance",
-    "legendOwn": "Name in yellow: my own company",
-    "countryChange": "✈ 2019 · TUNISIA → FRANCE"
-  },
-  "skillsUi": {
-    "eyebrow": "WORLD 2 · INVENTORY",
-    "count": "{n} items"
-  },
-  "projectsUi": {
-    "eyebrow": "WORLD 3 · BONUS BLOCKS",
-    "view": "View on GitHub",
-    "hit": "Hit the block"
-  },
-  "educationUi": {
-    "eyebrow": "WORLD 5 · ACHIEVEMENTS",
-    "unlocked": "ACHIEVEMENT UNLOCKED!"
+    "less": "Collapse"
   },
   "blogUi": {
-    "eyebrow": "WORLD 4 · SERVER LOGS",
     "readTime": "read"
-  },
-  "contactUi": {
-    "eyebrow": "INSERT COIN · PLAYER 2 ?",
-    "title": "Contact",
-    "cv": "CV"
   },
   "theme": {
     "day": "DAY",
@@ -522,7 +466,6 @@
   "openSource": {
     "title": "Open source contributions",
     "intro": "Pull requests sent to the projects I use every day, the Symfony bundles I publish on Packagist and the organizations I build in the open.",
-    "previewTitle": "Contributions to open source projects",
     "merged": "merged",
     "open": "under review",
     "mergedShare": "{n} % merged",
@@ -567,7 +510,6 @@
       "benmacha": "My personal GitHub: Symfony bundles, PHP SDKs and experiments."
     },
     "updated": "Updated {date} from GitHub and Packagist",
-    "seeAll": "Open the workshop",
     "seo": {
       "title": "Open source contributions: Symfony, API Platform, Caddy",
       "description": "Ben Macha Ali's open source work: pull requests merged into Symfony, fixes proposed to API Platform, Caddy and Ting, Symfony bundles on Packagist and the Pepprio and Pignelle organizations."
@@ -639,7 +581,7 @@
       "bundles": "bundles"
     },
     "footer": "Let's write the next chapter.",
-    "expIntro": "From 2016 to today, from Tunis to Paris. The axis on the left counts the years; each job is a branch opened at its start date and closed at its end date.",
+    "expIntro": "From 2016 to today, from Tunis to Paris, drawn as a git graph. The main branch carries the salaried jobs; the freelance and Pepprio branches (my own company) fork from it at their start date and are closed when the mission ends. Each job is a commit, the newest at the top.",
     "cdiMarker": "PERMANENT",
     "contents": "Chapter contents"
   }

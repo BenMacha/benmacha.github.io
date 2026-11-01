@@ -7,7 +7,7 @@
     <span class="eyebrow eyebrow--red">Erratum · 404</span>
     <h1 class="lost__title">{{ $t('404.title') }}</h1>
     <p class="lead">{{ $t('404.description') }}</p>
-    <NuxtLink :to="localePath('/')" class="btn btn--primary" @click="$emit('home')">← {{ $t('404.back') }}</NuxtLink>
+    <NuxtLink :to="localePath('/')" class="btn btn--primary" @click="$emit('home')"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('404.back') }}</NuxtLink>
   </div>
 </template>
 

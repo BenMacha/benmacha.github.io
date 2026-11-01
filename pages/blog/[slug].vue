@@ -4,7 +4,7 @@
       <span>Ben Macha Ali — {{ $t('book.volume') }}</span>
       <span>{{ label }}</span>
     </div>
-    <NuxtLink :to="localePath('/blog')" class="back">← {{ $t('blog.backToBlog') }}</NuxtLink>
+    <NuxtLink :to="localePath('/blog')" class="back"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('blog.backToBlog') }}</NuxtLink>
 
     <template v-if="article">
       <header class="head">
@@ -24,12 +24,12 @@
 
       <nav class="pager">
         <NuxtLink v-if="prev" :to="localePath(`/blog/${prev.slug}`)" class="pager__link card">
-          <span class="pager__label mono">← {{ $t('blog.previousArticle') }}</span>
+          <span class="pager__label mono"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('blog.previousArticle') }}</span>
           <span class="pager__title" :lang="prev.lang" :dir="articleDir(prev)">{{ prev.title }}</span>
         </NuxtLink>
         <span v-else />
         <NuxtLink v-if="next" :to="localePath(`/blog/${next.slug}`)" class="pager__link pager__link--next card">
-          <span class="pager__label mono">{{ $t('blog.nextArticle') }} →</span>
+          <span class="pager__label mono">{{ $t('blog.nextArticle') }} <span class="dir-arrow" aria-hidden="true">→</span></span>
           <span class="pager__title" :lang="next.lang" :dir="articleDir(next)">{{ next.title }}</span>
         </NuxtLink>
       </nav>

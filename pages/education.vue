@@ -1,6 +1,6 @@
 <template>
   <div class="container container--narrow page education">
-    <SectionTitle page :eyebrow="$t('educationUi.eyebrow')" :title="$t('education.title')" :subtitle="$t('intro.education')" />
+    <SectionTitle page :title="$t('education.title')" :subtitle="$t('intro.education')" />
 
     <div class="stack">
       <AchievementCard v-for="(degree, i) in education" :key="degree.school" v-reveal="i" :degree="degree" />

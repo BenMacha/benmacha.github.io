@@ -309,8 +309,7 @@
   "404": {
     "title": "Page non trouvée",
     "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
-    "back": "Retour à l'accueil",
-    "gameOver": "GAME OVER"
+    "back": "Retour à l'accueil"
   },
   "blog": {
     "title": "Blog Technique",
@@ -332,69 +331,14 @@
     "noArticles": "Aucun article trouvé dans cette catégorie.",
     "articleNotFound": "Article non trouvé."
   },
-  "footer": {
-    "rights": "Tous droits réservés.",
-    "built": "Built with code, coffee & curiosity // v5.0.0 — Pixel edition"
-  },
-  "hero": {
-    "player": "JOUEUR",
-    "xp": "XP",
-    "years": "×10 ANS",
-    "world": "MONDE",
-    "worldValue": "ILE-DE-FRANCE",
-    "class": "CLASSE",
-    "classValue": "CHEF DE PROJET SI & IA",
-    "level": "NIVEAU 10",
-    "xpLabel": "10 ANS D'EXPERIENCE · DEPUIS 2016",
-    "terminal": "terminal — bash",
-    "jump": "Saute !"
-  },
   "sections": {
-    "experience": "MONDE 1 · CARRIERE",
-    "skills": "MONDE 2 · INVENTAIRE",
-    "projects": "MONDE 3 · BLOCS BONUS",
-    "blog": "MONDE 4 · LOGS",
-    "seeAll": "Tout voir",
-    "openInventory": "Ouvrir l'inventaire",
-    "education": "MONDE 5 · SUCCES",
-    "bestExperience": "Mes meilleures expériences",
-    "openSource": "MONDE 3-2 · OPEN SOURCE"
+    "seeAll": "Tout voir"
   },
   "experienceUi": {
-    "eyebrow": "MONDE 1 · CARTE DES NIVEAUX",
-    "more": "+{n} quêtes",
-    "less": "Réduire",
-    "start": "START · 2016",
-    "freelanceBranch": "FREELANCE KEYTCHENS",
-    "levelUp": "LEVEL UP · CDI 09/20",
-    "legendTrunk": "Tuyau vert : poste salarié",
-    "legendBranch": "Tuyau jaune : freelance ou projet en parallèle",
-    "legendPermanent": "Nom en rouge : salarié (CDI, CDD)",
-    "legendFreelance": "Nom en vert : freelance",
-    "legendOwn": "Nom en jaune : ma société",
-    "countryChange": "✈ 2019 · TUNISIE → FRANCE"
-  },
-  "skillsUi": {
-    "eyebrow": "MONDE 2 · INVENTAIRE",
-    "count": "{n} objets"
-  },
-  "projectsUi": {
-    "eyebrow": "MONDE 3 · BLOCS BONUS",
-    "view": "Voir sur GitHub",
-    "hit": "Frapper le bloc"
-  },
-  "educationUi": {
-    "eyebrow": "MONDE 5 · SUCCES DEBLOQUES",
-    "unlocked": "SUCCES OBTENU !"
+    "less": "Réduire"
   },
   "blogUi": {
-    "eyebrow": "MONDE 4 · LOGS SERVEUR",
     "readTime": "de lecture"
-  },
-  "contactUi": {
-    "eyebrow": "INSERT COIN · PLAYER 2 ?",
-    "title": "Contact",
-    "cv": "CV"
   },
   "theme": {
     "day": "JOUR",
@@ -522,7 +466,6 @@
   "openSource": {
     "title": "Contributions open source",
     "intro": "Les pull requests envoyées aux projets que j'utilise tous les jours, les bundles Symfony que je publie sur Packagist et les organisations que je construis en public.",
-    "previewTitle": "Contributions aux projets open source",
     "merged": "fusionnées",
     "open": "en revue",
     "mergedShare": "{n} % fusionnées",
@@ -567,7 +510,6 @@
       "benmacha": "Mon GitHub personnel : bundles Symfony, SDK PHP et expériences."
     },
     "updated": "Mis à jour le {date} depuis GitHub et Packagist",
-    "seeAll": "Entrer dans l'atelier",
     "seo": {
       "title": "Contributions open source : Symfony, API Platform, Caddy",
       "description": "Le travail open source de Ben Macha Ali : pull requests fusionnées dans Symfony, correctifs proposés à API Platform, Caddy et Ting, bundles Symfony sur Packagist et les organisations Pepprio et Pignelle."
@@ -639,7 +581,7 @@
       "bundles": "bundles"
     },
     "footer": "Écrivons le prochain chapitre.",
-    "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris. L'axe à gauche compte les années ; chaque poste est une branche ouverte à sa date de début et fermée à sa date de fin.",
+    "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris, raconté comme un graphe git. La branche main porte les postes salariés ; les branches freelance et Pepprio, ma société, en partent à leur date de début et se ferment à la fin de la mission. Chaque poste est un commit, le plus récent en haut.",
     "cdiMarker": "CDI",
     "contents": "Contenu du chapitre"
   }

@@ -63,7 +63,7 @@
           <p class="job__role">{{ job.role }}</p>
           <p class="job__text">{{ job.tasks[0] }}</p>
         </article>
-        <NuxtLink :to="localePath('/experience')" class="latest__more btn btn--ghost">{{ $t('sections.seeAll') }} →</NuxtLink>
+        <NuxtLink :to="localePath('/experience')" class="latest__more btn btn--ghost">{{ $t('sections.seeAll') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
       </div>
     </section>
 
@@ -74,7 +74,7 @@
           <span class="eyebrow eyebrow--green">{{ $t('book.annexA.eyebrow') }}</span>
           <h2 id="annex-a" class="h2 annex__title">{{ $t('book.annexA.title', { n: symfonyMerged }) }}</h2>
           <p class="annex__lead">{{ $t('book.annexA.text') }}</p>
-          <NuxtLink :to="localePath('/open-source')" class="btn btn--green annex__cta">{{ $t('book.annexA.cta') }} →</NuxtLink>
+          <NuxtLink :to="localePath('/open-source')" class="btn btn--green annex__cta">{{ $t('book.annexA.cta') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
         </div>
         <dl class="annex__stats">
           <div class="stat"><dd class="stat__value green" v-count="mergedCount">{{ mergedCount }}</dd><dt class="mono">{{ $t('book.annexA.merged') }}</dt></div>

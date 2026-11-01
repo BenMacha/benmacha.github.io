@@ -7,7 +7,7 @@
         <span>· {{ article.readTime }} {{ $t('blogUi.readTime') }}</span>
       </div>
       <h3 class="post__title" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h3>
-      <span class="post__more">{{ $t('blog.readMore') }} →</span>
+      <span class="post__more">{{ $t('blog.readMore') }} <span class="dir-arrow" aria-hidden="true">→</span></span>
     </div>
   </NuxtLink>
 </template>

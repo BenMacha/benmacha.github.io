@@ -1,5 +1,5 @@
 <template>
-  <GameOver />
+  <NotFound />
 </template>
 
 <script setup lang="ts">

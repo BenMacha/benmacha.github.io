@@ -309,8 +309,7 @@
   "404": {
     "title": "الصفحة غير موجودة",
     "description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
-    "back": "العودة إلى الصفحة الرئيسية",
-    "gameOver": "GAME OVER"
+    "back": "العودة إلى الصفحة الرئيسية"
   },
   "blog": {
     "title": "المدونة التقنية",
@@ -332,69 +331,14 @@
     "noArticles": "لم يتم العثور على مقالات في هذه الفئة.",
     "articleNotFound": "المقال غير موجود."
   },
-  "footer": {
-    "rights": "جميع الحقوق محفوظة.",
-    "built": "Built with code, coffee & curiosity // v5.0.0 — Pixel edition"
-  },
-  "hero": {
-    "player": "اللاعب",
-    "xp": "الخبرة",
-    "years": "×10 سنوات",
-    "world": "العالم",
-    "worldValue": "إيل دو فرانس",
-    "class": "الفئة",
-    "classValue": "مدير مشاريع SI والذكاء الاصطناعي",
-    "level": "المستوى 10",
-    "xpLabel": "10 سنوات من الخبرة · منذ 2016",
-    "terminal": "terminal — bash",
-    "jump": "اقفز!"
-  },
   "sections": {
-    "experience": "العالم 1 · المسيرة",
-    "skills": "العالم 2 · المخزون",
-    "projects": "العالم 3 · الكتل الإضافية",
-    "blog": "العالم 4 · السجلات",
-    "seeAll": "عرض الكل",
-    "openInventory": "فتح المخزون",
-    "education": "العالم 5 · الإنجازات",
-    "bestExperience": "أفضل تجاربي المهنية",
-    "openSource": "العالم 3-2 · المصادر المفتوحة"
+    "seeAll": "عرض الكل"
   },
   "experienceUi": {
-    "eyebrow": "العالم 1 · خريطة المستويات",
-    "more": "+{n} مهام",
-    "less": "طي",
-    "start": "START · 2016",
-    "freelanceBranch": "KEYTCHENS · عمل حر",
-    "levelUp": "LEVEL UP · CDI 09/20",
-    "legendTrunk": "الأنبوب الأخضر: وظيفة بأجر",
-    "legendBranch": "الأنبوب الأصفر: عمل حر أو مشروع موازٍ",
-    "legendPermanent": "الاسم بالأحمر: وظيفة بأجر (عقد دائم أو محدد المدة)",
-    "legendFreelance": "الاسم بالأخضر: عمل حر",
-    "legendOwn": "الاسم بالأصفر: شركتي الخاصة",
-    "countryChange": "✈ 2019 · من تونس إلى فرنسا"
-  },
-  "skillsUi": {
-    "eyebrow": "العالم 2 · المخزون",
-    "count": "{n} عناصر"
-  },
-  "projectsUi": {
-    "eyebrow": "العالم 3 · الكتل الإضافية",
-    "view": "عرض على GitHub",
-    "hit": "اضرب الكتلة"
-  },
-  "educationUi": {
-    "eyebrow": "العالم 5 · الإنجازات",
-    "unlocked": "تم فتح الإنجاز!"
+    "less": "طي"
   },
   "blogUi": {
-    "eyebrow": "العالم 4 · سجلات الخادم",
     "readTime": "قراءة"
-  },
-  "contactUi": {
-    "eyebrow": "INSERT COIN · PLAYER 2 ?",
-    "title": "اتصل بي",
-    "cv": "السيرة"
   },
   "theme": {
     "day": "نهار",
@@ -522,7 +466,6 @@
   "openSource": {
     "title": "مساهمات مفتوحة المصدر",
     "intro": "طلبات الدمج التي أرسلتها إلى المشاريع التي أستخدمها يوميًا، وحزم Symfony التي أنشرها على Packagist، والمنظمات التي أبنيها بشكل مفتوح.",
-    "previewTitle": "مساهمات في مشاريع مفتوحة المصدر",
     "merged": "مدمجة",
     "open": "قيد المراجعة",
     "mergedShare": "{n} % مدمجة",
@@ -567,7 +510,6 @@
       "benmacha": "حسابي الشخصي على GitHub: حزم Symfony ومكتبات PHP وتجارب."
     },
     "updated": "حُدّث في {date} من GitHub وPackagist",
-    "seeAll": "ادخل الورشة",
     "seo": {
       "title": "مساهمات مفتوحة المصدر: Symfony وAPI Platform وCaddy",
       "description": "أعمال بن ماشا علي مفتوحة المصدر: طلبات دمج مدمجة في Symfony، وإصلاحات مقترحة على API Platform وCaddy وTing، وحزم Symfony على Packagist، ومنظمتا Pepprio وPignelle."
@@ -639,7 +581,7 @@
       "bundles": "حزم"
     },
     "footer": "لنكتب الفصل القادم.",
-    "expIntro": "من 2016 إلى اليوم، من تونس إلى باريس. المحور على الجانب يعدّ السنوات؛ كل وظيفة فرع يُفتح عند تاريخ بدايتها ويُغلق عند تاريخ نهايتها.",
+    "expIntro": "من 2016 إلى اليوم، من تونس إلى باريس، مرسومة كمخطط git. يحمل الفرع main الوظائف بأجر؛ ويتفرع منه فرعا العمل الحر وPepprio، شركتي، عند تاريخ البداية ويُغلقان بنهاية المهمة. كل وظيفة commit، والأحدث في الأعلى.",
     "cdiMarker": "عقد دائم",
     "contents": "محتوى الفصل"
   }

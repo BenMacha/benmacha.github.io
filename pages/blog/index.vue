@@ -2,7 +2,6 @@
   <div class="container page">
     <SectionTitle
       page
-      :eyebrow="$t('blogUi.eyebrow')"
       :title="$t('blog.title')"
       :subtitle="$t('blog.subtitle')"
     />
