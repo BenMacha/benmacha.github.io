@@ -64,7 +64,7 @@ export default defineNuxtConfig({
         { name: 'author', content: 'Ben Macha Ali' },
         { name: 'keywords', content: 'Ben Macha Ali, créateur de Keytchens, Keytchens, fondateur de Pepprio, Pepprio, ORPI chef de projet SI, CCM Benchmark lead dev, groupe Le Figaro, Manymore, Matalto, UKN, Argolife, Pixel Trade, développeur PHP Symfony, React, Vue.js, Docker, DevOps, Linux, Paris, France, chef de projet SI, blog technique' },
         { name: 'robots', content: 'index, follow, max-image-preview:large' },
-        { name: 'theme-color', content: '#0b0e1f' },
+        { name: 'theme-color', content: '#0e1116' },
         { property: 'og:site_name', content: 'Ben Macha Ali' },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
@@ -89,8 +89,9 @@ export default defineNuxtConfig({
 
   googleFonts: {
     families: {
-      'Press Start 2P': [400],
-      'Fira Code': [400, 500, 600, 700],
+      'Nunito': [700, 800],
+      'Mulish': [400, 500, 600, 700],
+      'JetBrains Mono': [400, 500],
       'Noto Sans Arabic': [400, 600, 700],
     },
     display: 'swap',

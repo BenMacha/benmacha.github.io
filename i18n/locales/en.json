@@ -558,5 +558,80 @@
       "title": "Open source contributions: Symfony, API Platform, Caddy",
       "description": "Ben Macha Ali's open source work: pull requests merged into Symfony, fixes proposed to API Platform, Caddy and Ting, Symfony bundles on Packagist and the Pepprio and Pignelle organizations."
     }
+  },
+  "book": {
+    "volume": "vol. 2026",
+    "chapter": "Chapter",
+    "annex": "Appendix",
+    "page": "p.",
+    "toc": "Contents",
+    "menu": "Open the contents",
+    "preface": "// Preface",
+    "heroLead": "I design IT and AI products",
+    "heroAccent": "that run in production.",
+    "heroText": "IT & Generative AI Project Manager at ORPI, PHP/Symfony Tech Lead, founder of Pepprio. Ten years from Tunis to Paris, told like a technical manual: each chapter is one part of the machine.",
+    "cv": "Read the CV (PDF)",
+    "contact": "Contact me",
+    "facts": {
+      "experience": "experience",
+      "years": "{n} years",
+      "merged": "merged PRs",
+      "bundles": "bundles",
+      "products": "products"
+    },
+    "fig1": {
+      "label": "Isometric drawing: a workbench with three connected modules, IT and data, AI, product",
+      "caption": "Fig. 1 — The workbench: data (1) feeds the AI agents (2), which deliver a product (3).",
+      "data": "IT & data",
+      "ai": "AI",
+      "product": "Product"
+    },
+    "tocSummary": "6 chapters · 1 open source appendix",
+    "chapters": {
+      "experience": "Eight jobs, one timeline, freelance and permanent.",
+      "skills": "PHP, Symfony, React, data and generative AI.",
+      "projects": "Pepprio, OrpiHub, SDKs and Symfony bundles.",
+      "open-source": "Pull requests to Symfony, API Platform, Caddy.",
+      "blog": "Technical notes: Docker, Linux, Symfony, AI.",
+      "education": "Software engineering degree, ISI Mahdia."
+    },
+    "latestTitle": "Latest chapters written",
+    "latestText": "The three current or recent jobs. The rest is in the Experience chapter.",
+    "legend": {
+      "salaried": "Salaried",
+      "salariedNote": "permanent, fixed-term, full time",
+      "freelance": "Freelance",
+      "freelanceNote": "closed at the end of the mission",
+      "own": "My company",
+      "ownNote": "Pepprio"
+    },
+    "kinds": {
+      "cdi": "permanent",
+      "cdd": "fixed-term",
+      "fulltime": "full time",
+      "own": "my company",
+      "freelanceThenCdi": "freelance 09/2018 – 08/2020, then permanent"
+    },
+    "annexA": {
+      "eyebrow": "Appendix A · Open source",
+      "title": "{n} pull requests merged into Symfony",
+      "text": "More under review at API Platform, Caddy and Ting, and four Symfony bundles published on Packagist.",
+      "cta": "Open the appendix",
+      "seeAlso": "See also · Appendix A",
+      "chapterTitle": "{n} pull requests merged into Symfony, more under review at API Platform, Caddy and Ting.",
+      "merged": "merged",
+      "open": "under review",
+      "projects": "projects",
+      "bundles": "bundles"
+    },
+    "annexB": {
+      "eyebrow": "Appendix B · Recess",
+      "title": "Recess",
+      "text": "Five small games written for fun: keyboard, mouse or touch. Nothing to learn here, just a break between two chapters."
+    },
+    "footer": "Let's write the next chapter.",
+    "expIntro": "From 2016 to today, from Tunis to Paris. The axis on the left counts the years; each job is a branch opened at its start date and closed at its end date.",
+    "cdiMarker": "PERMANENT",
+    "contents": "Chapter contents"
   }
 }

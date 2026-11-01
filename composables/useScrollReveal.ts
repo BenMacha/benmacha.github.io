@@ -3,9 +3,9 @@ import { animate } from 'motion'
 
 /**
  * `v-reveal` — springs an element in with Motion when it scrolls into view.
- *   v-reveal          → slide up
- *   v-reveal="i"      → slide up, staggered by index i
- *   v-reveal.pop="i"  → scale in (inventory slots)
+ *   v-reveal          → turns in like a page (rises, tilt flattens)
+ *   v-reveal="i"      → same, staggered by index i
+ *   v-reveal.pop="i"  → fades and scales in slightly
  *
  * The element is only hidden on the client, so server-rendered HTML stays
  * visible without JavaScript. Elements the user jumped past without them ever
@@ -26,10 +26,9 @@ function reveal(el: HTMLElement) {
   const { index, pop } = options
   animate(
     el,
-    pop ? { scale: [0, 1], opacity: [0, 1] } : { y: [40, 0], opacity: [0, 1] },
-    pop
-      ? { type: 'spring', bounce: 0.5, delay: index * 0.04 }
-      : { type: 'spring', bounce: 0.35, duration: 0.7, delay: index * 0.07 },
+    // A page turning in: it rises and swings flat from a slight tilt
+    pop ? { scale: [0.92, 1], opacity: [0, 1] } : { y: [28, 0], rotateX: [8, 0], opacity: [0, 1] },
+    { duration: 0.6, ease: [0.22, 0.8, 0.2, 1], delay: index * 0.06 },
   )
 }
 
@@ -63,6 +62,7 @@ export const revealDirective: Directive<HTMLElement, number | undefined> = {
   mounted(el, binding) {
     if (prefersReducedMotion()) return
     el.style.opacity = '0'
+    el.style.transformPerspective = '1200px'
     pending.set(el, { index: Math.min(binding.value ?? 0, 8), pop: !!binding.modifiers.pop })
     getObserver().observe(el)
   },
