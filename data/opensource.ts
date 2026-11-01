@@ -105,6 +105,15 @@ export const updatedAt = '2026-11-01'
 export const pullRequests: PullRequest[] = [
   {
     "repo": "symfony/symfony",
+    "number": 67699,
+    "title": "[Form] Validate the collection entries that keep_as_list doesn't need to renumber",
+    "url": "https://github.com/symfony/symfony/pull/67699",
+    "state": "merged",
+    "mergedAt": "2026-11-01T13:27:13Z",
+    "createdAt": "2026-10-31T20:52:02Z"
+  },
+  {
+    "repo": "symfony/symfony",
     "number": 67712,
     "title": "[Messenger] Stop keeping alive the messages that a listener prevents the worker from handling",
     "url": "https://github.com/symfony/symfony/pull/67712",
@@ -239,13 +248,13 @@ export const pullRequests: PullRequest[] = [
     "createdAt": "2026-10-31T20:57:25Z"
   },
   {
-    "repo": "symfony/symfony",
-    "number": 67699,
-    "title": "[Form] Validate the entries renumbered by the keep_as_list option of CollectionType",
-    "url": "https://github.com/symfony/symfony/pull/67699",
+    "repo": "api-platform/core",
+    "number": 8783,
+    "title": "fix(laravel): filter on every value given to EqualsFilter",
+    "url": "https://github.com/api-platform/core/pull/8783",
     "state": "open",
     "mergedAt": null,
-    "createdAt": "2026-10-31T20:52:02Z"
+    "createdAt": "2026-11-01T11:47:14Z"
   },
   {
     "repo": "api-platform/core",
