@@ -1,13 +1,13 @@
 <template>
-  <div class="container lost">
+  <div class="container lost" data-build-stage>
     <div class="running-head mono" aria-hidden="true">
       <span>Ben Macha Ali — {{ $t('book.volume') }}</span>
       <span>404</span>
     </div>
-    <span class="eyebrow eyebrow--red">Erratum · 404</span>
-    <h1 class="lost__title">{{ $t('404.title') }}</h1>
-    <p class="lead">{{ $t('404.description') }}</p>
-    <NuxtLink :to="localePath('/')" class="btn btn--primary" @click="$emit('home')"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('404.back') }}</NuxtLink>
+    <span class="eyebrow eyebrow--red" data-build>Erratum · 404</span>
+    <h1 class="lost__title" data-build data-build-kind="text">{{ $t('404.title') }}</h1>
+    <p class="lead" data-build>{{ $t('404.description') }}</p>
+    <NuxtLink :to="localePath('/')" class="btn btn--primary" data-build @click="$emit('home')"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('404.back') }}</NuxtLink>
   </div>
 </template>
 

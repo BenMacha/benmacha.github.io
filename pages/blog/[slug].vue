@@ -7,22 +7,22 @@
     <NuxtLink :to="localePath('/blog')" class="back"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('blog.backToBlog') }}</NuxtLink>
 
     <template v-if="article">
-      <header class="head">
-        <span class="badge mono" :style="{ '--cat': category.color }">{{ $t(`blog.categories.${category.key}`) }}</span>
-        <h1 class="title" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h1>
-        <div class="meta mono">
+      <header class="head" data-build-stage>
+        <span class="badge mono" data-build :style="{ '--cat': category.color }">{{ $t(`blog.categories.${category.key}`) }}</span>
+        <h1 class="title" data-build data-build-kind="text" :lang="article.lang" :dir="articleDir(article)">{{ article.title }}</h1>
+        <div class="meta mono" data-build>
           <span>{{ $t('blog.publishedOn') }} {{ article.date }}</span>
           <span>· {{ article.readTime }} {{ $t('blogUi.readTime') }}</span>
         </div>
-        <div class="tags">
+        <div class="tags" data-build>
           <span v-for="tag in article.tags" :key="tag" class="tag">#{{ tag }}</span>
         </div>
       </header>
 
       <!-- Article bodies are trusted, first-party HTML from data/articles/ -->
-      <article v-if="body" class="content" :lang="body.lang" :dir="articleDir(body)" v-html="body.html" />
+      <article v-if="body" class="content" data-build-stage data-build-split="6" :lang="body.lang" :dir="articleDir(body)" v-html="body.html" />
 
-      <nav class="pager">
+      <nav class="pager" data-build-stage data-build>
         <NuxtLink v-if="prev" :to="localePath(`/blog/${prev.slug}`)" class="pager__link card">
           <span class="pager__label mono"><span class="dir-arrow" aria-hidden="true">←</span> {{ $t('blog.previousArticle') }}</span>
           <span class="pager__title" :lang="prev.lang" :dir="articleDir(prev)">{{ prev.title }}</span>
@@ -36,6 +36,8 @@
     </template>
 
     <p v-else class="missing">{{ $t('blog.articleNotFound') }}</p>
+
+    <AgentsBuild />
   </div>
 </template>
 

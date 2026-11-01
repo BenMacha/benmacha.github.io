@@ -1,6 +1,6 @@
 <template>
-  <section v-if="sections.length" class="prose">
-    <div v-for="section in sections" :key="section.title" class="prose__section">
+  <section v-if="sections.length" class="prose" data-build-stage>
+    <div v-for="section in sections" :key="section.title" class="prose__section" data-build>
       <h2 class="prose__title">{{ section.title }}</h2>
       <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
     </div>

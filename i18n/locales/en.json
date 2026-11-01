@@ -523,9 +523,9 @@
     "toc": "Contents",
     "menu": "Open the contents",
     "preface": "// Preface",
-    "heroLead": "I design IT and AI products",
-    "heroAccent": "that run in production.",
-    "heroText": "IT & Generative AI Project Manager at ORPI, PHP/Symfony Tech Lead, founder of Pepprio. Ten years from Tunis to Paris, told like a technical manual: each chapter is one part of the machine.",
+    "heroLead": "Native PHP developer, then Symfony, React and Vue.js.",
+    "heroAccent": "Today, AI does the work of five, and I stay in control of the code.",
+    "heroText": "IT & Generative AI Project Manager at ORPI, PHP/Symfony Tech Lead, founder of Pepprio. No vibe coding: every generated line is reviewed, tested and understood before it reaches production. Ten years from Tunis to Paris, told like a technical manual.",
     "cv": "Read the CV (PDF)",
     "contact": "Contact me",
     "facts": {

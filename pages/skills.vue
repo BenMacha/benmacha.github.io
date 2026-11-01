@@ -2,8 +2,8 @@
   <div class="container page">
     <SectionTitle page :title="$t('skills.title')" :subtitle="$t('intro.skills')" />
 
-    <div class="grid" style="--min: 320px; gap: 20px">
-      <section v-for="(section, s) in skillSections" :key="section.key" v-reveal="s" class="bag card">
+    <div class="grid" style="--min: 320px; gap: 20px" data-build-stage>
+      <section v-for="(section, s) in skillSections" :key="section.key" v-reveal="s" class="bag card" data-build>
         <div class="bag__head">
           <span class="bag__num mono">2.{{ s + 1 }}</span>
           <h2 class="bag__title">{{ $t(`skills.${section.key}`) }}</h2>
@@ -16,6 +16,8 @@
     </div>
 
     <PageProse page="skills" />
+
+    <AgentsBuild />
   </div>
 </template>
 

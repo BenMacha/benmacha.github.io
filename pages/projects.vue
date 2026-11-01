@@ -2,8 +2,8 @@
   <div class="container page">
     <SectionTitle page :title="$t('projects.github.title')" :subtitle="$t('intro.projects')" />
 
-    <ol class="projects">
-      <li v-for="(project, i) in projects" :key="project.url" v-reveal="i" class="project card">
+    <ol class="projects" data-build-stage>
+      <li v-for="(project, i) in projects" :key="project.url" v-reveal="i" class="project card" data-build>
         <span class="project__num mono">3.{{ i + 1 }}</span>
         <h2 class="project__name">{{ project.name }}</h2>
         <p class="project__desc">{{ project.description }}</p>
@@ -16,6 +16,8 @@
     </ol>
 
     <PageProse page="projects" />
+
+    <AgentsBuild />
   </div>
 </template>
 
