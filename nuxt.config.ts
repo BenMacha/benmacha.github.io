@@ -118,6 +118,8 @@ export default defineNuxtConfig({
   },
 
   sitemap: {
+    // Plain XML: browsers are dropping XSLT, which the styled sitemap view relies on
+    xsl: false,
     excludeAppSources: true,
     autoI18n: false,
     urls: sitemapUrls,

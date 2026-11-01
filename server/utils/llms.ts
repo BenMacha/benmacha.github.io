@@ -4,6 +4,7 @@ import ar from '~/i18n/locales/ar.json'
 import { blogArticles } from '~/data/blog'
 import { skillSections } from '~/data/skills'
 import { socialLinks } from '~/data/site'
+import { contributionsByProject, mergedCount, openCount, packages, securityNotes, updatedAt } from '~/data/opensource'
 
 /**
  * Builds the Markdown profiles for AI assistants and answer engines
@@ -205,6 +206,55 @@ function experiences(lang: LlmsLang, full: boolean): string {
   return `## ${t.headings.experience}\n\n${lines.join('\n\n')}`
 }
 
+const OPEN_SOURCE = {
+  "fr": {
+    "heading": "Contributions open source",
+    "intro": "{m} pull requests fusionnées et {o} en revue dans des projets open source (données au {d}).",
+    "merged": "fusionnées",
+    "open": "en revue",
+    "packages": "Packages publiés sur Packagist",
+    "downloads": "téléchargements",
+    "security": "Signalement de sécurité"
+  },
+  "en": {
+    "heading": "Open source contributions",
+    "intro": "{m} merged pull requests and {o} under review in open source projects (data as of {d}).",
+    "merged": "merged",
+    "open": "under review",
+    "packages": "Packages published on Packagist",
+    "downloads": "downloads",
+    "security": "Security report"
+  },
+  "ar": {
+    "heading": "المساهمات في المصادر المفتوحة",
+    "intro": "{m} طلب دمج مقبول و{o} قيد المراجعة في مشاريع مفتوحة المصدر (البيانات بتاريخ {d}).",
+    "merged": "مقبولة",
+    "open": "قيد المراجعة",
+    "packages": "حزم منشورة على Packagist",
+    "downloads": "تنزيل",
+    "security": "بلاغ أمني"
+  }
+} as const
+
+function openSource(lang: LlmsLang, full: boolean): string {
+  const t = OPEN_SOURCE[lang]
+  const intro = t.intro.replace('{m}', String(mergedCount)).replace('{o}', String(openCount)).replace('{d}', updatedAt)
+  const pr = (p: { title: string, url: string, number: number }) => `  - [#${p.number}](${p.url}) ${p.title}`
+  const sections = contributionsByProject
+    .filter(project => project.merged.length + project.open.length > 0)
+    .map((project) => {
+      const lines = [`### [${project.name}](${project.url}) — ${project.merged.length} ${t.merged}, ${project.open.length} ${t.open}`]
+      if (project.merged.length) lines.push(`- ${t.merged}:`, ...project.merged.map(pr))
+      if (project.open.length) lines.push(`- ${t.open}:`, ...project.open.map(pr))
+      const notes = securityNotes.filter(n => n.project === project.id).map(n => `- ${t.security}: [${n.label}](${n.url})`)
+      return [...lines, ...notes].join('\n')
+    })
+  const pkgs = full && packages.length
+    ? [`### ${t.packages}\n\n${packages.map(p => `- [${p.name}](${p.url}): ${p.description} (${p.downloads} ${t.downloads})`).join('\n')}`]
+    : []
+  return [`## ${t.heading}`, intro, ...sections, ...pkgs].join('\n\n')
+}
+
 function skills(lang: LlmsLang): string {
   const labels = messages[lang].skills as Record<string, string>
   return `## ${TEXT[lang].headings.skills}\n\n${skillSections.map(s => `- ${labels[s.key]}: ${s.skills.join(', ')}`).join('\n')}`
@@ -249,6 +299,7 @@ export function buildLlms(lang: LlmsLang, full: boolean): string {
     t.pepprio,
     t.faq,
     experiences(lang, full),
+    openSource(lang, full),
     skills(lang),
     ...(full ? [education(lang), projects(lang)] : []),
     pages(lang, full),
