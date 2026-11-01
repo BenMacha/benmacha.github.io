@@ -9,7 +9,7 @@ export const socialLinks = {
 /** Cookie remembering the language chosen by the visitor. */
 export const LOCALE_COOKIE = 'i18n_locale'
 
-export const navPages = ['experience', 'skills', 'projects', 'education', 'blog'] as const
+export const navPages = ['experience', 'skills', 'projects', 'open-source', 'education', 'blog'] as const
 
 export type BlogCategory = 'Docker' | 'Linux' | 'PHP' | 'DevOps'
 

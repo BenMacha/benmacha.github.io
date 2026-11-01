@@ -4,7 +4,7 @@ const SITE_URL = 'https://benmacha.tn'
 const DEFAULT_LOCALE = 'fr'
 const LOCALES = ['fr', 'en', 'ar'] as const
 
-const pagePaths = ['/', '/experience', '/skills', '/projects', '/education', '/blog']
+const pagePaths = ['/', '/experience', '/skills', '/projects', '/open-source', '/education', '/blog']
 const articlePaths = blogArticles.map(article => `/blog/${article.slug}`)
 
 /** '/blog' in 'en' → '/en/blog'; the default locale has no prefix. */
@@ -53,7 +53,7 @@ export default defineNuxtConfig({
     '@nuxtjs/sitemap',
   ],
 
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/anatomy.css'],
 
   // Title, description, canonical, hreflang and Open Graph are set per page (usePageSeo + layout)
   app: {

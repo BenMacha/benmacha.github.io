@@ -27,10 +27,11 @@ Personal portfolio website built with **Nuxt 3**, featuring a retro pixel-art / 
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — hero, experience, skills, projects, blog, education, arcade, contact |
+| `/` | Home — hero, experience, skills, projects, open source, blog, education, arcade, contact |
 | `/experience` | Work experience as a level map |
 | `/skills` | Skills inventory by category |
 | `/projects` | Open source projects ("?" blocks) |
+| `/open-source` | Open source contributions: pull requests by project, Packagist packages and organizations, drawn as isometric figures |
 | `/education` | Education, internships and interests |
 | `/blog` | Technical blog, `/blog/:slug` for articles |
 
@@ -55,19 +56,32 @@ npm run generate
 npm run preview
 ```
 
+## Open source data
+
+`data/opensource.ts` holds the pull requests, the Packagist packages and the organizations shown on `/open-source`. Refresh its generated block from the GitHub search API and Packagist (Node built-ins only, the token is optional and only raises the rate limit):
+
+```bash
+GITHUB_TOKEN=$(gh auth token) node scripts/update-opensource.mjs
+```
+
+The repositories and packages it reads are listed at the top of the script. The figures on the page (pull request machine, package shelf, organizations) are SVG strings built at render time in `utils/anatomy/` with the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy) (MIT, see `utils/anatomy/NOTICE`), coloured by `assets/css/anatomy.css`.
+
 ## Project Structure
 
 ```
 ├── assets/css/          # Design tokens and shared pixel primitives
 ├── components/          # Layout, sections and UI components
-│   └── arcade/          # Mini-games and their cabinet frame
+│   ├── arcade/          # Mini-games and their cabinet frame
+│   └── open-source/     # Open source figures, ledger and lists
 ├── composables/         # Resume data, blog helpers, arcade plumbing, Motion effects
-├── data/                # Blog articles, skills, site links
+├── data/                # Blog articles, skills, site links, open source contributions
 ├── i18n/locales/        # Translation files (fr.json, en.json, ar.json)
 ├── layouts/             # Default layout (header, footer, progress bar)
 ├── pages/               # File-based routing
 ├── plugins/             # Motion directives (v-reveal, v-lift, v-wiggle)
 ├── public/              # Static assets (CV.pdf, images)
+├── scripts/             # update-opensource.mjs (refreshes data/opensource.ts)
+├── utils/anatomy/       # Isometric figure builders (vendored Anatomy kit)
 └── nuxt.config.ts       # Nuxt configuration
 ```
 
