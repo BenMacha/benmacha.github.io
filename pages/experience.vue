@@ -28,7 +28,11 @@
             <template v-if="railOf(job).branch">
               <div class="rail__branch" :class="`rail__branch--${railOf(job).branch}`" />
               <div v-if="hasElbow(job)" class="rail__elbow" :class="`rail__elbow--${railOf(job).branch}`" />
-              <div v-if="railOf(job).node === 'branch' || railOf(job).branch === 'open'" class="rail__blip" />
+              <div
+                v-if="railOf(job).node === 'branch' || ['open', 'endBelowHead'].includes(railOf(job).branch ?? '')"
+                class="rail__blip"
+                :class="`rail__blip--${railOf(job).branch}`"
+              />
               <span v-if="railOf(job).label" class="rail__label"><span>{{ $t(railOf(job).label!) }}</span></span>
             </template>
           </div>
@@ -162,6 +166,7 @@ usePageSeo({
   --blip-h: 22px;
   --elbow-y: 1px;
   --elbow-h: 26px;
+  --cap-y: 72px;
   --pipe-branch: var(--coin);
 }
 
@@ -224,6 +229,12 @@ usePageSeo({
 
 .rail__branch--mergeAtHead {
   top: var(--elbow-y);
+}
+
+/* A closed freelance branch: capped below the pipe head, before the next contract starts */
+.rail__branch--endBelowHead,
+.rail__blip--endBelowHead {
+  top: var(--cap-y);
 }
 
 .rail__branch--forkAtHead {
