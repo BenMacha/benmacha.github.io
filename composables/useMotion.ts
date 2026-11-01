@@ -99,6 +99,8 @@ export const drawDirective: Directive<HTMLElement> = {
     const io = new IntersectionObserver((entries) => {
       if (!entries.some(e => e.isIntersecting)) return
       io.disconnect()
+      // A graph the agents build intro has taken over is drawn by that intro
+      if (el.closest('.ab-armed') && !el.classList.contains('ab-built')) return
       el.classList.add('is-drawn')
     }, { rootMargin: '0px 0px -15% 0px' })
     io.observe(el)

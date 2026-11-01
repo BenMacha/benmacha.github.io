@@ -584,5 +584,13 @@
     "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris, raconté comme un graphe git. La branche main porte les postes salariés ; les branches freelance et Pepprio, ma société, en partent à leur date de début et se ferment à la fin de la mission. Chaque poste est un commit, le plus récent en haut.",
     "cdiMarker": "CDI",
     "contents": "Contenu du chapitre"
+  },
+  "agentsBuild": {
+    "label": "Construction de la page",
+    "building": "{agents} agents · {built}/{total} calques · construction…",
+    "done": "{agents} agents · {total} calques · construit en {s} s",
+    "skipped": "{agents} agents · {total} calques · construit",
+    "skip": "Passer",
+    "replay": "Rejouer"
   }
 }

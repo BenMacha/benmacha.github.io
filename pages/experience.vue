@@ -10,10 +10,10 @@
 
     <!-- The career as a git graph (GitKraken-style): one lane per kind of contract, one commit per job -->
     <ol class="graph-list">
-      <li v-for="(job, i) in experiences" :key="job.company" class="row" :style="laneVars">
-        <span class="row__year mono" aria-hidden="true">{{ startYear(job.period) }}</span>
+      <li v-for="(job, i) in experiences" :key="job.company" class="row" :style="laneVars" data-build-stage>
+        <span class="row__year mono" aria-hidden="true" data-build>{{ startYear(job.period) }}</span>
 
-        <div class="row__refs" aria-hidden="true">
+        <div class="row__refs" aria-hidden="true" data-build>
           <span class="row__year-inline mono">{{ startYear(job.period) }}</span>
           <span v-for="ref in rowOf(job).refs" :key="ref.text" class="ref mono" :class="[`ref--${ref.kind}`, `ref--${ref.lane}`]">{{ ref.text }}</span>
           <span v-for="ref in rowOf(job).endRefs ?? []" :key="ref.text" class="ref-end">
@@ -22,7 +22,7 @@
           </span>
         </div>
 
-        <div v-draw class="graph" aria-hidden="true">
+        <div v-draw class="graph" aria-hidden="true" data-build data-build-kind="draw">
           <template v-for="(shape, lane) in rowOf(job).lanes" :key="lane">
             <span v-if="shape !== 'forkFromNode'" class="lane" :class="[`lane--${lane}`, `shape--${shape}`]" />
             <svg v-else class="fork" :class="`fork--${lane}`" :viewBox="`0 0 ${GW} ${NODE_Y}`" preserveAspectRatio="none">
@@ -40,7 +40,7 @@
           </span>
         </div>
 
-        <article v-reveal class="job">
+        <article v-reveal class="job" data-build>
           <div class="job__head">
             <h2 class="job__role">{{ job.role }}</h2>
             <span class="job__commit mono"><span class="job__hash">{{ commitHash(job.company) }}</span> · {{ job.period }}</span>
@@ -77,7 +77,7 @@
       </li>
     </ol>
 
-    <aside class="see-also card">
+    <aside class="see-also card" data-build-stage data-build>
       <div class="see-also__text">
         <span class="eyebrow eyebrow--green">{{ $t('book.annexA.seeAlso') }}</span>
         <p class="see-also__title">{{ $t('book.annexA.chapterTitle', { n: symfonyMerged }) }}</p>
@@ -85,6 +85,8 @@
       </div>
       <NuxtLink :to="localePath('/open-source')" class="btn btn--green">{{ $t('book.annexA.cta') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
     </aside>
+
+    <AgentsBuild />
   </div>
 </template>
 
