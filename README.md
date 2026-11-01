@@ -64,6 +64,8 @@ npm run preview
 GITHUB_TOKEN=$(gh auth token) node scripts/update-opensource.mjs
 ```
 
+The workflow `.github/workflows/update-opensource.yml` runs it every day at 05:00 UTC (and on demand from the Actions tab) and commits `data/opensource.ts` to `master` when something changed, which redeploys the site.
+
 The repositories and packages it reads are listed at the top of the script. The figures on the page (pull request machine, package shelf, organizations) are SVG strings built at render time in `utils/anatomy/` with the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy) (MIT, see `utils/anatomy/NOTICE`), coloured by `assets/css/anatomy.css`.
 
 ## Project Structure
