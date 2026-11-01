@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "cv": "python3 scripts/cv/build.py"
   },
   "dependencies": {
     "motion": "^12.43.0",
