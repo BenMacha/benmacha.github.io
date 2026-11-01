@@ -514,12 +514,12 @@
     "mergedShare": "{n} % fusionnées",
     "packages": "paquets",
     "downloads": "installations",
-    "fig": "Fig {n}",
+    "fig": "Fig. {n}",
     "machine": {
       "title": "Machine à pull requests",
       "hint": "Survolez un projet",
-      "caption": "Chaque pull request sort du tuyau sous la forme d'un bloc « ? ». Le tampon de revue le frappe, le bloc donne une pièce, et les pull requests fusionnées s'empilent en pièces dans la caisse de briques ; celles encore en revue attendent dans le bac. Le cadran indique la part fusionnée.",
-      "label": "Une machine à pull requests isométrique sur un établi. Des blocs « ? » représentant les pull requests sortent d'un tuyau vert sur un convoyeur et passent sous un tampon de revue qui les change en pièces. {merged} pull requests fusionnées sont des pièces dans la caisse de briques et {open} attendent en revue dans le bac. Le cadran indique {share} % fusionnées."
+      "caption": "Chaque pull request sort de la trémie sous la forme d'un colis. Le tampon de revue l'approuve et le colis reçoit une étiquette verte ; les pull requests fusionnées s'empilent en plaques dans la caisse, celles encore en revue attendent dans le bac. Le cadran indique la part fusionnée.",
+      "label": "Une machine à pull requests isométrique sur un établi, en dessin au trait. Des colis représentant les pull requests sortent d'une trémie sur un convoyeur et passent sous un tampon de revue qui les approuve. {merged} pull requests fusionnées sont empilées dans la caisse et {open} attendent en revue dans le bac. Le cadran indique {share} % fusionnées."
     },
     "byProject": "Pull requests par projet",
     "repo": "Dépôt",
@@ -533,8 +533,8 @@
       "title": "Étagère des paquets",
       "hint": "Survolez une caisse",
       "heading": "Paquets sur Packagist",
-      "caption": "Une caisse par bundle Symfony publié sur Packagist. Les pièces de chaque caisse sont proportionnelles à ses installations, et le compteur dessous donne le total Packagist.",
-      "label": "Une étagère d'atelier isométrique avec {count} caisses en bois, une par paquet Packagist, chacune avec une pile de pièces et un compteur d'installations : {list}."
+      "caption": "Une caisse par bundle Symfony publié sur Packagist. La pile de plaques de chaque caisse est proportionnelle à ses installations, et le compteur dessous donne le total Packagist.",
+      "label": "Une étagère d'atelier isométrique avec {count} caisses, une par paquet Packagist, chacune avec une pile de plaques et un compteur d'installations : {list}."
     },
     "pkg": {
       "diagramBundle": "Diagramme interactif des entités Doctrine pour Symfony : une API JSON et un studio React utilisables depuis Twig, JS, React et Vue.",
@@ -547,7 +547,7 @@
       "hint": "Survolez un bâtiment",
       "heading": "Organisations",
       "caption": "Le restaurant de Pepprio, l'agence immobilière de Pignelle et mon propre atelier, où sont fabriqués les bundles ci-dessus.",
-      "label": "Trois petits bâtiments isométriques sur un bloc de terre et d'herbe : le restaurant Pepprio avec un store rayé, l'agence immobilière Pignelle avec un toit rouge et un panneau à vendre, et l'atelier en briques de Ben Macha avec un bloc « ? » en enseigne et un tuyau vert.",
+      "label": "Trois petits bâtiments isométriques en dessin au trait sur un socle : le restaurant Pepprio avec un store rayé, l'agence immobilière Pignelle avec un toit et un panneau à vendre, et l'atelier de Ben Macha avec une enseigne sur le toit.",
       "pepprio": "Pepprio (TastyBox) : gestion des commandes pour les restaurants.",
       "pignelle": "Pignelle : outils pour les agences immobilières : estimation, gestion des biens, notifications et signature électronique.",
       "benmacha": "Mon GitHub personnel : bundles Symfony, SDK PHP et expériences."

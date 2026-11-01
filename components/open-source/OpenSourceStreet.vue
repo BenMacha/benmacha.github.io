@@ -27,7 +27,7 @@
         @pointerenter="focus = org.id"
         @pointerleave="focus = null"
       >
-        <h3 class="org__name pixel">{{ org.name }}</h3>
+        <h3 class="org__name">{{ org.name }}</h3>
         <p class="org__desc">{{ $t(`openSource.orgs.${org.key}`) }}</p>
         <div class="org__links">
           <a
@@ -90,13 +90,13 @@ const readout = computed(() => {
 
 .org__name {
   margin: 0;
-  font-size: 12px;
-  color: var(--accent);
+  font-size: 22px;
+  color: var(--ink);
 }
 
 .org__desc {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.65;
   color: var(--muted);
 }
@@ -107,7 +107,7 @@ const readout = computed(() => {
   gap: 6px;
   margin-top: auto;
   padding-top: 12px;
-  border-top: 3px dotted var(--border);
+  border-top: 1px solid var(--rule);
   font-size: 12px;
   font-weight: 600;
   direction: ltr;

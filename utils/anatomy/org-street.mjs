@@ -1,7 +1,7 @@
-// The organizations: three small buildings on a grass-topped ground block, like a level map.
+// The organizations: three small buildings on a ground slab, drawn as line art.
 // Pepprio is a restaurant with a striped awning (restaurant order management), Pignelle a
 // real-estate agency under a red gable roof with a "for sale" board in the yard, and the
-// personal workshop is a brick garage with a roller door, a "?" block sign and a warp pipe.
+// personal workshop is a garage with a roller door and a box sign on the roof.
 //
 // orgStreet({ label }) → { svg, width, height }
 
@@ -29,7 +29,7 @@ export function orgStreet({ label = '' } = {}) {
 
   const windowOn = (face, at0, u0, z0, w, h, panes = 2) => {
     const frame = faceRect(face, at0, u0, z0, w, h, 0.6, 2)
-    const out = [`<g class="mt-sky"><path class="iso-glass" d="${poly(frame)}"/></g>`]
+    const out = [`<g class="mt-glass"><path class="iso-glass" d="${poly(frame)}"/></g>`]
     const lines = []
     const pt = (u, z) => (face === 'y' ? [u, at0, z] : [at0, -u, z])
     for (let i = 1; i < panes; i++) lines.push(k.segment(pt(u0 + (w / panes) * i, z0), pt(u0 + (w / panes) * i, z0 + h), P))
@@ -53,7 +53,7 @@ export function orgStreet({ label = '' } = {}) {
     const lines = []
     for (const z of [-GROUND_H + 4.5, -GROUND_H + 9]) lines.push(k.sideSeam(GROUND, z, P, 4))
     for (let x = GROUND.x + 12; x < GROUND.x + GROUND.w - 4; x += 16) lines.push(k.segment([x, GROUND.y + GROUND.d, -GROUND_H + 4.5], [x, GROUND.y + GROUND.d, -GROUND_H + 9], P))
-    out.push(`<g class="mt-grass">${S(slab(GROUND, -GROUND_H, GROUND_H, 4, 1), { tone: 'hi', crease: 'mid', inner: L(lines.join(''), { tone: 'lo' }) })}</g>`)
+    out.push(`<g class="mt-ground">${S(slab(GROUND, -GROUND_H, GROUND_H, 4, 1), { tone: 'hi', crease: 'mid', inner: L(lines.join(''), { tone: 'lo' }) })}</g>`)
     // a stone path running in front of the three doors
     const path = { x: GROUND.x + 16, y: 36, w: GROUND.w - 32, d: 18, r: 2 }
     out.push(`<path class="iso-path" d="${k.planOutline(path, 0, P, 3)}"/>`)
@@ -70,7 +70,7 @@ export function orgStreet({ label = '' } = {}) {
   }
 
   function bush(x, y, r = 7) {
-    return `<g class="mt-pipe">${S(k.cylinder(x, y, r, 0, r * 0.9, P, 20, r * 0.35), { tone: 'hi', crease: 'lo' })}${S(k.cylinder(x - r * 0.15, y - r * 0.1, r * 0.62, r * 0.9, r * 0.6, P, 18, r * 0.3), { tone: 'hi', crease: 'lo' })}</g>`
+    return `<g class="mt-plant">${S(k.cylinder(x, y, r, 0, r * 0.9, P, 20, r * 0.35), { tone: 'hi', crease: 'lo' })}${S(k.cylinder(x - r * 0.15, y - r * 0.1, r * 0.62, r * 0.9, r * 0.6, P, 18, r * 0.3), { tone: 'hi', crease: 'lo' })}</g>`
   }
 
   // Pepprio: a restaurant with a flat roof, a parapet, a striped awning and a chimney.
@@ -85,21 +85,21 @@ export function orgStreet({ label = '' } = {}) {
       windowOn('y', fy, b.x + 46, 8, 34, 16, 3),
       windowOn('x', fx, -(b.y + b.d - 14), 14, 24, 14, 2),
     ].join('')
-    out.push(`<g class="mt-wall">${S(slab(b, 0, REST_H, 1, 0.4), { tone: 'hi', crease: 'lo', inner })}</g>`)
+    out.push(`<g class="mt-box">${S(slab(b, 0, REST_H, 1, 0.4), { tone: 'hi', crease: 'lo', inner })}</g>`)
     // parapet and roof deck
     const deck = k.insetPlan(b, 3)
     out.push(`<path class="iso-roof" d="${k.planOutline(deck, REST_H, P, 1)}"/>`, L(k.planOutline(deck, REST_H, P, 1), { tone: 'mid' }))
-    out.push(`<g class="mt-wall">${S(slab({ x: b.x, y: b.y, w: b.w, d: 3, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}${S(slab({ x: b.x, y: b.y, w: 3, d: b.d, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}</g>`)
+    out.push(`<g class="mt-box">${S(slab({ x: b.x, y: b.y, w: b.w, d: 3, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}${S(slab({ x: b.x, y: b.y, w: 3, d: b.d, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}</g>`)
     // chimney with a vent cap
     const ch = { x: b.x + 14, y: b.y + 10, w: 10, d: 10, r: 0.4 }
-    out.push(`<g class="mt-brick">${S(slab(ch, REST_H, 16, 1, 0.3), { tone: 'hi', crease: 'lo', inner: L(k.sideSeam(ch, REST_H + 8, P, 1), { tone: 'lo' }) })}</g>`)
+    out.push(`<g class="mt-box">${S(slab(ch, REST_H, 16, 1, 0.3), { tone: 'hi', crease: 'lo', inner: L(k.sideSeam(ch, REST_H + 8, P, 1), { tone: 'lo' }) })}</g>`)
     out.push(S(slab(k.insetPlan(ch, -1.5), REST_H + 16, 2, 1, 0.3), { tone: 'mid' }))
     // roof sign: a board on two legs
     const sign = { x: b.x + 40, y: b.y + 24, w: 40, d: 3, r: 0.3 }
     for (const x of [sign.x + 6, sign.x + sign.w - 6]) out.push(S(slab({ x: x - 1, y: sign.y, w: 2, d: 2, r: 0 }, REST_H, 6, 1), { tone: 'mid' }))
     out.push(`<g class="mt-red">${S(slab(sign, REST_H + 6, 12, 1, 0.3), { tone: 'hi', crease: 'lo' })}</g>`)
     out.push(faceText('y', sign.y + sign.d, sign.x + sign.w / 2, REST_H + 9, 'EAT', { size: 7, cls: 'iso-glyph iso-glyph--light' }))
-    out.push(`<g class="mt-wall">${S(slab({ x: fx - 3, y: b.y, w: 3, d: b.d, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}${S(slab({ x: b.x, y: fy - 3, w: b.w, d: 3, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}</g>`)
+    out.push(`<g class="mt-box">${S(slab({ x: fx - 3, y: b.y, w: 3, d: b.d, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}${S(slab({ x: b.x, y: fy - 3, w: b.w, d: 3, r: 0.3 }, REST_H, 3, 1), { tone: 'hi', crease: 'lo' })}</g>`)
     // striped awning over the door and the window: a slanted plane, red and white
     const a0 = b.x + 18
     const a1 = b.x + b.w - 6
@@ -136,7 +136,7 @@ export function orgStreet({ label = '' } = {}) {
       windowOn('y', fy, b.x + 38, 10, 36, 15, 3),
       windowOn('x', fx, -(b.y + b.d - 12), 12, 20, 13, 2),
     ].join('')
-    out.push(`<g class="mt-wall">${S(slab(b, 0, AGENCY_H, 1, 0.4), { tone: 'hi', crease: 'lo', inner })}</g>`)
+    out.push(`<g class="mt-box">${S(slab(b, 0, AGENCY_H, 1, 0.4), { tone: 'hi', crease: 'lo', inner })}</g>`)
     // gable roof, ridge along x, eaves overhanging by 4
     const o = 4
     const x0 = b.x - o
@@ -147,9 +147,9 @@ export function orgStreet({ label = '' } = {}) {
     const ze = AGENCY_H - 2
     const zr = AGENCY_H + ROOF_H
     // gable wall on the +x face (triangle above the wall top)
-    out.push(`<g class="mt-wall"><path class="iso-shade" data-shade="2" d="${poly([[fx, b.y, AGENCY_H], [fx, fy, AGENCY_H], [fx, ym, zr - 2]])}"/></g>`)
+    out.push(`<g class="mt-box"><path class="iso-shade" data-shade="2" d="${poly([[fx, b.y, AGENCY_H], [fx, fy, AGENCY_H], [fx, ym, zr - 2]])}"/></g>`)
     const vent = faceRect('x', fx, -(ym + 4), AGENCY_H + 5, 8, 8, 4, 6)
-    out.push(`<g class="mt-sky"><path class="iso-glass" d="${poly(vent)}"/></g><path class="iso-line" data-tone="hi" d="${poly(vent)}"/>`)
+    out.push(`<g class="mt-glass"><path class="iso-glass" d="${poly(vent)}"/></g><path class="iso-line" data-tone="hi" d="${poly(vent)}"/>`)
     out.push(L(poly([[fx, b.y, AGENCY_H], [fx, ym, zr - 2], [fx, fy, AGENCY_H]], false), { tone: 'hi' }))
     // back slope then front slope
     out.push(`<g class="mt-red"><path class="iso-shade" data-shade="1" d="${poly([[x0, y0, ze], [x1, y0, ze], [x1, ym, zr], [x0, ym, zr]])}"/>`)
@@ -169,18 +169,18 @@ export function orgStreet({ label = '' } = {}) {
     // chimney through the back slope
     const ch = { x: b.x + 56, y: b.y + 8, w: 9, d: 9, r: 0.3 }
     const chz = ze + ((ch.y + ch.d / 2 - y0) / (ym - y0)) * (zr - ze)
-    out.push(`<g class="mt-brick">${S(slab(ch, chz - 2, zr - chz + 10, 1, 0.3), { tone: 'hi', crease: 'lo' })}</g>`)
+    out.push(`<g class="mt-box">${S(slab(ch, chz - 2, zr - chz + 10, 1, 0.3), { tone: 'hi', crease: 'lo' })}</g>`)
     // "for sale" board on a post in the yard
     const sx = b.x + 4
     const sy = fy + 14
     out.push(S(slab({ x: sx - 1, y: sy - 1, w: 2, d: 2, r: 0 }, 0, 26, 1), { tone: 'mid' }))
     out.push(S(slab({ x: sx - 1, y: sy - 1, w: 16, d: 2, r: 0 }, 24, 2, 1), { tone: 'mid' }))
-    out.push(`<g class="mt-q">${S(slab({ x: sx + 3, y: sy - 0.6, w: 12, d: 1.2, r: 0 }, 14, 9, 1), { tone: 'hi', crease: 'lo' })}</g>`)
+    out.push(`<g class="mt-green">${S(slab({ x: sx + 3, y: sy - 0.6, w: 12, d: 1.2, r: 0 }, 14, 9, 1), { tone: 'hi', crease: 'lo' })}</g>`)
     out.push(faceText('y', sy + 0.6, sx + 9, 16.2, '$', { size: 6.5 }))
     return out.join('')
   }
 
-  // The personal workshop: a brick garage with a roller door, a "?" block sign and a warp pipe.
+  // The personal workshop: a garage with a roller door and a box sign on the roof.
   function workshop() {
     const b = SHOP
     const fy = b.y + b.d
@@ -196,25 +196,21 @@ export function orgStreet({ label = '' } = {}) {
     for (let z = 3; z < doorH; z += 3) slats.push(k.segment([doorU, fy, z], [doorU + doorW, fy, z], P))
     const inner = [
       L(courses.join(''), { tone: 'lo' }),
-      `<g class="mt-wall"><path class="iso-shade" data-shade="3" d="${poly(rd)}"/></g>`,
+      `<g class="mt-box"><path class="iso-shade" data-shade="3" d="${poly(rd)}"/></g>`,
       L(slats.join(''), { tone: 'mid' }),
       `<path class="iso-line" data-tone="hi" d="${poly(rd)}"/>`,
       door('y', fy, b.x + 74, 13, 22),
       windowOn('x', fx, -(b.y + b.d - 12), 16, 30, 13, 3),
     ].join('')
-    out.push(`<g class="mt-brick">${S(slab(b, 0, SHOP_H, 1, 0.4), { tone: 'hi', crease: 'lo', inner })}</g>`)
+    out.push(`<g class="mt-box">${S(slab(b, 0, SHOP_H, 1, 0.4), { tone: 'hi', crease: 'lo', inner })}</g>`)
     // flat roof with a skylight and the "?" block sign
     const deck = k.insetPlan(b, 2.5)
     out.push(`<path class="iso-roof" d="${k.planOutline(deck, SHOP_H, P, 1)}"/>`, L(k.planOutline(deck, SHOP_H, P, 1), { tone: 'mid' }))
     const sky = { x: b.x + 14, y: b.y + 12, w: 22, d: 16, r: 0.4 }
     out.push(S(slab(sky, SHOP_H, 3, 1, 0.3), { tone: 'mid' }))
-    out.push(`<g class="mt-sky"><path class="iso-glass" d="${k.planOutline(k.insetPlan(sky, 2), SHOP_H + 3, P, 1)}"/></g>`)
+    out.push(`<g class="mt-glass"><path class="iso-glass" d="${k.planOutline(k.insetPlan(sky, 2), SHOP_H + 3, P, 1)}"/></g>`)
     out.push(S(slab({ x: b.x + 66, y: b.y + 30, w: 4, d: 4, r: 0 }, SHOP_H, 6, 1), { tone: 'mid' }))
-    out.push(block([b.x + 68, b.y + 32, SHOP_H + 6], { w: 20, d: 20, h: 18 }, 'q'))
-    // warp pipe beside the garage
-    const [px, py] = [fx + 16, b.y + 20]
-    out.push(halo({ x: px - 12, y: py - 12, w: 24, d: 24, r: 12 }, 0, 2, 's'))
-    out.push(`<g class="mt-pipe">${S(k.cylinder(px, py, 9, 0, 22, P, 32), { tone: 'hi', crease: 'none', inner: L(k.knurl(px, py, 9, 0, 22, 6, P, 0.6), { tone: 'faint' }) })}${S(k.cylinder(px, py, 11.5, 22, 7, P, 32, 0.5), { tone: 'hi', crease: 'lo' })}<path class="iso-hole" d="${k.ring(px, py, 8.5, 29, P, 32)}"/></g>`)
+    out.push(block([b.x + 68, b.y + 32, SHOP_H + 6], { w: 20, d: 20, h: 18 }, 'used'))
     return out.join('')
   }
 

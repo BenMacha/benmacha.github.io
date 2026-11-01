@@ -1,9 +1,9 @@
-// The pull request machine: an isometric bench where "?" blocks (pull requests) drop out of
-// a warp pipe onto an indexing conveyor and pass under a review stamp. The stamp hits each
-// block, the block turns into a used block and pays a coin. Merged pull requests are the
-// coins piled in the brick crate; pull requests still under review wait as "?" blocks in the
-// holding tray. The dial on the station reads the share merged, and two counters give the
-// true totals (the crate and the tray draw at most 12 pieces each).
+// The pull request machine: an isometric bench drawn as a line drawing, where parcels (pull
+// requests) drop out of a hopper onto an indexing conveyor and pass under a review stamp. The
+// stamp approves each parcel, which gets a green label. Merged pull requests are the stacks of
+// plates in the crate; pull requests still under review wait as parcels in the holding tray.
+// The dial on the station reads the share merged, and two counters give the true totals (the
+// crate and the tray draw at most 12 pieces each).
 //
 // prMachine({ projects: [{ id, merged, open }], idPrefix }) → { svg, width, height }
 
@@ -39,9 +39,9 @@ export function prMachine({ projects, idPrefix = 'prm', label = '' }) {
   const PLINTH_H = 44
   const PIPE = [PLINTH.x + PLINTH.w / 2, PLINTH.y + PLINTH.d / 2]
   const PIPE_R = 19
-  const PIPE_TOP = 74
+  const PIPE_TOP = PLINTH_H + 20
   const LIP_R = 23
-  const LIP_H = 10
+  const LIP_H = 0
 
   const POST_R = 3.6
   const POSTS = [[STATION, BELT_Y - 31], [STATION, BELT_Y + 29]]
@@ -115,17 +115,16 @@ export function prMachine({ projects, idPrefix = 'prm', label = '' }) {
     const fx = body.x + body.w
     const slot = faceRect('x', fx, -(BELT_Y + 15), BELT_TOP - 1, 30, CUBE.h + 3, 1.5)
     out.push(voidPath(poly(slot)), `<path class="iso-line" data-tone="lo" d="${poly(slot)}"/>`)
-    // warp pipe: flange ring, body, lip, dark mouth
-    const [px, py] = PIPE
-    out.push(S(k.cylinder(px, py, PIPE_R + 3, PLINTH_H, 2, P, 40, 0.4), { tone: 'mid' }))
-    out.push(D([0, 1, 2, 3, 4, 5].map(i => at([px + Math.cos(i * Math.PI / 3 + 0.3) * (PIPE_R + 1.6), py + Math.sin(i * Math.PI / 3 + 0.3) * (PIPE_R + 1.6), PLINTH_H + 2])), { size: 0.45 }))
-    const shine = k.knurl(px, py, PIPE_R, PLINTH_H + 2, PIPE_TOP, 7, P, 0.6)
-    out.push(`<g class="mt-pipe">`)
-    out.push(S(k.cylinder(px, py, PIPE_R, PLINTH_H + 2, PIPE_TOP - PLINTH_H - 2, P, 40), { tone: 'hi', crease: 'none', inner: L(shine, { tone: 'faint' }) }))
-    out.push(S(k.cylinder(px, py, LIP_R, PIPE_TOP, LIP_H, P, 40, 0.6), { tone: 'hi', crease: 'lo', inner: L(k.sideArc(px, py, LIP_R, PIPE_TOP + LIP_H / 2, P, 40), { tone: 'faint' }) }))
-    out.push(`<path class="iso-hole" d="${k.ring(px, py, LIP_R - 4, PIPE_TOP + LIP_H, P, 40)}"/>`)
-    out.push(L(k.ring(px, py, LIP_R - 4, PIPE_TOP + LIP_H, P, 40), { tone: 'lo' }))
-    out.push('</g>')
+    // hopper: two flared tiers and an open mouth
+    const tier1 = k.insetPlan(PLINTH, -2)
+    out.push(S(slab(tier1, PLINTH_H, 10, 3, 0.6), { tone: 'mid' }))
+    const tier2 = k.insetPlan(PLINTH, -7)
+    out.push(S(slab(tier2, PLINTH_H + 10, 10, 3, 0.8), { tone: 'mid' }))
+    const mouth = k.insetPlan(tier2, 4)
+    const zt = PLINTH_H + 20
+    out.push(`<path class="iso-hole" d="${k.planOutline(mouth, zt, P, 3)}"/>`)
+    out.push(L(k.planOutline(mouth, zt, P, 3), { tone: 'lo' }))
+    out.push(D(k.corners(tier2, 2.2).map(([x, y]) => at([x, y, zt])), { size: 0.45 }))
     return out.join('')
   }
 
@@ -235,7 +234,7 @@ export function prMachine({ projects, idPrefix = 'prm', label = '' }) {
       const a = FROM + (i / steps) * SHARE * SPAN
       arc.push([dx + Math.sin(a) * (DIAL_R - 3.4), dy - Math.cos(a) * (DIAL_R - 3.4), DIAL_TOP])
     }
-    if (SHARE > 0) out.push(`<path class="iso-line" style="stroke:var(--coin);stroke-width:2.2;stroke-linecap:butt" d="${poly(arc, false)}"/>`)
+    if (SHARE > 0) out.push(`<path class="iso-line" style="stroke:var(--green);stroke-width:2.2;stroke-linecap:butt" d="${poly(arc, false)}"/>`)
     const ticks = k.radialTicks(dx, dy, DIAL_R - 2, 20, 5, DIAL_TOP, [1.2, 2.6], P, FROM, SPAN)
     out.push(L(ticks.minor, { tone: 'lo' }), L(ticks.major, { tone: 'mid' }))
     const z0 = [Math.sin(FROM), -Math.cos(FROM)]
@@ -300,7 +299,7 @@ export function prMachine({ projects, idPrefix = 'prm', label = '' }) {
           else lines.push(k.segment([plan.x + plan.w, plan.y + u, z0], [plan.x + plan.w, plan.y + u, z1], P))
         }
       }
-      return `<g class="mt-brick">${S(slab(plan, 3, CRATE_H - 3, 2, 0.4), { tone: 'hi', crease: 'lo', inner: L(lines.join(''), { tone: 'lo' }) })}</g>`
+      return `<g class="mt-box">${S(slab(plan, 3, CRATE_H - 3, 2, 0.4), { tone: 'hi', crease: 'lo', inner: L(lines.join(''), { tone: 'lo' }) })}</g>`
     }
     out.push(wall({ x: c.x, y: c.y, w: c.w, d: w, r: 0.8 }, 'y'))
     out.push(wall({ x: c.x, y: c.y, w, d: c.d, r: 0.8 }, 'x'))
@@ -333,29 +332,9 @@ export function prMachine({ projects, idPrefix = 'prm', label = '' }) {
     out.push(S(k.cylinder(pad[0], pad[1], 6.5, PANEL_H, 1.2, P, 16), { tone: 'lo' }))
     out.push(S(slab({ x: pad[0] - 5, y: pad[1] - 1.6, w: 10, d: 3.2, r: 0.4 }, PANEL_H + 1.2, 1.8, 1), { tone: 'mid' }))
     out.push(S(slab({ x: pad[0] - 1.6, y: pad[1] - 5, w: 3.2, d: 10, r: 0.4 }, PANEL_H + 1.2, 1.8, 1), { tone: 'mid' }))
-    for (const [x, y, mat] of [[PANEL.x + 33, PANEL.y + 10, 'red'], [PANEL.x + 37, PANEL.y + 20, 'q']]) {
+    for (const [x, y, mat] of [[PANEL.x + 33, PANEL.y + 10, 'red'], [PANEL.x + 37, PANEL.y + 20, 'green']]) {
       out.push(S(k.cylinder(x, y, 4.2, PANEL_H, 1, P, 14), { tone: 'lo' }))
       out.push(`<g class="mt-${mat}">${S(k.cylinder(x, y, 3.2, PANEL_H + 1, 2.2, P, 14, 0.3), { tone: 'hi', crease: 'lo' })}</g>`)
-    }
-    return out.join('')
-  }
-
-  // End-of-level flagpole behind the crate: the flag is up when something got merged.
-  function flagpole() {
-    const out = []
-    const [x, y] = [244, -66]
-    const base = { x: x - 6, y: y - 6, w: 12, d: 12, r: 1 }
-    out.push(halo(base, 0, 2, 's'))
-    out.push(`<g class="mt-brick">${S(slab(base, 0, 8, 2, 0.4), { tone: 'hi', crease: 'lo' })}</g>`)
-    const POLE = 96
-    out.push(S(k.cylinder(x, y, 1.6, 8, POLE - 8, P, 12), { tone: 'mid', crease: 'none' }))
-    out.push(`<g class="mt-pipe">${S(k.cylinder(x, y, 3.4, POLE, 4.5, P, 16, 1.2), { tone: 'hi', crease: 'lo' })}</g>`)
-    if (MERGED > 0) {
-      const fy = y
-      const flag = [[x, fy, POLE - 4], [x - 26, fy, POLE - 13], [x, fy, POLE - 22]]
-      out.push(`<path class="${idPrefix}-flag" fill="#43b047" stroke="#0b2b10" stroke-width=".8" stroke-linejoin="round" d="${poly(flag)}"/>`)
-      const [fx, fy2] = at([x - 9, fy, POLE - 13])
-      out.push(`<circle cx="${fix(fx)}" cy="${fix(fy2)}" r="3" fill="#fff" stroke="#0b2b10" stroke-width=".6"/>`)
     }
     return out.join('')
   }
@@ -408,9 +387,6 @@ ${delays}
 .${idPrefix}-coin{animation:${idPrefix}-coin ${TAU}s ease-out infinite}
 }`
 
-  // The coin a hit block pays: a sprite-like upright coin above the stamp head.
-  const [cxs, cys] = at([STATION, BELT_Y + 14, HEAD_Z + 10])
-  const coinSprite = `<g class="${idPrefix}-coin"><ellipse cx="${fix(cxs)}" cy="${fix(cys)}" rx="4.4" ry="6.4" fill="var(--coin)" stroke="#1a1a2e" stroke-width="1"/><path d="M${fix(cxs)} ${fix(cys - 3.4)}v6.8" stroke="var(--coin-dark)" stroke-width="1.6"/></g>`
 
   // ---------------------------------------------------------------- assemble, back to front
   const art = [
@@ -429,8 +405,7 @@ ${delays}
     gland(),
     post(POSTS[1]),
     beam(),
-    coinSprite,
-    flagpole(),
+
     tray(),
     crate(),
     panel(),

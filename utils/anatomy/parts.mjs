@@ -1,7 +1,7 @@
-// Shared parts for the open source figures: helpers bound to one projection, plus the
-// Mario pieces (a "?" block, a hit block, a coin stack, a mechanical counter) built from
-// the Anatomy kit's solids. Every function returns an SVG string; nothing touches the DOM,
-// so the figures render the same on the server (prerender) and in the browser.
+// Shared parts for the open source figures: helpers bound to one projection, plus a parcel,
+// a stack of plates and a mechanical counter built from the Anatomy kit's solids. Every
+// function returns an SVG string; nothing touches the DOM, so the figures render the same on
+// the server (prerender) and in the browser.
 
 import * as k from './iso-kit.mjs'
 
@@ -39,58 +39,36 @@ export function toolkit(P) {
     return `<text class="${cls}" transform="${m}" font-size="${size}" text-anchor="${anchor}">${esc(text)}</text>`
   }
 
-  // A Mario block (cube) with its centre at (cx, cy) standing on z.
-  // kind "q": "?" block with rivets; "used": the brown block left after a hit; "brick".
+  // A parcel (a box with packing tape) with its centre at (cx, cy) standing on z.
+  // kind "q": waiting (neutral); "used": approved (green outline and label); "brick": plain box.
   function block([cx, cy, z], size, kind = 'q', extra = '') {
     const { w, d, h } = size
     const plan = { x: cx - w / 2, y: cy - d / 2, w, d, r: 0.4 }
     const top = z + h
-    const out = []
     const front = plan.y + d
-    const right = plan.x + w
-    const inner = []
-    if (kind === 'q' || kind === 'used') {
-      // rivets at the corners of both visible faces and of the top
-      const inset = 2.2
-      const rivets = [
-        [plan.x + inset, front, top - inset], [right - inset, front, top - inset],
-        [plan.x + inset, front, z + inset], [right - inset, front, z + inset],
-        [right, plan.y + inset, top - inset], [right, front - inset, top - inset],
-        [right, plan.y + inset, z + inset], [right, front - inset, z + inset],
-      ]
-      inner.push(D(rivets.map(at), { size: 0.55, tone: 'hi' }))
-    }
-    if (kind === 'brick') {
-      const rows = 3
-      const lines = []
-      for (let i = 1; i < rows; i++) {
-        const zr = z + (h / rows) * i
-        lines.push(k.segment([plan.x, front, zr], [right, front, zr], P), k.segment([right, plan.y, zr], [right, front, zr], P))
-      }
-      inner.push(L(lines.join(''), { tone: 'lo' }))
-    }
-    out.push(`<g class="mt-${kind}"${extra}>`)
-    out.push(S(slab(plan, z, h, 1, 0.5), { tone: 'hi', crease: 'lo', inner: inner.join('') }))
-    if (kind === 'q') {
-      out.push(faceText('y', front, cx, z + h * 0.24, '?', { size: h * 0.62 }))
-      out.push(faceText('x', right, -cy, z + h * 0.24, '?', { size: h * 0.62 }))
+    const tape = [
+      k.lineOnTop([cx - 1.6, plan.y], [cx - 1.6, front], top, P), k.lineOnTop([cx + 1.6, plan.y], [cx + 1.6, front], top, P),
+      k.segment([cx - 1.6, front, top], [cx - 1.6, front, z + h * 0.45], P), k.segment([cx + 1.6, front, top], [cx + 1.6, front, z + h * 0.45], P),
+    ].join('')
+    const material = kind === 'used' ? 'green' : 'box'
+    const out = [`<g class="mt-${material}"${extra}>`]
+    out.push(S(slab(plan, z, h, 1, 0.5), { tone: 'hi', crease: 'lo', inner: kind === 'brick' ? '' : L(tape, { tone: 'mid' }) }))
+    if (kind === 'used') {
+      // shipping label on the lid: reviewed and merged
+      const label = { x: plan.x + w * 0.62, y: plan.y + 2.5, w: w * 0.28, d: d * 0.36, r: 0.4 }
+      out.push(`<path class="iso-tag" d="${k.planOutline(label, top, P, 1)}"/>`)
     }
     out.push('</g>')
     return out.join('')
   }
 
-  // A stack of `count` coins, each `t` thick, centred on (cx, cy) from z up.
+  // A stack of `count` thin square plates (delivered work), centred on (cx, cy) from z up.
   function coinStack([cx, cy, z], count, r = 7, t = 2.2, extra = '') {
     if (count <= 0) return ''
+    const plan = { x: cx - r, y: cy - r, w: r * 2, d: r * 2, r: 0.6 }
     const seams = []
-    for (let i = 1; i < count; i++) seams.push(k.sideArc(cx, cy, r, z + i * t, P, 24))
-    const reeds = k.knurl(cx, cy, r, z, z + count * t, 28, P, 0.5)
-    const topZ = z + count * t
-    const face = [
-      L(k.ring(cx, cy, r - 1.6, topZ, P, 28), { tone: 'mid' }),
-      L(k.lineOnTop([cx - 1.1, cy - 2.6], [cx - 1.1, cy + 2.6], topZ, P) + k.lineOnTop([cx + 1.1, cy - 2.6], [cx + 1.1, cy + 2.6], topZ, P), { tone: 'mid', free: true }),
-    ].join('')
-    return `<g class="mt-coin"${extra}>${S(k.cylinder(cx, cy, r, z, count * t, P, 28, 0.4), { tone: 'hi', crease: 'mid', inner: L(reeds, { tone: 'faint' }) + L(seams.join(''), { tone: 'lo' }) })}${face}</g>`
+    for (let i = 1; i < count; i++) seams.push(k.sideSeam(plan, z + i * t, P, 1))
+    return `<g class="mt-green"${extra}>${S(slab(plan, z, count * t, 1, 0.4), { tone: 'hi', crease: 'lo', inner: L(seams.join(''), { tone: 'mid' }) })}</g>`
   }
 
   // A mechanical counter on the front (+y) face of a stand: bezel, dark window, digits.
