@@ -1,5 +1,5 @@
-// The package shelf: one wooden crate per Packagist package on a workshop shelf. Each crate
-// holds a stack of coins in proportion to the package's installs (the biggest gets 8 coins),
+// The package shelf: one crate per Packagist package on a workshop shelf. Each crate holds a
+// stack of plates in proportion to the package's installs (the biggest gets 8 plates),
 // and a mechanical counter on the shelf edge under it gives the true Packagist total.
 //
 // packageShelf({ packages: [{ name, downloads }] }) → { svg, width, height }
@@ -94,7 +94,7 @@ export function packageShelf({ packages, label = '' }) {
       return L(lines.join(''), { tone: 'lo' })
     }
     out.push(halo(plan, z, 2, 's'))
-    out.push(`<g class="mt-wood">`)
+    out.push(`<g class="mt-box">`)
     out.push(S(slab(plan, z, 2.4, 1, 0.3), { tone: 'hi', crease: 'lo' }))
     const backW = { x: plan.x, y: plan.y, w: plan.w, d: wall, r: 0.4 }
     const leftW = { x: plan.x, y: plan.y, w: wall, d: plan.d, r: 0.4 }
@@ -104,7 +104,7 @@ export function packageShelf({ packages, label = '' }) {
     out.push(coinStack([cx, plan.y + plan.d / 2, z + 2.4], coinsOf(pkg.downloads), COIN_R, COIN_T))
     const rightW = { x: plan.x + plan.w - wall, y: plan.y, w: wall, d: plan.d, r: 0.4 }
     const frontW = { x: plan.x, y: plan.y + plan.d - wall, w: plan.w, d: wall, r: 0.4 }
-    out.push(`<g class="mt-wood">`)
+    out.push(`<g class="mt-box">`)
     out.push(S(slab(rightW, z, CRATE.h, 1, 0.3), { tone: 'hi', crease: 'lo', inner: plank(rightW, 'x') }))
     out.push(S(slab(frontW, z, CRATE.h, 1, 0.3), { tone: 'hi', crease: 'lo', inner: plank(frontW, 'y') }))
     // stencilled package number on the front slat
@@ -144,7 +144,7 @@ export function packageShelf({ packages, label = '' }) {
     counters,
     ...bays.map(({ p, i, cx }) => `<g class="iso-lift" data-p="pkg${i}">${crate(cx, i, p)}</g>`),
     upright(X0 + SPAN),
-    ...spares,
+
   ]
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label.replace(/"/g, '&quot;')}">${art.join('')}</svg>`

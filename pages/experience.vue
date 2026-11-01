@@ -1,127 +1,82 @@
 <template>
-  <div class="container container--narrow page">
-    <SectionTitle page :eyebrow="$t('experienceUi.eyebrow')" :title="$t('experience.title')" />
+  <div class="container page">
+    <ChapterHead :title="$t('experience.title')" :lead="$t('book.expIntro')">
+      <dl class="legend">
+        <div><i class="swatch swatch--green" /><dt>{{ $t('book.legend.salaried') }}</dt><dd>{{ $t('book.legend.salariedNote') }}</dd></div>
+        <div><i class="swatch swatch--amber" /><dt>{{ $t('book.legend.freelance') }}</dt><dd>{{ $t('book.legend.freelanceNote') }}</dd></div>
+        <div><i class="swatch swatch--red" /><dt>{{ $t('book.legend.own') }}</dt><dd>{{ $t('book.legend.ownNote') }}</dd></div>
+      </dl>
+    </ChapterHead>
 
-    <p class="legend" aria-hidden="true">
-      <span class="legend__item"><i class="legend__swatch legend__swatch--trunk" />{{ $t('experienceUi.legendTrunk') }}</span>
-      <span class="legend__item"><i class="legend__swatch legend__swatch--branch" />{{ $t('experienceUi.legendBranch') }}</span>
-      <span class="legend__item"><i class="legend__dot legend__dot--permanent" />{{ $t('experienceUi.legendPermanent') }}</span>
-      <span class="legend__item"><i class="legend__dot legend__dot--own" />{{ $t('experienceUi.legendOwn') }}</span>
-    </p>
+    <ol class="timeline">
+      <li v-for="(job, i) in experiences" :key="job.company" class="row" :class="{ 'row--first': i === 0, 'row--last': i === experiences.length - 1 }">
+        <!-- The red axis counts the years; each job is a branch opened at its start (bottom) and closed at its end (top) -->
+        <div v-draw class="rail" :class="[`rail--${tone(job)}`, { 'rail--switch': contractOf(job.company).switchedFromFreelance }]" aria-hidden="true">
+          <span class="rail__year mono">{{ startYear(job.period) }}</span>
+          <span class="rail__axis" />
+          <span class="rail__tick" />
+          <span class="rail__branch" />
+          <span class="rail__fork" />
+          <span v-if="ongoing(job)" class="rail__open" />
+          <span v-else class="rail__end" />
+          <template v-if="contractOf(job.company).switchedFromFreelance">
+            <span class="rail__freelance" />
+            <span class="rail__switch" />
+            <span class="rail__switch-label mono">{{ $t('book.cdiMarker') }}</span>
+          </template>
+        </div>
 
-    <ol class="levels">
-      <template v-for="(job, i) in experiences" :key="job.company">
-        <!-- Milestone between two countries: both pipes keep running through it -->
-        <li v-if="job.company === countryChangeBefore" class="level-row level-row--milestone">
-          <div class="rail" aria-hidden="true">
-            <div class="rail__trunk" />
-            <div class="rail__branch" />
+        <article v-reveal class="job">
+          <div class="job__head">
+            <h2 class="job__role">{{ job.role }}</h2>
+            <span class="job__period mono">{{ job.period }}</span>
           </div>
-          <p class="milestone pixel">{{ $t('experienceUi.countryChange') }}</p>
-        </li>
+          <p class="job__company">
+            <span :class="`contract--${contractOf(job.company).contract}`">{{ contractOf(job.company).name }}</span>
+            <span class="job__where"> · {{ job.location }} · {{ $t(`book.kinds.${contractOf(job.company).kind}`) }}</span>
+          </p>
 
-        <li class="level-row">
-          <!-- Git-like pipes: green trunk = salaried job, yellow branch = freelance / side project -->
-          <div class="rail" aria-hidden="true">
-            <div class="rail__trunk" />
-            <div v-if="railOf(job).node === 'trunk'" class="rail__lip" />
-            <template v-if="railOf(job).branch">
-              <div class="rail__branch" :class="`rail__branch--${railOf(job).branch}`" />
-              <div v-if="hasElbow(job)" class="rail__elbow" :class="`rail__elbow--${railOf(job).branch}`" />
-              <div
-                v-if="railOf(job).node === 'branch' || ['open', 'endBelowHead'].includes(railOf(job).branch ?? '')"
-                class="rail__blip"
-                :class="`rail__blip--${railOf(job).branch}`"
-              />
-              <span v-if="railOf(job).label" class="rail__label"><span>{{ $t(railOf(job).label!) }}</span></span>
-              <!-- Contract change: the freelance pipe joins the trunk through a coupler, with a super mushroom -->
-              <template v-if="railOf(job).branch === 'levelUp'">
-                <div class="rail__coupler" />
-                <svg class="rail__mushroom" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">
-                  <path fill="#000" d="M4 0h4v1h2v1h1v2h1v4h-1v1H9v3H3V9H1V8H0V4h1V2h1V1h2z" />
-                  <path fill="#e52521" d="M4 1h4v1h2v2h1v4H1V4h1V2h2z" />
-                  <path fill="#fff" d="M5 1h2v2H5zM1 5h2v2H1zM9 5h2v2H9z" />
-                  <path fill="#ffe0b0" d="M4 8h4v3H4z" />
-                  <path fill="#000" d="M5 9h1v1H5zM7 9h1v1H7z" />
-                </svg>
-                <span v-if="railOf(job).levelUp" class="rail__levelup"><span>{{ $t(railOf(job).levelUp!) }}</span></span>
-              </template>
-            </template>
-          </div>
+          <ul v-if="job.phases.length" class="phases">
+            <li v-for="phase in job.phases" :key="phase.period" class="phase" :class="`phase--${phase.kind}`">
+              <span class="phase__label">{{ phase.label }}</span>
+              <span class="phase__period mono">{{ phase.period }}</span>
+              <span class="phase__text">{{ phase.text }}</span>
+            </li>
+          </ul>
 
-          <article v-reveal="i" v-lift class="job card">
-            <div class="job__bar">
-              <span class="level">LVL 1-{{ experiences.length - i }}</span>
-              <span>session://{{ sessionOf(job) }}</span>
-              <span class="job__period">{{ job.period }}</span>
-            </div>
+          <ul class="bullets">
+            <li v-for="task in visibleTasks(job.tasks, i)" :key="task">{{ task }}</li>
+          </ul>
+          <button
+            v-if="job.tasks.length > TASK_LIMIT"
+            type="button"
+            class="job__more mono"
+            :aria-expanded="!!expanded[i]"
+            @click="expanded[i] = !expanded[i]"
+          >
+            {{ expanded[i] ? `− ${$t('experienceUi.less')}` : `+ ${job.tasks.length - TASK_LIMIT}` }}
+          </button>
 
-            <div class="job__body">
-              <div>
-                <div class="job__title">
-                  <h2 class="job__company pixel" :class="contracts[job.company] && `job__company--${contracts[job.company]}`">{{ job.company }}</h2>
-                </div>
-                <p class="job__role">{{ job.role }}</p>
-                <p v-if="job.location" class="job__location">⌖ {{ job.location }}</p>
-              </div>
-
-              <ul v-if="job.phases.length" class="phases">
-                <li v-for="phase in job.phases" :key="phase.period" class="phase" :class="`phase--${phase.kind}`">
-                  <span class="phase__label pixel">{{ phase.label }}</span>
-                  <span class="phase__period">{{ phase.period }}</span>
-                  <span class="phase__text">{{ phase.text }}</span>
-                </li>
-              </ul>
-
-              <ul class="bullets">
-                <li v-for="task in visibleTasks(job.tasks, i)" :key="task">{{ task }}</li>
-              </ul>
-
-              <button
-                v-if="job.tasks.length > TASK_LIMIT"
-                type="button"
-                class="job__more pixel"
-                :aria-expanded="!!expanded[i]"
-                @click="expanded[i] = !expanded[i]"
-              >
-                {{ expanded[i] ? `▲ ${$t('experienceUi.less')}` : `▼ ${$t('experienceUi.more', { n: job.tasks.length - TASK_LIMIT })}` }}
-              </button>
-
-              <div v-if="job.stack.length" class="job__stack">
-                <span class="job__stack-label">$ stack:</span>
-                <span v-for="tech in job.stack" :key="tech" class="tag">{{ tech }}</span>
-              </div>
-
-              <a v-if="job.website" :href="job.website" target="_blank" rel="noopener" class="job__site">↗ {{ job.website }}</a>
-            </div>
-          </article>
-        </li>
-      </template>
-
-      <li class="level-row level-row--start">
-        <div class="flag" aria-hidden="true"><span /></div>
-        <div class="pixel start-label">{{ $t('experienceUi.start') }}</div>
+          <p v-if="job.stack.length" class="job__stack mono">stack · {{ job.stack.join(', ') }}</p>
+          <a v-if="job.website" :href="job.website" target="_blank" rel="noopener" class="job__site mono">{{ job.website.replace(/^https?:\/\//, '') }} ↗</a>
+        </article>
       </li>
     </ol>
 
-    <!-- Open source work, beside the jobs -->
-    <section class="contrib card" aria-labelledby="exp-contrib">
-      <div class="contrib__eyebrow pixel">{{ $t('sections.openSource') }}</div>
-      <h2 id="exp-contrib" class="contrib__title pixel">{{ $t('openSource.previewTitle') }}</h2>
-      <p class="contrib__text">{{ $t('openSource.intro') }}</p>
-      <ul class="contrib__stats">
-        <li><span class="contrib__icon contrib__icon--coin" aria-hidden="true" /><b class="pixel">{{ mergedCount }}</b> {{ $t('openSource.merged') }}</li>
-        <li><span class="contrib__icon contrib__icon--q pixel" aria-hidden="true">?</span><b class="pixel">{{ openCount }}</b> {{ $t('openSource.open') }}</li>
-        <li><span class="contrib__icon contrib__icon--crate" aria-hidden="true" /><b class="pixel">{{ packages.length }}</b> {{ $t('openSource.packages') }}</li>
-      </ul>
-      <NuxtLink :to="localePath('/open-source')" class="btn btn--coin contrib__link">{{ $t('openSource.seeAll') }} ▶</NuxtLink>
-    </section>
+    <aside class="see-also card">
+      <div class="see-also__text">
+        <span class="eyebrow eyebrow--green">{{ $t('book.annexA.seeAlso') }}</span>
+        <p class="see-also__title">{{ $t('book.annexA.chapterTitle', { n: symfonyMerged }) }}</p>
+        <p class="see-also__stats mono">{{ mergedCount }} {{ $t('book.annexA.merged') }} · {{ openCount }} {{ $t('book.annexA.open') }} · {{ packages.length }} {{ $t('book.annexA.bundles') }}</p>
+      </div>
+      <NuxtLink :to="localePath('/open-source')" class="btn btn--green">{{ $t('book.annexA.cta') }} →</NuxtLink>
+    </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { contracts, countryChangeBefore, rails, type Rail } from '~/data/experience'
-import { mergedCount, openCount, packages } from '~/data/opensource'
+import { contractOf, startYear } from '~/data/experience'
+import { contributionsByProject, mergedCount, openCount, packages } from '~/data/opensource'
 import type { Experience } from '~/composables/useResume'
 
 const TASK_LIMIT = 6
@@ -129,16 +84,13 @@ const TASK_LIMIT = 6
 const { t } = useI18n()
 const localePath = useLocalePath()
 const { experiences } = useResume()
-
-// Terminal header of each card: the company's own session ("CCM BENCHMARK · GROUPE LE FIGARO" → ccm-benchmark)
-const sessionOf = (job: Experience) =>
-  (job.company.split('·')[0] ?? job.company).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const expanded = reactive<Record<number, boolean>>({})
 
-const railOf = (job: Experience): Rail => rails[job.company] ?? { node: 'trunk' }
+const symfonyMerged = contributionsByProject.find(p => p.id === 'symfony')?.merged.length ?? 0
 
-// A horizontal pipe joins the branch to the trunk where the branch starts or ends
-const hasElbow = (job: Experience) => ['forkBelow', 'mergeAtHead', 'forkAtHead', 'levelUp'].includes(railOf(job).branch ?? '')
+const tone = (job: Experience) => ({ permanent: 'green', freelance: 'amber', own: 'red' } as const)[contractOf(job.company).contract]
+// A period with a single date ("09/25 – Aujourd'hui") is still running
+const ongoing = (job: Experience) => (job.period.match(/\d{2}\/\d{2}/g) ?? []).length < 2
 
 function visibleTasks(tasks: string[], index: number) {
   return expanded[index] ? tasks : tasks.slice(0, TASK_LIMIT)
@@ -152,573 +104,407 @@ usePageSeo({
 </script>
 
 <style scoped>
-.levels {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.level-row {
-  display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
-  gap: 18px;
-}
-
-.levels {
-  /* Pipe geometry, scaled down on small screens */
-  --rail-w: 124px;
-  --lip-w: 56px;
-  --lip-h: 26px;
-  --trunk-x: 8px;
-  --trunk-w: 40px;
-  --branch-x: 84px;
-  --branch-w: 30px;
-  --blip-x: 79px;
-  --blip-w: 40px;
-  --blip-h: 22px;
-  --elbow-y: 1px;
-  --elbow-h: 26px;
-  --cap-y: 72px;
-  --pipe-branch: var(--coin);
-}
-
-/* Git-like pipes running down the timeline */
-.rail {
-  position: relative;
-  min-height: 40px;
-}
-
-.rail__trunk,
-.rail__branch {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-inline: 3px solid #000;
-}
-
-.rail__trunk {
-  inset-inline-start: var(--trunk-x);
-  width: var(--trunk-w);
-  background: var(--pipe);
-  box-shadow: inset 5px 0 0 #7ee07e, inset -7px 0 0 #1f7a2a;
-}
-
-.rail__lip,
-.rail__blip {
-  position: absolute;
-  top: 0;
-  z-index: 2;
-  border: 3px solid #000;
-}
-
-.rail__lip {
-  inset-inline-start: 0;
-  width: var(--lip-w);
-  height: var(--lip-h);
-  background: var(--pipe);
-  box-shadow: inset 6px 0 0 #7ee07e, inset -8px 0 0 #1f7a2a;
-}
-
-.rail__branch {
-  inset-inline-start: var(--branch-x);
-  width: var(--branch-w);
-  background: var(--pipe-branch);
-  box-shadow: inset 4px 0 0 var(--coin-light), inset -6px 0 0 var(--coin-dark);
-}
-
-.rail__blip {
-  inset-inline-start: var(--blip-x);
-  width: var(--blip-w);
-  height: var(--blip-h);
-  background: var(--pipe-branch);
-  box-shadow: inset 5px 0 0 var(--coin-light), inset -7px 0 0 var(--coin-dark);
-}
-
-/* Where the branch leaves or joins the trunk */
-.rail__branch--forkBelow {
-  bottom: 18px;
-}
-
-.rail__branch--mergeAtHead {
-  top: var(--elbow-y);
-}
-
-/* A closed freelance branch: capped below the pipe head, before the next contract starts */
-.rail__branch--endBelowHead,
-.rail__blip--endBelowHead {
-  top: var(--cap-y);
-}
-
-.rail__branch--forkAtHead {
-  bottom: auto;
-  height: calc(var(--elbow-y) + var(--elbow-h));
-}
-
-.rail__elbow {
-  position: absolute;
-  z-index: 1;
-  inset-inline-start: calc(var(--trunk-x) + var(--trunk-w) - 6px);
-  width: calc(var(--branch-x) - var(--trunk-x) - var(--trunk-w) + 12px);
-  height: var(--elbow-h);
-  background: var(--pipe-branch);
-  border-block: 3px solid #000;
-  box-shadow: inset 0 4px 0 var(--coin-light), inset 0 -5px 0 var(--coin-dark);
-}
-
-.rail__elbow--forkBelow {
-  bottom: 6px;
-}
-
-.rail__elbow--mergeAtHead,
-.rail__elbow--forkAtHead {
-  top: var(--elbow-y);
-}
-
-/* Contract change (freelance -> CDI): the yellow pipe stops at 08/20 and joins the trunk at 09/20
-   through a coupler, under the row's pipe head */
-.rail__branch--levelUp,
-.rail__elbow--levelUp {
-  top: var(--cap-y);
-}
-
-.rail__coupler {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--cap-y) - 6px);
-  inset-inline-start: calc(var(--trunk-x) + var(--trunk-w) - 4px);
-  width: 14px;
-  height: calc(var(--elbow-h) + 12px);
-  background: var(--pipe);
-  border: 3px solid #000;
-  box-shadow: inset 3px 0 0 #7ee07e, inset -4px 0 0 #1f7a2a;
-}
-
-.rail__mushroom {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--cap-y) - 31px);
-  inset-inline-start: calc(var(--trunk-x) + var(--trunk-w) + 8px);
-  width: 30px;
-  height: 30px;
-  image-rendering: pixelated;
-}
-
-.rail__levelup {
-  position: absolute;
-  z-index: 2;
-  top: calc(var(--cap-y) + var(--elbow-h) + 12px);
-  inset-inline-start: var(--branch-x);
-  width: var(--branch-w);
-  display: flex;
-  justify-content: center;
-}
-
-.rail__levelup span {
-  writing-mode: vertical-rl;
-  font-family: var(--font-pixel, monospace);
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: #3d2a00;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .rail__mushroom {
-    animation: mushroom-bob 1.6s steps(2, end) infinite;
-  }
-}
-
-@keyframes mushroom-bob {
-  50% { transform: translateY(-3px); }
-}
-
-.rail__label {
-  position: absolute;
-  top: 50%;
-  z-index: 2;
-  inset-inline-start: var(--branch-x);
-  width: var(--branch-w);
-  display: flex;
-  justify-content: center;
-  transform: translateY(-50%);
-}
-
-/* Vertical text sits in its own box: in a vertical writing mode, inline-start would mean "top" */
-.rail__label span {
-  writing-mode: vertical-rl;
-  font-family: var(--font-pixel, monospace);
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: #3d2a00;
-}
-
-/* Legend and country milestone */
+/* Legend beside the chapter title */
 .legend {
+  margin: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-  margin: 0 0 22px;
-  font-size: 12px;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.legend div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend dt {
+  font-weight: 700;
+}
+
+.legend dd {
+  margin: 0;
   color: var(--muted);
 }
 
-.legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+/* ---------- Timeline ---------- */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.legend__swatch {
-  display: inline-block;
-  width: 22px;
-  height: 12px;
-  border: 2px solid #000;
+.row {
+  display: flex;
+  gap: 24px;
 }
 
-.legend__swatch--trunk {
-  background: var(--pipe);
+.rail {
+  --c: var(--green);
+  position: relative;
+  flex: 0 0 140px;
+  min-height: 176px;
 }
 
-.legend__swatch--branch {
-  background: var(--coin);
+.rail--red { --c: var(--red); }
+.rail--amber { --c: var(--amber); }
+
+.rail > span {
+  position: absolute;
 }
 
-.legend__dot {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid #000;
+.rail__year {
+  inset-inline-start: 0;
+  top: 28px;
+  font-size: 13px;
+  color: var(--muted);
 }
 
-.legend__dot--permanent {
-  background: var(--mario);
+.rail__axis {
+  inset-inline-start: 56px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--axis);
 }
 
-.legend__dot--freelance {
-  background: var(--grass);
+.row--first .rail__axis {
+  top: 30px;
 }
 
-.legend__dot--own {
-  background: var(--coin);
+.rail__tick {
+  inset-inline-start: 48px;
+  top: 37px;
+  width: 18px;
+  height: 2px;
+  background: var(--axis);
 }
 
-.level-row--milestone {
-  align-items: center;
+/* The job: from its start (connector to the axis, bottom) up to its end (ring, top) */
+.rail__branch {
+  inset-inline-start: 96px;
+  top: 36px;
+  bottom: 26px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--c);
+  transform-origin: 50% 100%;
 }
 
-.level-row--milestone .rail {
-  align-self: stretch;
-  min-height: 56px;
+.rail__fork {
+  inset-inline-start: 57px;
+  bottom: 26px;
+  width: 42px;
+  height: 2px;
+  background: var(--c);
+  transform-origin: 0 50%;
 }
 
-.milestone {
-  justify-self: start;
-  margin: 0 0 32px;
-  padding: 8px 12px;
-  font-size: 10px;
-  color: var(--coin);
-  border: 2px dashed var(--coin);
+.rail__end,
+.rail__open {
+  inset-inline-start: 89px;
+  top: 28px;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 3px solid var(--c);
 }
 
-/* Successive contracts within one company */
-.phases {
+/* Still running: the branch stays open at the top (an arrowhead instead of a closing ring) */
+.rail__open {
+  top: 26px;
+  border-radius: 0;
+  border-width: 3px 0 0 3px;
+  background: transparent;
+  transform: rotate(45deg);
+  width: 13px;
+  height: 13px;
+  inset-inline-start: 91px;
+}
+
+/* Freelance first (amber, below), then permanent from the ◆ */
+.rail__freelance {
+  inset-inline-start: 96px;
+  top: 110px;
+  bottom: 26px;
+  width: 3px;
+  background: var(--amber);
+  transform-origin: 50% 100%;
+}
+
+.rail--switch .rail__fork {
+  background: var(--amber);
+}
+
+.rail__switch {
+  inset-inline-start: 91px;
+  top: 98px;
+  width: 13px;
+  height: 13px;
+  background: var(--green);
+  transform: rotate(45deg);
+}
+
+.rail__switch-label {
+  inset-inline-start: 112px;
+  top: 92px;
+  font-size: 11px;
+  color: var(--green-ink);
+}
+
+/* The branch grows from its start date when it scrolls into view */
+.rail.will-draw .rail__branch,
+.rail.will-draw .rail__freelance {
+  transform: scaleY(0);
+}
+
+.rail.will-draw .rail__fork {
+  transform: scaleX(0);
+}
+
+.rail.will-draw .rail__end,
+.rail.will-draw .rail__open,
+.rail.will-draw .rail__switch,
+.rail.will-draw .rail__switch-label {
+  opacity: 0;
+}
+
+.rail.will-draw.is-drawn .rail__fork {
+  transform: scaleX(1);
+  transition: transform .25s var(--ease);
+}
+
+.rail.will-draw.is-drawn .rail__branch,
+.rail.will-draw.is-drawn .rail__freelance {
+  transform: scaleY(1);
+  transition: transform .7s var(--ease) .2s;
+}
+
+.rail.will-draw.is-drawn .rail__end,
+.rail.will-draw.is-drawn .rail__open,
+.rail.will-draw.is-drawn .rail__switch,
+.rail.will-draw.is-drawn .rail__switch-label {
+  opacity: 1;
+  transition: opacity .3s .8s;
+}
+
+.rail.will-draw.is-drawn .rail__open {
+  transform: rotate(45deg);
+}
+
+/* RTL: the arrowhead points up in both directions */
+[dir='rtl'] .rail__open {
+  border-width: 3px 3px 0 0;
+  transform: rotate(-45deg);
+}
+
+[dir='rtl'] .rail.will-draw.is-drawn .rail__open {
+  transform: rotate(-45deg);
+}
+
+/* ---------- Job ---------- */
+.job {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 22px 0 30px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.job__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 24px;
+}
+
+.job__role {
   margin: 0;
-  padding: 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.job__period {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.job__company {
+  margin: 0;
+  font-weight: 700;
+}
+
+.job__where {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.phases {
   list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .phase {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
-  padding: 6px 10px;
-  font-size: 12px;
-  border-inline-start: 6px solid var(--pipe);
-  background: var(--bar);
+  gap: 2px 10px;
+  padding: 8px 14px;
+  border-inline-start: 3px solid var(--green);
+  background: var(--panel);
+  border-radius: 0 8px 8px 0;
+  font-size: 15px;
+}
+
+[dir='rtl'] .phase {
+  border-radius: 8px 0 0 8px;
 }
 
 .phase--freelance {
-  border-inline-start-color: var(--coin);
+  border-inline-start-color: var(--amber);
 }
 
 .phase__label {
-  font-size: 9px;
-  line-height: 1.8;
-  color: var(--accent);
+  font-weight: 700;
+  color: var(--green-ink);
 }
 
 .phase--freelance .phase__label {
-  color: var(--coin);
+  color: var(--amber-ink);
 }
 
 .phase__period {
-  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .phase__text {
   flex-basis: 100%;
-  color: var(--muted);
-}
-
-.job {
-  margin-bottom: 32px;
-}
-
-.job__bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 14px;
-  border-bottom: 3px solid var(--line);
-  background: var(--bar);
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.job__period {
-  margin-inline-start: auto;
-}
-
-.job__body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 20px;
-}
-
-.job__title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  margin-bottom: 8px;
-}
-
-.job__company {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  /* Neutral until the contract is known (see `contracts` in data/experience.ts) */
-  color: var(--ink);
-}
-
-.job__company--permanent {
-  color: var(--mario-light);
-}
-
-html.light .job__company--permanent {
-  color: var(--mario-dark);
-}
-
-.job__company--own {
-  color: var(--coin);
-}
-
-html.light .job__company--own {
-  color: #9a6a00;
-}
-
-.job__company--freelance {
-  color: var(--grass);
-}
-
-html.light .job__company--own {
-  color: var(--coin);
-}
-
-html.light .job__company--own {
-  color: #9a6a00;
-}
-
-.job__company--freelance {
-  color: var(--grass-dark);
-}
-
-.job__role {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.job__location {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-2);
 }
 
 .job__more {
   align-self: flex-start;
-  font-size: 9px;
-  padding: 8px 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
   background: transparent;
-  color: var(--accent);
-  border: 2px dashed var(--accent);
+  color: var(--ink-2);
+  font-size: 12px;
   cursor: pointer;
 }
 
 .job__stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-top: 14px;
-  border-top: 3px dotted var(--border);
-}
-
-.job__stack-label {
-  padding: 4px 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .job__site {
-  font-size: 12px;
-  color: var(--accent);
-  overflow-wrap: anywhere;
+  align-self: flex-start;
+  font-size: 13px;
+  color: var(--green-ink);
 }
 
-/* Flag at the start of the level map */
-.level-row--start {
+/* ---------- See also ---------- */
+.see-also {
+  margin-top: 48px;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 16px;
 }
 
-.flag {
-  position: relative;
-  justify-self: center;
-  width: 6px;
-  height: 60px;
-  background: #fff;
-  border: 2px solid #000;
+.see-also__text {
+  flex: 999 1 420px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.flag span {
-  position: absolute;
-  top: 0;
-  left: 4px;
-  width: 26px;
-  height: 18px;
-  background: var(--grass);
-  border: 2px solid #000;
+.see-also__title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.25;
 }
 
-@media (max-width: 480px) {
-  .levels {
-    --rail-w: 84px;
-    --lip-w: 36px;
-    --lip-h: 20px;
-    --trunk-x: 5px;
-    --trunk-w: 26px;
-    --branch-x: 56px;
-    --branch-w: 22px;
-    --blip-x: 52px;
-    --blip-w: 30px;
-    --blip-h: 18px;
-    --elbow-h: 18px;
-  }
+.see-also__stats {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
 
-  .level-row {
+@media (max-width: 600px) {
+  .row {
     gap: 12px;
   }
 
-  .job__body {
-    padding: 16px;
+  .rail {
+    flex-basis: 76px;
   }
-}
 
-.start-label {
-  font-size: 10px;
-  color: var(--muted);
-}
+  .rail__year {
+    font-size: 11px;
+  }
 
-/* Open source block under the map */
-.contrib {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 48px;
-  padding: 24px;
-}
+  .rail__axis {
+    inset-inline-start: 34px;
+  }
 
-.contrib__eyebrow {
-  font-size: 10px;
-  line-height: 1.6;
-  color: var(--eyebrow);
-}
+  .rail__tick {
+    inset-inline-start: 28px;
+    width: 14px;
+  }
 
-html.light .contrib__eyebrow {
-  color: var(--accent);
-}
+  .rail__branch,
+  .rail__freelance {
+    inset-inline-start: 60px;
+  }
 
-.contrib__title {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--accent);
-}
+  .rail__fork {
+    inset-inline-start: 35px;
+    width: 27px;
+  }
 
-.contrib__text {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--muted);
-}
+  .rail__end {
+    inset-inline-start: 53px;
+  }
 
-.contrib__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 24px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12px;
-  color: var(--muted);
-}
+  .rail__open {
+    inset-inline-start: 55px;
+  }
 
-.contrib__stats li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
+  .rail__switch {
+    inset-inline-start: 55px;
+  }
 
-.contrib__stats b {
-  font-size: 13px;
-  color: var(--ink);
-}
+  .rail__switch-label {
+    display: none;
+  }
 
-.contrib__icon {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--navy);
-}
+  .rail__year {
+    top: 46px;
+    inset-inline-start: 0;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
 
-.contrib__icon--coin {
-  width: 14px;
-  margin-inline: 3px;
-  border-radius: 50%;
-  background: var(--coin);
-  box-shadow: inset -3px 0 0 var(--coin-dark);
-}
-
-.contrib__icon--q {
-  font-size: 9px;
-  color: var(--navy);
-  background: var(--coin);
-  box-shadow: inset -2px -2px 0 var(--coin-dark);
-}
-
-.contrib__icon--crate {
-  background: #d9a066;
-  box-shadow: inset -2px -2px 0 #a06833;
-}
-
-.contrib__link {
-  align-self: flex-start;
+  .job__role {
+    font-size: 21px;
+  }
 }
 </style>

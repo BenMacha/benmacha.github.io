@@ -1,9 +1,9 @@
 <template>
   <header class="header" :class="{ 'is-open': menuOpen }">
     <div class="container header__inner">
-      <NuxtLink :to="localePath('/')" class="logo pixel">
-        <span class="logo__block coin-block" aria-hidden="true">?</span>
-        <span><span class="logo__tilde">~/</span>benmacha<span class="blink" aria-hidden="true">█</span></span>
+      <NuxtLink :to="localePath('/')" class="brand">
+        <span class="brand__name">Ben Macha <span class="brand__accent">Ali</span></span>
+        <span class="brand__vol mono">{{ $t('book.volume') }}</span>
       </NuxtLink>
 
       <button
@@ -11,21 +11,21 @@
         class="burger"
         :aria-expanded="menuOpen"
         aria-controls="site-menu"
-        :aria-label="$t('menu.toggle')"
+        :aria-label="$t('book.menu')"
         @click="menuOpen = !menuOpen"
       >
-        <span /><span /><span />
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" /></svg>
       </button>
 
       <div id="site-menu" class="menu">
-        <nav class="nav" aria-label="Main">
+        <nav class="nav" :aria-label="$t('book.toc')">
           <NuxtLink
-            v-for="page in navPages"
-            :key="page"
-            :to="localePath(`/${page}`)"
+            v-for="chapter in chapters"
+            :key="chapter.page"
+            :to="localePath(`/${chapter.page}`)"
             class="nav__link"
           >
-            <span class="nav__dot">./</span>{{ $t(`nav.${page}`) }}
+            <span class="nav__num mono">{{ chapter.num }}</span> {{ $t(`nav.${chapter.page}`) }}
           </NuxtLink>
         </nav>
 
@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { navPages } from '~/data/site'
+import { chapters } from '~/data/site'
 
 const route = useRoute()
 const localePath = useLocalePath()
@@ -63,41 +63,43 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   position: sticky;
   top: 0;
   z-index: 40;
-  background: var(--bg2);
-  border-bottom: 3px solid var(--line);
-  box-shadow: 0 4px 0 var(--shadow);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
 }
 
 .header__inner {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding-block: 12px;
+  gap: 28px;
+  padding-block: 16px;
 }
 
-.logo {
-  direction: ltr;
+.brand {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   flex: none;
+}
+
+.brand:hover {
+  color: var(--ink);
+}
+
+.brand__name {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -.2px;
+}
+
+.brand__accent {
+  color: var(--red-ink);
+}
+
+.brand__vol {
   font-size: 12px;
-  color: var(--accent);
-}
-
-.logo:hover {
-  color: var(--accent);
-}
-
-.logo__block {
-  width: 22px;
-  height: 22px;
-  font-size: 9px;
-  box-shadow: inset -3px -3px 0 var(--coin-dark), inset 3px 3px 0 var(--coin-light);
-}
-
-.logo__tilde {
-  opacity: .6;
+  color: var(--muted);
 }
 
 .menu {
@@ -111,32 +113,31 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   flex: 1;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
+  gap: 2px;
 }
 
 .nav__link {
-  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 15px;
   font-weight: 600;
-  padding: 7px 11px;
-  border: 3px solid transparent;
-  color: var(--nav-ink);
+  color: var(--ink-2);
 }
 
 .nav__link:hover {
-  color: var(--nav-ink);
-  border-color: var(--nav-hover);
+  color: var(--ink);
+  background: var(--panel);
 }
 
 .nav__link.router-link-active {
-  background: var(--coin);
-  border-color: var(--navy);
-  color: var(--navy);
-  box-shadow: inset -3px -3px 0 var(--coin-dark);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--red);
+  border-radius: 0;
 }
 
-.nav__dot {
-  opacity: .55;
+.nav__num {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .header__actions {
@@ -150,44 +151,25 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   display: none;
   margin-inline-start: auto;
   width: 44px;
-  height: 40px;
-  padding: 8px 9px;
-  flex-direction: column;
-  justify-content: space-between;
-  background: var(--coin);
-  border: 3px solid var(--navy);
-  box-shadow: inset -3px -3px 0 var(--coin-dark), 3px 3px 0 var(--shadow);
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
   cursor: pointer;
 }
 
-.burger span {
-  display: block;
-  height: 3px;
-  background: var(--navy);
-  transition: transform .2s, opacity .2s;
-}
-
-.is-open .burger span:nth-child(1) {
-  transform: translateY(7.5px) rotate(45deg);
-}
-
-.is-open .burger span:nth-child(2) {
-  opacity: 0;
-}
-
-.is-open .burger span:nth-child(3) {
-  transform: translateY(-7.5px) rotate(-45deg);
-}
-
-/* Mobile: logo + burger, the menu unfolds below */
-@media (max-width: 1000px) {
+@media (max-width: 1080px) {
   .header__inner {
     flex-wrap: wrap;
-    padding-block: 10px;
+    gap: 12px;
+    padding-block: 12px;
   }
 
   .burger {
-    display: flex;
+    display: inline-flex;
   }
 
   .menu {
@@ -196,7 +178,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     flex-direction: column;
     align-items: stretch;
     gap: 14px;
-    padding-block: 6px 4px;
+    padding-block: 6px 10px;
   }
 
   .is-open .menu {
@@ -205,13 +187,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
   .nav {
     flex-direction: column;
-    gap: 4px;
   }
 
   .nav__link {
-    font-size: 14px;
-    padding: 12px 14px;
-    border-color: var(--nav-hover);
+    padding: 12px 4px;
+    border-top: 1px solid var(--rule);
+    border-radius: 0;
+    font-size: 18px;
+    font-family: var(--font-head);
+    font-weight: 800;
+  }
+
+  .nav__link.router-link-active {
+    box-shadow: none;
+    color: var(--red-ink);
   }
 
   .header__actions {

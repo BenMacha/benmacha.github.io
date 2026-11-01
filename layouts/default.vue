@@ -24,7 +24,7 @@ useHead(() => ({
   meta: (i18nHead.value.meta ?? []).filter(m => m.property !== 'og:locale'),
 }))
 
-// Rainbow reading-progress bar, driven by Motion's scroll timeline
+// Thin reading-progress bar (a bookmark ribbon), driven by Motion's scroll timeline
 const progressBar = ref<HTMLElement | null>(null)
 let stopProgress: (() => void) | undefined
 
@@ -49,11 +49,11 @@ main {
 .progress {
   position: fixed;
   inset: 0 0 auto;
-  height: 5px;
+  height: 2px;
   z-index: 70;
   pointer-events: none;
   transform: scaleX(0);
   transform-origin: 0 50%;
-  background: linear-gradient(90deg, #e52521, #fbd000, #5cb338, #2496ed);
+  background: var(--red);
 }
 </style>

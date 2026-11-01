@@ -39,7 +39,7 @@ useHead(() => ({
           'url': SITE,
           'image': `${SITE}/images/avatar.jpeg`,
           'email': `mailto:${socialLinks.email}`,
-          'jobTitle': 'Tech Lead & Développeur Full Stack',
+          'jobTitle': 'Chef de projet SI & IA générative, Tech Lead PHP/Symfony',
           'description': 'Créateur du projet Keytchens, dont il a réalisé toute la plateforme technique de 2018 à 2024, et fondateur de Pepprio, plateforme SaaS de gestion des commandes pour restaurants. Chef de projet SI chez ORPI.',
           'worksFor': positions.value,
           'alumniOf': { '@type': 'CollegeOrUniversity', 'name': 'ISI' },

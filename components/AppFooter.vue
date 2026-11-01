@@ -1,26 +1,16 @@
 <template>
   <footer class="footer">
-    <div class="container footer__mario">
-      <img src="/images/mario-sm.png" alt="" width="40" height="53" class="pixelated">
-    </div>
-    <div class="grass" />
-    <div class="bricks">
-      <div class="container footer__wrap">
-        <div class="footer__panel">
-          <div class="footer__brand">
-            <div class="footer__prompt">
-              <span class="dim">root@</span>benmacha<span class="dim">:~#</span>
-            </div>
-            <p class="footer__copy">© {{ year }} Ben Macha Ali // {{ $t('footer.rights') }}</p>
-          </div>
-          <div class="footer__links">
-            <a :href="socialLinks.github" target="_blank" rel="noopener">GitHub</a>
-            <a :href="socialLinks.linkedin" target="_blank" rel="noopener">LinkedIn</a>
-            <a :href="`mailto:${socialLinks.email}`">Email</a>
-            <a :href="socialLinks.website" target="_blank" rel="noopener">benmacha.tn</a>
-          </div>
-          <div class="footer__built">&lt;/&gt; {{ $t('footer.built') }}</div>
-        </div>
+    <div class="folio mono" aria-hidden="true">— {{ folio }} —</div>
+    <div class="footer__bar">
+      <div class="container footer__inner">
+        <p class="footer__cta">{{ $t('book.footer') }}</p>
+        <nav class="footer__links" aria-label="Contact">
+          <a :href="`mailto:${socialLinks.email}`">{{ socialLinks.email }}</a>
+          <a :href="socialLinks.linkedin" target="_blank" rel="noopener">LinkedIn</a>
+          <a :href="socialLinks.github" target="_blank" rel="noopener">GitHub</a>
+          <a :href="socialLinks.cv" target="_blank">CV</a>
+        </nav>
+        <p class="footer__copy mono">© {{ year }} Ben Macha Ali · {{ $t('book.volume') }}</p>
       </div>
     </div>
   </footer>
@@ -29,94 +19,54 @@
 <script setup lang="ts">
 import { socialLinks } from '~/data/site'
 
+const { folio } = useChapter()
 const year = new Date().getFullYear()
 </script>
 
 <style scoped>
 .footer {
-  margin-top: 80px;
+  margin-top: 56px;
 }
 
-.footer__mario {
+.folio {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  padding: 0 0 32px;
+  font-size: 12px;
+  color: var(--muted);
 }
 
-.footer__mario img {
-  display: block;
-  width: 40px;
-  height: auto;
-  margin-inline-end: 40px;
+.footer__bar {
+  border-top: 1px solid var(--rule);
 }
 
-.bricks {
-  background-color: #c84c0c;
-  background-image:
-    linear-gradient(#000 3px, transparent 3px),
-    linear-gradient(90deg, #000 3px, transparent 3px);
-  background-size: 48px 24px;
-  border-bottom: 3px solid #000;
-}
-
-.footer__wrap {
-  padding-block: 28px;
-}
-
-.footer__panel {
+.footer__inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 22px 24px;
-  background: #0b0e1f;
-  color: #e8ecff;
-  border: 3px solid #000;
-  box-shadow: 6px 6px 0 #000;
+  gap: 16px 28px;
+  padding-block: 40px;
 }
 
-.footer__brand {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.footer__prompt {
-  direction: ltr;
-  text-align: start;
-  font-size: 14px;
-  font-weight: 700;
-  color: #00ff41;
-}
-
-.dim {
-  opacity: .6;
-}
-
-.footer__copy {
+.footer__cta {
   margin: 0;
-  font-size: 12px;
-  color: #a3abd1;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 22px;
 }
 
 .footer__links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 20px;
+  font-weight: 600;
 }
 
-.footer__links a {
-  font-size: 12px;
-  padding: 7px 11px;
-  border: 2px solid #3b4170;
-}
-
-.footer__built {
+.footer__copy {
+  margin: 0;
   flex-basis: 100%;
-  padding-top: 14px;
-  border-top: 2px dotted #2b3160;
-  font-size: 11px;
-  color: #8a93c0;
-  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
 }
 </style>

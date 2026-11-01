@@ -1,19 +1,20 @@
 <template>
   <nav class="langs" :aria-label="$t('language.label')">
-    <NuxtLink
-      v-for="item in locales"
-      :key="item.code"
-      :to="switchLocalePath(item.code)"
-      :hreflang="item.language"
-      :lang="item.code"
-      class="langs__btn pixel"
-      :class="{ 'is-active': item.code === locale }"
-      :aria-current="item.code === locale ? 'true' : undefined"
-      :title="item.name"
-      @click="remember(item.code)"
-    >
-      {{ item.code.toUpperCase() }}
-    </NuxtLink>
+    <template v-for="(item, i) in locales" :key="item.code">
+      <span v-if="i" class="langs__dot" aria-hidden="true">·</span>
+      <NuxtLink
+        :to="switchLocalePath(item.code)"
+        :hreflang="item.language"
+        :lang="item.code"
+        class="langs__btn"
+        :class="{ 'is-active': item.code === locale }"
+        :aria-current="item.code === locale ? 'true' : undefined"
+        :title="item.name"
+        @click="remember(item.code)"
+      >
+        {{ item.code.toUpperCase() }}
+      </NuxtLink>
+    </template>
   </nav>
 </template>
 
@@ -32,22 +33,27 @@ function remember(code: string) {
 
 <style scoped>
 .langs {
-  display: flex;
-  border: 3px solid var(--line);
-  background: var(--card);
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 6px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .langs__btn {
-  font-size: 9px;
-  padding: 8px 9px;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  color: var(--nav-ink);
+  padding: 6px 5px;
+  color: var(--muted);
 }
 
 .langs__btn.is-active {
-  background: #00ff41;
-  color: #0b0e1f;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.langs__dot {
+  color: var(--muted);
 }
 </style>

@@ -1,6 +1,6 @@
 # Ben Macha Ali - Portfolio
 
-Personal portfolio website built with **Nuxt 3**, featuring a retro pixel-art / 8-bit game design, playable mini-games and multilingual support.
+Personal portfolio website built with **Nuxt 3**, designed as a technical book (vol. 2026: preface, contents, chapters, appendices), with line-drawn figures, playable mini-games and multilingual support.
 
 **Live:** [benmacha.tn](https://benmacha.tn)
 
@@ -10,14 +10,15 @@ Personal portfolio website built with **Nuxt 3**, featuring a retro pixel-art / 
 - **Styling:** plain CSS with design tokens (`assets/css/main.css`) and scoped component styles
 - **Animations:** [Motion](https://motion.dev) — scroll reveal, hover/press feedback, scroll progress, score pops
 - **i18n:** [@nuxtjs/i18n](https://i18n.nuxtjs.org) — French (default), English, Arabic (RTL)
-- **Fonts:** Press Start 2P + Fira Code via [@nuxtjs/google-fonts](https://google-fonts.nuxtjs.org)
+- **Fonts:** Nunito (headings), Mulish (text) and JetBrains Mono (numbers, dates, captions) via [@nuxtjs/google-fonts](https://google-fonts.nuxtjs.org)
 - **Themes:** [@nuxtjs/color-mode](https://color-mode.nuxtjs.org) — night (default) and day
 - **Deployment:** Cloudflare Pages
 
 ## Features
 
-- Pixel / Mario-inspired design with day and night palettes
-- Arcade section with Snake, Tetris, Breakout, Pong and Space Invaders (keyboard, mouse and touch)
+- Technical book design: running heads, chapter and page numbers, thin rules, dark (default) and light palettes
+- Experience chapter drawn as a year axis with one branch per job, coloured by contract
+- Appendix B (home page): Snake, Tetris, Breakout, Pong and Space Invaders (keyboard, mouse and touch)
 - Trilingual support (FR / EN / AR) with full RTL layout for Arabic
 - Technical blog (PHP, Symfony, Docker, Linux, DevOps) with category filters
 - SEO: meta tags, JSON-LD for articles, sitemap, canonical URLs
@@ -27,7 +28,7 @@ Personal portfolio website built with **Nuxt 3**, featuring a retro pixel-art / 
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — hero, experience, skills, projects, open source, blog, education, arcade, contact |
+| `/` | Preface — Fig. 1, key facts, contents, latest jobs, Appendix A (open source), Appendix B (mini-games) |
 | `/experience` | Work experience as a level map |
 | `/skills` | Skills inventory by category |
 | `/projects` | Open source projects ("?" blocks) |
@@ -71,7 +72,7 @@ The repositories and packages it reads are listed at the top of the script. The 
 ## Project Structure
 
 ```
-├── assets/css/          # Design tokens and shared pixel primitives
+├── assets/css/          # Design tokens and shared book primitives
 ├── components/          # Layout, sections and UI components
 │   ├── arcade/          # Mini-games and their cabinet frame
 │   └── open-source/     # Open source figures, ledger and lists

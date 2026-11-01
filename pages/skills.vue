@@ -2,14 +2,15 @@
   <div class="container page">
     <SectionTitle page :eyebrow="$t('skillsUi.eyebrow')" :title="$t('skills.title')" :subtitle="$t('intro.skills')" />
 
-    <div class="grid" style="--min: 340px; gap: 24px">
-      <section v-for="section in skillSections" :key="section.key" class="bag inventory">
+    <div class="grid" style="--min: 320px; gap: 20px">
+      <section v-for="(section, s) in skillSections" :key="section.key" v-reveal="s" class="bag card">
         <div class="bag__head">
-          <h2 class="bag__title pixel">{{ $t(`skills.${section.key}`) }}</h2>
-          <span class="bag__count">{{ $t('skillsUi.count', { n: section.skills.length }) }}</span>
+          <span class="bag__num mono">2.{{ s + 1 }}</span>
+          <h2 class="bag__title">{{ $t(`skills.${section.key}`) }}</h2>
+          <span class="bag__count mono">{{ section.skills.length }}</span>
         </div>
-        <div class="bag__slots">
-          <SkillSlot v-for="(skill, i) in section.skills" :key="skill" v-reveal.pop="i" :name="skill" />
+        <div class="bag__list">
+          <SkillSlot v-for="skill in section.skills" :key="skill" :name="skill" />
         </div>
       </section>
     </div>
@@ -34,31 +35,30 @@ usePageSeo({
 .bag {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 24px;
 }
 
 .bag__head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.bag__num {
+  font-size: 13px;
+  color: var(--green-ink);
 }
 
 .bag__title {
+  flex: 1;
   margin: 0;
-  font-size: 12px;
-  color: var(--inv-fg);
+  font-size: 22px;
+  line-height: 1.2;
 }
 
 .bag__count {
-  font-size: 11px;
-  color: var(--inv-fg);
-  opacity: .75;
-}
-
-.bag__slots {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
 }
 </style>

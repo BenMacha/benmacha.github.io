@@ -1,12 +1,7 @@
 <template>
-  <div v-wiggle class="slot">
-    <span
-      class="slot__icon pixel"
-      :class="{ 'slot__icon--long': icon.abbr.length > 2 }"
-      :style="{ background: icon.color, color: icon.ink }"
-      aria-hidden="true"
-    >{{ icon.abbr }}</span>
-    <span class="slot__name">{{ name }}</span>
+  <div class="skill">
+    <span class="skill__mark mono" :style="{ '--mark': icon.color }" aria-hidden="true">{{ icon.abbr }}</span>
+    <span class="skill__name">{{ name }}</span>
   </div>
 </template>
 
@@ -18,44 +13,28 @@ const icon = computed(() => skillIcon(props.name))
 </script>
 
 <style scoped>
-.slot {
-  aspect-ratio: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px;
-  background: var(--slot);
-  box-shadow: inset 3px 3px 0 var(--slot-lo), inset -3px -3px 0 var(--slot-hi);
-}
-
-.slot:hover {
-  outline: 3px solid #fff;
-}
-
-.slot__icon {
-  min-width: 40px;
-  height: 34px;
-  padding: 0 6px;
+.skill {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  border: 2px solid #000;
-  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .3), inset 3px 3px 0 rgba(255, 255, 255, .35);
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
 }
 
-.slot__icon--long {
+/* A small index tab in the technology's own colour */
+.skill__mark {
+  flex: none;
+  min-width: 42px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  border-inline-start: 3px solid var(--mark);
   font-size: 11px;
+  text-align: center;
+  color: var(--ink-2);
 }
 
-.slot__name {
-  max-width: 100%;
-  font-size: 10px;
-  line-height: 1.3;
-  text-align: center;
-  color: var(--ink);
-  overflow-wrap: anywhere;
+.skill__name {
+  font-weight: 600;
 }
 </style>

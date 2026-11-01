@@ -28,11 +28,11 @@
         @pointerleave="focus = null"
       >
         <div class="package__head">
-          <span class="package__num coin-block pixel" aria-hidden="true">{{ i + 1 }}</span>
+          <span class="package__num mono" aria-hidden="true">{{ i + 1 }}</span>
           <h3 class="package__name">{{ pkg.name }}</h3>
         </div>
         <p class="package__desc">{{ description(pkg) }}</p>
-        <p class="package__downloads pixel">{{ format(pkg.downloads) }} <span>{{ $t('openSource.downloads') }}</span></p>
+        <p class="package__downloads">{{ format(pkg.downloads) }} <span>{{ $t('openSource.downloads') }}</span></p>
         <div class="package__links">
           <a :href="pkg.url" target="_blank" rel="noopener" @focus="focus = `pkg${i}`" @blur="focus = null">Packagist ↗</a>
           <a v-if="pkg.repository" :href="pkg.repository" target="_blank" rel="noopener">GitHub ↗</a>
@@ -107,30 +107,38 @@ const readout = computed(() => {
 
 .package__num {
   flex: none;
-  width: 30px;
-  height: 30px;
-  font-size: 11px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--green-ink);
 }
 
 .package__name {
   margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
   overflow-wrap: anywhere;
   direction: ltr;
 }
 
 .package__desc {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.65;
   color: var(--muted);
 }
 
 .package__downloads {
   margin: 0;
-  font-size: 11px;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 22px;
   color: var(--ink);
 }
 
@@ -146,7 +154,7 @@ const readout = computed(() => {
   gap: 14px;
   margin-top: auto;
   padding-top: 12px;
-  border-top: 3px dotted var(--border);
+  border-top: 1px solid var(--rule);
   font-size: 12px;
   font-weight: 600;
 }

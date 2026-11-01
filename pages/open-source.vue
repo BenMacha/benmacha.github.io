@@ -5,23 +5,23 @@
     <OpenSourceMachine />
 
     <section class="os__section" aria-labelledby="os-prs">
-      <h2 id="os-prs" class="os__heading pixel">{{ $t('openSource.byProject') }}</h2>
+      <h2 id="os-prs" class="os__heading"><span class="mono">4.1</span> {{ $t('openSource.byProject') }}</h2>
       <div class="os__projects">
         <article v-for="(project, i) in projects" :key="project.id" v-reveal="i" class="project card">
           <header class="project__head">
             <span class="project__logo" aria-hidden="true"><OpenSourceLogo :logo="project.logo" /></span>
-            <h3 class="project__name pixel">{{ project.name }}</h3>
+            <h3 class="project__name">{{ project.name }}</h3>
             <span class="project__badges">
-              <span v-if="project.merged.length" class="badge badge--merged pixel">{{ project.merged.length }} {{ $t('openSource.merged') }}</span>
-              <span v-if="project.open.length" class="badge badge--open pixel">{{ project.open.length }} {{ $t('openSource.open') }}</span>
+              <span v-if="project.merged.length" class="badge badge--merged mono">{{ project.merged.length }} {{ $t('openSource.merged') }}</span>
+              <span v-if="project.open.length" class="badge badge--open mono">{{ project.open.length }} {{ $t('openSource.open') }}</span>
             </span>
             <a :href="project.url" target="_blank" rel="noopener" class="project__repo">{{ $t('openSource.repo') }} ↗</a>
           </header>
 
           <div class="project__lists">
             <div v-for="group in groups(project)" :key="group.state" class="prs">
-              <h4 class="prs__title pixel">
-                <span class="prs__icon" :class="`prs__icon--${group.state}`" aria-hidden="true">{{ group.state === 'open' ? '?' : '' }}</span>
+              <h4 class="prs__title mono">
+                <span class="swatch" :class="group.state === 'merged' ? 'swatch--green' : 'swatch--open'" aria-hidden="true" />
                 {{ group.title }} · {{ group.items.length }}
               </h4>
               <ul class="prs__list">
@@ -36,8 +36,8 @@
             </div>
 
             <div v-for="note in notesOf(project.id)" :key="note.url" class="prs">
-              <h4 class="prs__title pixel">
-                <span class="prs__icon prs__icon--note" aria-hidden="true">!</span>
+              <h4 class="prs__title mono">
+                <span class="swatch swatch--red" aria-hidden="true" />
                 {{ $t('openSource.security') }}
               </h4>
               <p class="note">
@@ -51,12 +51,12 @@
     </section>
 
     <section class="os__section" aria-labelledby="os-packages">
-      <h2 id="os-packages" class="os__heading pixel">{{ $t('openSource.shelf.heading') }}</h2>
+      <h2 id="os-packages" class="os__heading"><span class="mono">4.2</span> {{ $t('openSource.shelf.heading') }}</h2>
       <OpenSourceShelf />
     </section>
 
     <section class="os__section" aria-labelledby="os-orgs">
-      <h2 id="os-orgs" class="os__heading pixel">{{ $t('openSource.orgs.heading') }}</h2>
+      <h2 id="os-orgs" class="os__heading"><span class="mono">4.3</span> {{ $t('openSource.orgs.heading') }}</h2>
       <OpenSourceStreet />
     </section>
 
@@ -99,7 +99,7 @@ usePageSeo({
   gap: 56px;
 }
 
-.os :deep(.section-title--page) {
+.os :deep(.chapter-head) {
   margin-bottom: 0;
 }
 
@@ -111,22 +111,28 @@ usePageSeo({
 
 .os__heading {
   margin: 0;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--h2);
+  font-size: clamp(26px, 3.6vw, 32px);
+  line-height: 1.2;
+}
+
+.os__heading span {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--green-ink);
+  margin-inline-end: 8px;
 }
 
 .os__projects {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
 }
 
 .project {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px;
+  padding: 24px;
 }
 
 .project__head {
@@ -137,20 +143,19 @@ usePageSeo({
 }
 
 .project__logo {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--chip);
-  border: 3px solid var(--line);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
   color: var(--ink);
 }
 
 .project__name {
   margin: 0;
-  font-size: 13px;
-  color: var(--accent);
+  font-size: 24px;
 }
 
 .project__badges {
@@ -160,72 +165,46 @@ usePageSeo({
 }
 
 .badge {
-  font-size: 8px;
-  padding: 5px 7px;
-  border: 2px solid #000;
+  font-size: 12px;
+  padding: 2px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
   white-space: nowrap;
+  color: var(--ink-2);
 }
 
 .badge--merged {
-  background: var(--coin);
-  color: var(--navy);
-}
-
-.badge--open {
-  background: var(--grass);
-  color: #0b0e1f;
+  border-color: var(--green);
+  color: var(--green-ink);
 }
 
 .project__repo {
   margin-inline-start: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-ink);
 }
 
 .project__lists {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
-  gap: 18px 28px;
+  gap: 18px 32px;
 }
 
 .prs__title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: 9px;
-  line-height: 1.6;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
-.prs__icon {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  color: var(--navy);
-  border: 2px solid var(--navy);
-}
-
-.prs__icon--merged {
-  width: 12px;
-  border-radius: 50%;
-  background: var(--coin);
-  box-shadow: inset -2px 0 0 var(--coin-dark);
-}
-
-.prs__icon--open {
-  background: var(--coin);
-  box-shadow: inset -2px -2px 0 var(--coin-dark);
-}
-
-.prs__icon--note {
-  background: var(--mario);
-  color: #fff;
+.swatch--open {
+  background: var(--muted);
 }
 
 .prs__list {
@@ -240,12 +219,8 @@ usePageSeo({
   display: flex;
   align-items: baseline;
   gap: 12px;
-  padding: 7px 0;
-  border-bottom: 2px dotted var(--border);
-}
-
-.pr:last-child {
-  border-bottom: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
 }
 
 .pr__link {
@@ -253,7 +228,7 @@ usePageSeo({
   min-width: 0;
   display: flex;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.55;
   color: var(--ink);
   direction: ltr;
@@ -261,13 +236,13 @@ usePageSeo({
 }
 
 .pr__link:hover .pr__title {
-  color: var(--accent);
-  text-decoration: underline;
+  color: var(--green-ink);
 }
 
 .pr__num {
   flex: none;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -277,9 +252,32 @@ usePageSeo({
 
 .pr__date {
   flex: none;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.note__link {
+  display: inline-block;
+  margin-inline-start: 6px;
+  font-weight: 700;
+  color: var(--green-ink);
+  direction: ltr;
+}
+
+.os__updated {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
 }
 
 @media (max-width: 560px) {
@@ -287,27 +285,5 @@ usePageSeo({
     flex-direction: column;
     gap: 2px;
   }
-}
-
-.note {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.65;
-  color: var(--ink);
-}
-
-.note__link {
-  display: inline-block;
-  margin-inline-start: 6px;
-  font-weight: 600;
-  color: var(--accent);
-  direction: ltr;
-}
-
-.os__updated {
-  margin: 0;
-  font-size: 11px;
-  color: var(--h2);
-  opacity: .8;
 }
 </style>

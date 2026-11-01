@@ -18,8 +18,7 @@
             @focus="focus = 'merged'"
             @blur="focus = null"
           >
-            <span class="total__icon total__icon--coin" aria-hidden="true" />
-            <span class="total__value pixel">{{ mergedCount }}</span>
+            <span class="total__value total__value--merged">{{ mergedCount }}</span>
             <span class="total__label">{{ $t('openSource.merged') }}</span>
           </button>
           <button
@@ -31,8 +30,7 @@
             @focus="focus = 'open'"
             @blur="focus = null"
           >
-            <span class="total__icon total__icon--q pixel" aria-hidden="true">?</span>
-            <span class="total__value total__value--open pixel">{{ openCount }}</span>
+            <span class="total__value">{{ openCount }}</span>
             <span class="total__label">{{ $t('openSource.open') }}</span>
           </button>
         </div>
@@ -49,7 +47,7 @@
             >
               <OpenSourceLogo :logo="project.logo" />
               <span class="row__name">{{ project.name }}</span>
-              <span class="row__count pixel">
+              <span class="row__count mono">
                 <span :class="{ 'is-merged': project.merged.length }">{{ project.merged.length }}</span>
                 ·
                 <span :class="{ 'is-open': project.open.length }">{{ project.open.length }}</span>
@@ -121,80 +119,53 @@ const readout = computed(() => {
   font: inherit;
   color: var(--ink);
   background: none;
-  border: 3px solid transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
   cursor: default;
   text-align: start;
 }
 
 .total {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 6px 8px;
-  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-color: var(--rule);
 }
 
 .total.is-on,
 .row.is-on {
-  border-color: var(--border);
-  background: var(--chip);
-}
-
-.total__icon {
-  grid-row: span 2;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--navy);
-}
-
-.total__icon--coin {
-  width: 16px;
-  margin-inline: 3px;
-  border-radius: 50%;
-  background: var(--coin);
-  box-shadow: inset -3px 0 0 var(--coin-dark);
-}
-
-.total__icon--q {
-  font-size: 10px;
-  color: var(--navy);
-  background: var(--coin);
-  box-shadow: inset -2px -2px 0 var(--coin-dark), inset 2px 2px 0 var(--coin-light);
+  border-color: var(--rule-strong);
+  background: var(--panel-2);
 }
 
 .total__value {
-  font-size: 20px;
-  line-height: 1;
-  color: var(--coin);
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.1;
 }
 
-html.light .total__value {
-  color: #b07a00;
-}
-
-.total__value--open,
-html.light .total__value--open {
-  color: var(--accent);
+.total__value--merged {
+  color: var(--green-ink);
 }
 
 .total__label {
-  grid-column: 2;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--muted);
-  white-space: nowrap;
 }
 
 .ledger__rows {
   margin: 0;
-  padding: 12px 0 0;
+  padding: 0;
   list-style: none;
-  border-top: 3px dotted var(--border);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+}
+
+.ledger__rows li {
+  border-top: 1px solid var(--rule);
 }
 
 .row {
@@ -202,8 +173,9 @@ html.light .total__value--open {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 5px 6px;
-  font-size: 13px;
+  padding: 8px 6px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .row__name {
@@ -215,21 +187,17 @@ html.light .total__value--open {
 }
 
 .row__count {
-  font-size: 9px;
+  font-size: 13px;
   color: var(--muted);
   white-space: nowrap;
   direction: ltr;
 }
 
 .is-merged {
-  color: var(--coin);
-}
-
-html.light .is-merged {
-  color: #b07a00;
+  color: var(--green-ink);
 }
 
 .is-open {
-  color: var(--accent);
+  color: var(--ink);
 }
 </style>

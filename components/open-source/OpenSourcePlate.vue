@@ -1,8 +1,8 @@
 <template>
   <figure class="plate">
     <div class="plate__card card">
-      <div class="plate__corner plate__corner--fig pixel">{{ fig }}</div>
-      <div class="plate__corner plate__corner--title pixel">{{ title }}</div>
+      <div class="plate__corner plate__corner--fig mono">{{ fig }}</div>
+      <div class="plate__corner plate__corner--title mono">{{ title }}</div>
       <div class="plate__body" :class="{ 'plate__body--side': $slots.side }">
         <div v-if="$slots.side" class="plate__side">
           <slot name="side" />
@@ -11,10 +11,10 @@
           <slot />
         </div>
       </div>
-      <div class="plate__corner plate__corner--hint pixel" aria-hidden="true">{{ hint }}</div>
-      <div class="plate__corner plate__corner--readout pixel" aria-live="polite">{{ readout }}</div>
+      <div class="plate__corner plate__corner--hint mono" aria-hidden="true">{{ hint }}</div>
+      <div class="plate__corner plate__corner--readout mono" aria-live="polite">{{ readout }}</div>
     </div>
-    <figcaption v-if="caption" class="plate__caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption" class="plate__caption caption">{{ fig }} — {{ caption }}</figcaption>
   </figure>
 </template>
 
@@ -39,18 +39,18 @@ defineProps<{
   grid-template-columns: 1fr auto;
   grid-template-rows: auto 1fr auto;
   gap: 10px 16px;
-  padding: 18px 20px;
+  padding: 18px 22px;
+  border-radius: 16px;
 }
 
 .plate__corner {
-  font-size: 8px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--muted);
-  letter-spacing: .04em;
 }
 
 .plate__corner--fig {
-  color: var(--eyebrow);
+  color: var(--red-ink);
 }
 
 .plate__corner--title,
@@ -71,7 +71,7 @@ defineProps<{
 .plate__body--side {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  gap: 20px;
+  gap: 24px;
   align-items: center;
 }
 
@@ -80,12 +80,8 @@ defineProps<{
 }
 
 .plate__caption {
-  max-width: 760px;
-  margin-top: 14px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--h2);
-  opacity: .85;
+  max-width: 820px;
+  margin-top: 12px;
 }
 
 @media (max-width: 760px) {
@@ -97,9 +93,8 @@ defineProps<{
     grid-template-columns: 1fr;
   }
 
-  /* The drawing is wide: let it bleed a little so it stays readable on phones */
   .plate__art {
-    margin-inline: -8px;
+    margin-inline: -6px;
   }
 
   .plate__corner--hint {

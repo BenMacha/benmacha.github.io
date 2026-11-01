@@ -514,12 +514,12 @@
     "mergedShare": "{n} % fusionnées",
     "packages": "paquets",
     "downloads": "installations",
-    "fig": "Fig {n}",
+    "fig": "Fig. {n}",
     "machine": {
       "title": "Machine à pull requests",
       "hint": "Survolez un projet",
-      "caption": "Chaque pull request sort du tuyau sous la forme d'un bloc « ? ». Le tampon de revue le frappe, le bloc donne une pièce, et les pull requests fusionnées s'empilent en pièces dans la caisse de briques ; celles encore en revue attendent dans le bac. Le cadran indique la part fusionnée.",
-      "label": "Une machine à pull requests isométrique sur un établi. Des blocs « ? » représentant les pull requests sortent d'un tuyau vert sur un convoyeur et passent sous un tampon de revue qui les change en pièces. {merged} pull requests fusionnées sont des pièces dans la caisse de briques et {open} attendent en revue dans le bac. Le cadran indique {share} % fusionnées."
+      "caption": "Chaque pull request sort de la trémie sous la forme d'un colis. Le tampon de revue l'approuve et le colis reçoit une étiquette verte ; les pull requests fusionnées s'empilent en plaques dans la caisse, celles encore en revue attendent dans le bac. Le cadran indique la part fusionnée.",
+      "label": "Une machine à pull requests isométrique sur un établi, en dessin au trait. Des colis représentant les pull requests sortent d'une trémie sur un convoyeur et passent sous un tampon de revue qui les approuve. {merged} pull requests fusionnées sont empilées dans la caisse et {open} attendent en revue dans le bac. Le cadran indique {share} % fusionnées."
     },
     "byProject": "Pull requests par projet",
     "repo": "Dépôt",
@@ -533,8 +533,8 @@
       "title": "Étagère des paquets",
       "hint": "Survolez une caisse",
       "heading": "Paquets sur Packagist",
-      "caption": "Une caisse par bundle Symfony publié sur Packagist. Les pièces de chaque caisse sont proportionnelles à ses installations, et le compteur dessous donne le total Packagist.",
-      "label": "Une étagère d'atelier isométrique avec {count} caisses en bois, une par paquet Packagist, chacune avec une pile de pièces et un compteur d'installations : {list}."
+      "caption": "Une caisse par bundle Symfony publié sur Packagist. La pile de plaques de chaque caisse est proportionnelle à ses installations, et le compteur dessous donne le total Packagist.",
+      "label": "Une étagère d'atelier isométrique avec {count} caisses, une par paquet Packagist, chacune avec une pile de plaques et un compteur d'installations : {list}."
     },
     "pkg": {
       "diagramBundle": "Diagramme interactif des entités Doctrine pour Symfony : une API JSON et un studio React utilisables depuis Twig, JS, React et Vue.",
@@ -547,7 +547,7 @@
       "hint": "Survolez un bâtiment",
       "heading": "Organisations",
       "caption": "Le restaurant de Pepprio, l'agence immobilière de Pignelle et mon propre atelier, où sont fabriqués les bundles ci-dessus.",
-      "label": "Trois petits bâtiments isométriques sur un bloc de terre et d'herbe : le restaurant Pepprio avec un store rayé, l'agence immobilière Pignelle avec un toit rouge et un panneau à vendre, et l'atelier en briques de Ben Macha avec un bloc « ? » en enseigne et un tuyau vert.",
+      "label": "Trois petits bâtiments isométriques en dessin au trait sur un socle : le restaurant Pepprio avec un store rayé, l'agence immobilière Pignelle avec un toit et un panneau à vendre, et l'atelier de Ben Macha avec une enseigne sur le toit.",
       "pepprio": "Pepprio (TastyBox) : gestion des commandes pour les restaurants.",
       "pignelle": "Pignelle : outils pour les agences immobilières : estimation, gestion des biens, notifications et signature électronique.",
       "benmacha": "Mon GitHub personnel : bundles Symfony, SDK PHP et expériences."
@@ -558,5 +558,80 @@
       "title": "Contributions open source : Symfony, API Platform, Caddy",
       "description": "Le travail open source de Ben Macha Ali : pull requests fusionnées dans Symfony, correctifs proposés à API Platform, Caddy et Ting, bundles Symfony sur Packagist et les organisations Pepprio et Pignelle."
     }
+  },
+  "book": {
+    "volume": "vol. 2026",
+    "chapter": "Chapitre",
+    "annex": "Annexe",
+    "page": "p.",
+    "toc": "Sommaire",
+    "menu": "Ouvrir le sommaire",
+    "preface": "// Préface",
+    "heroLead": "Je conçois des produits SI et IA",
+    "heroAccent": "qui tournent en production.",
+    "heroText": "Chef de projet SI & IA générative chez ORPI, Tech Lead PHP/Symfony, fondateur de Pepprio. Dix ans de Tunis à Paris, racontés comme un manuel technique : chaque chapitre, une pièce de la machine.",
+    "cv": "Lire le CV (PDF)",
+    "contact": "Me contacter",
+    "facts": {
+      "experience": "expérience",
+      "years": "{n} ans",
+      "merged": "PR fusionnées",
+      "bundles": "bundles",
+      "products": "produits"
+    },
+    "fig1": {
+      "label": "Schéma isométrique : un établi avec trois modules reliés, SI et données, IA, produit",
+      "caption": "Fig. 1 — L'établi : les données (1) alimentent les agents IA (2), qui livrent un produit (3).",
+      "data": "SI & data",
+      "ai": "IA",
+      "product": "Produit"
+    },
+    "tocSummary": "6 chapitres · 1 annexe open source",
+    "chapters": {
+      "experience": "Huit postes, une ligne du temps, freelance et CDI.",
+      "skills": "PHP, Symfony, React, data et IA générative.",
+      "projects": "Pepprio, OrpiHub, SDK et bundles Symfony.",
+      "open-source": "Pull requests chez Symfony, API Platform, Caddy.",
+      "blog": "Notes techniques : Docker, Linux, Symfony, IA.",
+      "education": "Licence génie logiciel, ISI Mahdia."
+    },
+    "latestTitle": "Derniers chapitres écrits",
+    "latestText": "Les trois postes en cours ou récents. La suite est dans le chapitre Expérience.",
+    "legend": {
+      "salaried": "Salarié",
+      "salariedNote": "CDI, CDD, temps plein",
+      "freelance": "Freelance",
+      "freelanceNote": "fermé à la fin de la mission",
+      "own": "Mon entreprise",
+      "ownNote": "Pepprio"
+    },
+    "kinds": {
+      "cdi": "CDI",
+      "cdd": "CDD",
+      "fulltime": "temps plein",
+      "own": "mon entreprise",
+      "freelanceThenCdi": "freelance 09/2018 – 08/2020, puis CDI"
+    },
+    "annexA": {
+      "eyebrow": "Annexe A · Open source",
+      "title": "{n} pull requests fusionnées chez Symfony",
+      "text": "D'autres en revue chez API Platform, Caddy et Ting, et quatre bundles Symfony publiés sur Packagist.",
+      "cta": "Ouvrir l'annexe",
+      "seeAlso": "Voir aussi · Annexe A",
+      "chapterTitle": "{n} pull requests fusionnées chez Symfony, d'autres en revue chez API Platform, Caddy et Ting.",
+      "merged": "fusionnées",
+      "open": "en revue",
+      "projects": "projets",
+      "bundles": "bundles"
+    },
+    "annexB": {
+      "eyebrow": "Annexe B · Récréation",
+      "title": "Récréation",
+      "text": "Cinq petits jeux écrits pour le plaisir : clavier, souris ou tactile. Rien à apprendre ici, juste une pause entre deux chapitres."
+    },
+    "footer": "Écrivons le prochain chapitre.",
+    "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris. L'axe à gauche compte les années ; chaque poste est une branche ouverte à sa date de début et fermée à sa date de fin.",
+    "cdiMarker": "CDI",
+    "contents": "Contenu du chapitre"
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <div class="cabinet" :class="`cabinet--${skin}`">
-    <div class="cabinet__hud pixel">
+    <div class="cabinet__hud">
       <span>{{ title }}</span>
       <span ref="scoreEl" class="cabinet__score">{{ score }}</span>
       <span>{{ extra }}</span>
@@ -9,7 +9,7 @@
     <div class="cabinet__body">
       <div class="cabinet__screen" :class="{ 'cabinet__screen--tall': tall }">
         <slot />
-        <div v-if="idle" class="cabinet__overlay pixel">
+        <div v-if="idle" class="cabinet__overlay">
           <div class="cabinet__message">{{ message }}</div>
           <div v-if="keys || hint" class="cabinet__hint">
             <span v-if="keys" class="arrows">{{ keys }}</span> {{ hint }}
@@ -20,7 +20,7 @@
     </div>
 
     <div class="cabinet__actions">
-      <button type="button" class="cabinet__start pixel" @click="$emit('start')">▶ {{ $t('arcade.start') }}</button>
+      <button type="button" class="cabinet__start" @click="$emit('start')">▶ {{ $t('arcade.start') }}</button>
     </div>
   </div>
 </template>
@@ -52,6 +52,8 @@ watch(() => props.score, () => {
 </script>
 
 <style scoped>
+/* A small figure plate of the book: panel, thin rule, mono captions. The screens keep
+   the games' own colours. */
 .cabinet {
   flex: 0 1 auto;
   min-width: 0;
@@ -60,39 +62,9 @@ watch(() => props.score, () => {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: var(--c-bg);
-  border: 3px solid #000;
-  box-shadow: inset 3px 3px 0 var(--c-hi), inset -3px -3px 0 var(--c-lo), 6px 6px 0 var(--shadow);
-}
-
-.cabinet--gameboy {
-  --c-bg: #9bbc0f; --c-hi: #c4df4a; --c-lo: #6b8a0a; --c-fg: #0f380f;
-  --s-border: #0f380f; --s-bg: #8bac0f; --o-bg: rgba(139, 172, 15, .85); --o-fg: #0f380f; --o-hint: #0f380f;
-  --b-bg: #e52521; --b-fg: #fff; --b-border: #0f380f;
-}
-
-.cabinet--tetris {
-  --c-bg: #c4c0b8; --c-hi: #e6e2da; --c-lo: #8a867e; --c-fg: #1a1a2e;
-  --s-border: #1a1a2e; --s-bg: #0b0e1f; --o-bg: rgba(11, 14, 31, .85); --o-fg: #fbd000; --o-hint: #e8ecff;
-  --b-bg: #fbd000; --b-fg: #1a1a2e; --b-border: #1a1a2e;
-}
-
-.cabinet--breakout {
-  --c-bg: #1a73c2; --c-hi: #5aa8f0; --c-lo: #0e4a85; --c-fg: #fff;
-  --s-border: #000; --s-bg: #05070f; --o-bg: rgba(5, 7, 15, .82); --o-fg: #fbd000; --o-hint: #e8ecff;
-  --b-bg: #fbd000; --b-fg: #1a1a2e; --b-border: #000;
-}
-
-.cabinet--pong {
-  --c-bg: #e8e4dc; --c-hi: #fff; --c-lo: #a8a49c; --c-fg: #1a1a2e;
-  --s-border: #000; --s-bg: #05070f; --o-bg: rgba(5, 7, 15, .82); --o-fg: #fbd000; --o-hint: #e8ecff;
-  --b-bg: #e52521; --b-fg: #fff; --b-border: #000;
-}
-
-.cabinet--invaders {
-  --c-bg: #1d2140; --c-hi: #3b4170; --c-lo: #0b0e1f; --c-fg: #fff;
-  --s-border: #000; --s-bg: #05070f; --o-bg: rgba(5, 7, 15, .82); --o-fg: #fbd000; --o-hint: #e8ecff;
-  --b-bg: #5cb338; --b-fg: #0b0e1f; --b-border: #000;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
 }
 
 .cabinet__hud {
@@ -101,13 +73,21 @@ watch(() => props.score, () => {
   align-items: center;
   justify-content: space-between;
   gap: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   line-height: 1.6;
-  font-size: 10px;
-  color: var(--c-fg);
+  color: var(--muted);
+}
+
+.cabinet__hud > span:first-child {
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .cabinet__score {
   display: inline-block;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 
 .cabinet__body {
@@ -122,8 +102,10 @@ watch(() => props.score, () => {
   width: 306px;
   max-width: 100%;
   aspect-ratio: 1;
-  background: var(--s-bg);
-  border: 3px solid var(--s-border);
+  background: #0b0e14;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
   direction: ltr;
 }
 
@@ -148,22 +130,25 @@ watch(() => props.score, () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 12px;
   padding: 10px;
   text-align: center;
-  background: var(--o-bg);
-  color: var(--o-fg);
+  background: rgba(11, 14, 20, .82);
+  color: #eef1f5;
 }
 
 .cabinet__message {
-  font-size: 11px;
-  line-height: 1.6;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .cabinet__hint {
-  font-size: 8px;
-  line-height: 1.9;
-  color: var(--o-hint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: #b6bdc8;
 }
 
 .arrows {
@@ -177,16 +162,20 @@ watch(() => props.score, () => {
 }
 
 .cabinet__start {
-  font-size: 10px;
-  padding: 10px 14px;
-  background: var(--b-bg);
-  color: var(--b-fg);
-  border: 3px solid var(--b-border);
-  box-shadow: 3px 3px 0 var(--b-border);
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.cabinet__start:active {
-  box-shadow: none;
+.cabinet__start:hover {
+  border-color: var(--green);
+  color: var(--green-ink);
 }
 </style>
