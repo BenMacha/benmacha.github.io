@@ -330,9 +330,12 @@
     "more": "+{n} quests",
     "less": "Collapse",
     "start": "START · 2016",
-    "freelanceBranch": "FREELANCE",
+    "freelanceBranch": "KEYTCHENS FREELANCE",
     "legendTrunk": "Green pipe: salaried job",
     "legendBranch": "Yellow pipe: freelance or side project",
+    "legendPermanent": "Name in red: salaried (permanent, fixed-term)",
+    "legendFreelance": "Name in green: freelance",
+    "legendOwn": "Name in yellow: my own company",
     "countryChange": "✈ 2019 · TUNISIA → FRANCE"
   },
   "skillsUi": {

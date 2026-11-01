@@ -12,24 +12,43 @@ export const featuredCompanies = ['ORPI', 'PEPPRIO', 'CCM BENCHMARK · GROUPE LE
  *   - `open`: runs along the whole row and is still going on above (ongoing project),
  *   - `forkBelow`: comes down to the row's pipe head, then joins the trunk at the bottom of the row,
  *   - `mergeAtHead`: leaves the trunk at the row's pipe head and goes down,
- *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head.
+ *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head,
+ *   - `endAtHead`: runs up the row and stops at its pipe head (the branch is closed there).
  */
 export interface Rail {
   node: 'trunk' | 'branch'
-  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead'
+  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead' | 'endAtHead'
   /** i18n key of a short label written along the yellow pipe. */
   label?: string
 }
 
 export const rails: Record<string, Rail> = {
-  'ORPI': { node: 'trunk', branch: 'open' },
+  'ORPI': { node: 'trunk' },
   'PEPPRIO': { node: 'branch', branch: 'forkBelow' },
   'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'trunk' },
-  'KEYTCHENS': { node: 'trunk', branch: 'mergeAtHead' },
+  // The Keytchens freelance period ends in 08/20: its branch stops there, it does not merge back
+  'KEYTCHENS': { node: 'trunk', branch: 'endAtHead' },
   'MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
   'MOBELITE': { node: 'trunk', branch: 'through' },
   'PIXELS TRADE': { node: 'trunk', branch: 'forkAtHead' },
   'ARGOLIFE': { node: 'trunk' },
+}
+
+/**
+ * Contract of each job, keyed like `rails` (from LinkedIn): the company name is drawn in red for a
+ * salaried job (CDI; Mobelite was a CDD), in green for a freelance one and in yellow for my own
+ * company. Keytchens was freelance (09/18 – 08/20) then CDI (09/20 – 08/24): its name follows the
+ * CDI, each phase keeps its own colour.
+ */
+export const contracts: Record<string, 'permanent' | 'freelance' | 'own'> = {
+  'ORPI': 'permanent',
+  'PEPPRIO': 'own',
+  'CCM BENCHMARK · GROUPE LE FIGARO': 'permanent',
+  'KEYTCHENS': 'permanent',
+  'MATALTO': 'permanent',
+  'MOBELITE': 'permanent',
+  'PIXELS TRADE': 'permanent',
+  'ARGOLIFE': 'permanent',
 }
 
 /** A "Tunisia → France" milestone is shown just above this company. */
