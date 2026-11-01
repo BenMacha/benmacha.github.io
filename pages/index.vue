@@ -84,9 +84,6 @@
         </dl>
       </div>
     </section>
-
-    <!-- Appendix B: recess (the mini-games) -->
-    <ArcadeSection />
   </div>
 </template>
 

@@ -1,15 +1,16 @@
 <template>
   <div class="skill">
-    <span class="skill__mark mono" :style="{ '--mark': icon.color }" aria-hidden="true">{{ icon.abbr }}</span>
+    <svg class="skill__icon" viewBox="0 0 24 24" :style="{ '--brand': brand }" aria-hidden="true" focusable="false"><path :d="techIcon(name)" /></svg>
     <span class="skill__name">{{ name }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { skillIcon } from '~/data/skills'
+import { techIcon } from '~/data/tech'
 
 const props = defineProps<{ name: string }>()
-const icon = computed(() => skillIcon(props.name))
+const brand = computed(() => skillIcon(props.name).color)
 </script>
 
 <style scoped>
@@ -21,17 +22,17 @@ const icon = computed(() => skillIcon(props.name))
   border-top: 1px solid var(--rule);
 }
 
-/* A small index tab in the technology's own colour */
-.skill__mark {
+/* Monochrome logo in the text colour, brand colour on hover */
+.skill__icon {
+  width: 20px;
+  height: 20px;
   flex: none;
-  min-width: 42px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  border: 1px solid var(--rule);
-  border-inline-start: 3px solid var(--mark);
-  font-size: 11px;
-  text-align: center;
-  color: var(--ink-2);
+  fill: var(--ink-2);
+  transition: fill .2s;
+}
+
+.skill:hover .skill__icon {
+  fill: var(--brand);
 }
 
 .skill__name {

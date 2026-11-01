@@ -163,6 +163,18 @@
       "viewOn": "Voir sur",
       "items": [
         {
+          "name": "Pepprio",
+          "icon": "",
+          "description": "SaaS de gestion des commandes pour restaurants : Uber Eats, Deliveroo, Just Eat et Glovo sur une seule tablette, caisse, écran cuisine, borne et litiges automatiques.",
+          "url": "https://www.pepprio.com"
+        },
+        {
+          "name": "OrpiHub",
+          "icon": "",
+          "description": "Plateforme data du réseau ORPI (projet interne) : pilotage commercial, cartographie, exports, audits d'agence et assistant métier IA avec serveur MCP et RAG.",
+          "url": "https://www.orpi.com"
+        },
+        {
           "name": "UberEat PHP SDK",
           "icon": "🍽️",
           "description": "SDK PHP pour l'intégration de l'API UberEat",
@@ -171,7 +183,7 @@
             "Gestion des commandes et des menus",
             "Documentation détaillée et exemples"
           ],
-          "url": "https://github.com/BenMacha/ubereat-php"
+          "url": "https://github.com/pepprio/uber-eats-sdk-php"
         },
         {
           "name": "Symfony CRUD Template Bundle",
@@ -190,6 +202,30 @@
           "icon": "📊",
           "description": "Générateur de diagrammes pour projets Symfony",
           "url": "https://github.com/BenMacha/diagram-bundle"
+        },
+        {
+          "name": "Symfony Audit Bundle",
+          "icon": "",
+          "description": "Audit des modifications des entités Doctrine avec retour arrière, interface web et API REST.",
+          "url": "https://github.com/BenMacha/audit-bundle"
+        },
+        {
+          "name": "AuthX Bundle",
+          "icon": "",
+          "description": "Authentification et autorisation pour Symfony : JWT, OpenID Connect, gestion des utilisateurs, journal d'audit et abonnements.",
+          "url": "https://github.com/BenMacha/authx-bundle"
+        },
+        {
+          "name": "Omnimail MCP",
+          "icon": "",
+          "description": "Serveur MCP open source multi-comptes mail (iCloud, Gmail, Outlook, Yahoo, Proton, Infomaniak, IMAP), sous Docker, conforme RGPD.",
+          "url": "https://github.com/BenMacha/omnimail-mcp"
+        },
+        {
+          "name": "Portfolio benmacha.tn",
+          "icon": "",
+          "description": "Ce site : un livre technique trilingue (FR / EN / AR) en Nuxt 3, rendu à l'avance, avec des figures isométriques.",
+          "url": "https://github.com/BenMacha/benmacha.github.io"
         }
       ]
     }
@@ -318,7 +354,6 @@
     "skills": "MONDE 2 · INVENTAIRE",
     "projects": "MONDE 3 · BLOCS BONUS",
     "blog": "MONDE 4 · LOGS",
-    "arcade": "MONDE 6 · ARCADE",
     "seeAll": "Tout voir",
     "openInventory": "Ouvrir l'inventaire",
     "education": "MONDE 5 · SUCCES",
@@ -355,27 +390,6 @@
   "blogUi": {
     "eyebrow": "MONDE 4 · LOGS SERVEUR",
     "readTime": "de lecture"
-  },
-  "arcade": {
-    "title": "Jeux d'antan",
-    "start": "START",
-    "pressStart": "APPUIE SUR START",
-    "gameOver": "GAME OVER",
-    "pause": "PAUSE · START",
-    "victory": "VICTOIRE !",
-    "score": "SCORE",
-    "best": "BEST",
-    "lines": "LIGNES",
-    "move": "bouger",
-    "rotate": "tourner",
-    "down": "descendre",
-    "drop": "ESPACE chute",
-    "orMouse": "ou souris",
-    "shoot": "ESPACE tirer",
-    "points": "7 pts",
-    "breakout": "CASSE-BRIQUES",
-    "swipe": "glisser",
-    "tetrisTouch": "Mobile : glisser pour bouger, toucher pour tourner"
   },
   "contactUi": {
     "eyebrow": "INSERT COIN · PLAYER 2 ?",
@@ -623,11 +637,6 @@
       "open": "en revue",
       "projects": "projets",
       "bundles": "bundles"
-    },
-    "annexB": {
-      "eyebrow": "Annexe B · Récréation",
-      "title": "Récréation",
-      "text": "Cinq petits jeux écrits pour le plaisir : clavier, souris ou tactile. Rien à apprendre ici, juste une pause entre deux chapitres."
     },
     "footer": "Écrivons le prochain chapitre.",
     "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris. L'axe à gauche compte les années ; chaque poste est une branche ouverte à sa date de début et fermée à sa date de fin.",

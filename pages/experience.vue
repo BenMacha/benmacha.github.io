@@ -8,28 +8,42 @@
       </dl>
     </ChapterHead>
 
-    <ol class="timeline">
-      <li v-for="(job, i) in experiences" :key="job.company" class="row" :class="{ 'row--first': i === 0, 'row--last': i === experiences.length - 1 }">
-        <!-- The red axis counts the years; each job is a branch opened at its start (bottom) and closed at its end (top) -->
-        <div v-draw class="rail" :class="[`rail--${tone(job)}`, { 'rail--switch': contractOf(job.company).switchedFromFreelance }]" aria-hidden="true">
-          <span class="rail__year mono">{{ startYear(job.period) }}</span>
-          <span class="rail__axis" />
-          <span class="rail__tick" />
-          <span class="rail__branch" />
-          <span class="rail__fork" />
-          <span v-if="ongoing(job)" class="rail__open" />
-          <span v-else class="rail__end" />
-          <template v-if="contractOf(job.company).switchedFromFreelance">
-            <span class="rail__freelance" />
-            <span class="rail__switch" />
-            <span class="rail__switch-label mono">{{ $t('book.cdiMarker') }}</span>
+    <!-- The career as a git graph (GitKraken-style): one lane per kind of contract, one commit per job -->
+    <ol class="graph-list">
+      <li v-for="(job, i) in experiences" :key="job.company" class="row" :style="laneVars">
+        <span class="row__year mono" aria-hidden="true">{{ startYear(job.period) }}</span>
+
+        <div class="row__refs" aria-hidden="true">
+          <span class="row__year-inline mono">{{ startYear(job.period) }}</span>
+          <span v-for="ref in rowOf(job).refs" :key="ref.text" class="ref mono" :class="[`ref--${ref.kind}`, `ref--${ref.lane}`]">{{ ref.text }}</span>
+          <span v-for="ref in rowOf(job).endRefs ?? []" :key="ref.text" class="ref-end">
+            <span class="ref mono" :class="[`ref--${ref.kind}`, `ref--${ref.lane}`]">{{ ref.text }}</span>
+            <span v-if="ref.closed" class="ref__closed mono">✕ {{ ref.closed }}</span>
+          </span>
+        </div>
+
+        <div v-draw class="graph" aria-hidden="true">
+          <template v-for="(shape, lane) in rowOf(job).lanes" :key="lane">
+            <span v-if="shape !== 'forkFromNode'" class="lane" :class="[`lane--${lane}`, `shape--${shape}`]" />
+            <svg v-else class="fork" :class="`fork--${lane}`" :viewBox="`0 0 ${GW} ${NODE_Y}`" preserveAspectRatio="none">
+              <path :d="forkPath(lane)" pathLength="1" />
+            </svg>
+            <span v-if="shape === 'open'" class="arrow" :class="`lane--${lane}`" />
+            <template v-if="shape === 'endBelow'">
+              <span class="endcap" :class="`lane--${lane}`" />
+              <span class="node node--end" :class="`lane--${lane}`" />
+            </template>
           </template>
+          <span class="node" :class="`lane--${rowOf(job).node}`">
+            <img v-if="logoOf(job.company)" :src="logoOf(job.company)" alt="" width="28" height="28" loading="lazy">
+            <span v-else>{{ contractOf(job.company).name.charAt(0) }}</span>
+          </span>
         </div>
 
         <article v-reveal class="job">
           <div class="job__head">
             <h2 class="job__role">{{ job.role }}</h2>
-            <span class="job__period mono">{{ job.period }}</span>
+            <span class="job__commit mono"><span class="job__hash">{{ commitHash(job.company) }}</span> · {{ job.period }}</span>
           </div>
           <p class="job__company">
             <span :class="`contract--${contractOf(job.company).contract}`">{{ contractOf(job.company).name }}</span>
@@ -57,7 +71,7 @@
             {{ expanded[i] ? `− ${$t('experienceUi.less')}` : `+ ${job.tasks.length - TASK_LIMIT}` }}
           </button>
 
-          <p v-if="job.stack.length" class="job__stack mono">stack · {{ job.stack.join(', ') }}</p>
+          <TechList v-if="job.stack.length" :items="job.stack" class="job__stack" />
           <a v-if="job.website" :href="job.website" target="_blank" rel="noopener" class="job__site mono">{{ job.website.replace(/^https?:\/\//, '') }} ↗</a>
         </article>
       </li>
@@ -75,7 +89,8 @@
 </template>
 
 <script setup lang="ts">
-import { contractOf, startYear } from '~/data/experience'
+import { commitHash, contractOf, graph, startYear, type GraphRow, type Lane } from '~/data/experience'
+import { companyLogos } from '~/data/companies'
 import { contributionsByProject, mergedCount, openCount, packages } from '~/data/opensource'
 import type { Experience } from '~/composables/useResume'
 
@@ -88,9 +103,27 @@ const expanded = reactive<Record<number, boolean>>({})
 
 const symfonyMerged = contributionsByProject.find(p => p.id === 'symfony')?.merged.length ?? 0
 
-const tone = (job: Experience) => ({ permanent: 'green', freelance: 'amber', own: 'red' } as const)[contractOf(job.company).contract]
-// A period with a single date ("09/25 – Aujourd'hui") is still running
-const ongoing = (job: Experience) => (job.period.match(/\d{2}\/\d{2}/g) ?? []).length < 2
+// Graph geometry (px): lane positions from the inline start, row commit height, graph width
+const LANE_X: Record<Lane, number> = { main: 22, freelance: 58, pepprio: 94 }
+const NODE_Y = 44
+const GW = 116
+const laneVars = {
+  '--x-main': `${LANE_X.main}px`,
+  '--x-freelance': `${LANE_X.freelance}px`,
+  '--x-pepprio': `${LANE_X.pepprio}px`,
+  '--node-y': `${NODE_Y}px`,
+  '--gw': `${GW}px`,
+}
+
+const rowOf = (job: Experience): GraphRow => graph[job.company] ?? { node: 'main', lanes: { main: 'full' }, refs: [] }
+const logoOf = (company: string) => companyLogos[company]?.src
+
+// S curve from the main lane at the commit up to the branch lane at the top of the row
+function forkPath(lane: Lane) {
+  const x0 = LANE_X.main + 3
+  const x1 = LANE_X[lane] + 3
+  return `M${x0} ${NODE_Y} C${x0} ${NODE_Y * 0.45} ${x1} ${NODE_Y * 0.55} ${x1} 0`
+}
 
 function visibleTasks(tasks: string[], index: number) {
   return expanded[index] ? tasks : tasks.slice(0, TASK_LIMIT)
@@ -128,185 +161,269 @@ usePageSeo({
   color: var(--muted);
 }
 
-/* ---------- Timeline ---------- */
-.timeline {
+/* ---------- Git graph (GitKraken-style) ---------- */
+.graph-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .row {
-  display: flex;
-  gap: 24px;
+  --lane-w: 6px;
+  --node: 34px;
+  display: grid;
+  grid-template-columns: 44px 180px var(--gw) minmax(0, 1fr);
+  grid-template-areas: 'year refs graph job';
+  column-gap: 12px;
 }
 
-.rail {
-  --c: var(--green);
-  position: relative;
-  flex: 0 0 140px;
-  min-height: 176px;
-}
-
-.rail--red { --c: var(--red); }
-.rail--amber { --c: var(--amber); }
-
-.rail > span {
-  position: absolute;
-}
-
-.rail__year {
-  inset-inline-start: 0;
-  top: 28px;
+.row__year {
+  grid-area: year;
+  padding-top: calc(var(--node-y) - 11px);
   font-size: 13px;
   color: var(--muted);
 }
 
-.rail__axis {
-  inset-inline-start: 56px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--axis);
+.row__year-inline {
+  display: none;
 }
 
-.row--first .rail__axis {
-  top: 30px;
+/* Ref badges, like GitKraken's branch and tag pills */
+.row__refs {
+  grid-area: refs;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding-top: calc(var(--node-y) - 12px);
 }
 
-.rail__tick {
-  inset-inline-start: 48px;
-  top: 37px;
-  width: 18px;
-  height: 2px;
-  background: var(--axis);
-}
-
-/* The job: from its start (connector to the axis, bottom) up to its end (ring, top) */
-.rail__branch {
-  inset-inline-start: 96px;
-  top: 36px;
-  bottom: 26px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--c);
-  transform-origin: 50% 100%;
-}
-
-.rail__fork {
-  inset-inline-start: 57px;
-  bottom: 26px;
-  width: 42px;
-  height: 2px;
-  background: var(--c);
-  transform-origin: 0 50%;
-}
-
-.rail__end,
-.rail__open {
-  inset-inline-start: 89px;
-  top: 28px;
-  width: 17px;
-  height: 17px;
+.ref {
+  --c: var(--green);
+  max-width: 100%;
+  padding: 2px 10px;
   border-radius: 999px;
-  background: var(--bg);
-  border: 3px solid var(--c);
+  border: 1px solid var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Still running: the branch stays open at the top (an arrowhead instead of a closing ring) */
-.rail__open {
-  top: 26px;
-  border-radius: 0;
-  border-width: 3px 0 0 3px;
+.ref--freelance { --c: var(--amber); }
+.ref--pepprio { --c: var(--red); }
+
+.ref--head {
+  background: var(--c);
+  color: #0e1116;
+  font-weight: 500;
+}
+
+/* A tag: pointed start, outlined */
+.ref--tag {
+  border-radius: 4px 999px 999px 4px;
   background: transparent;
-  transform: rotate(45deg);
-  width: 13px;
-  height: 13px;
-  inset-inline-start: 91px;
-}
-
-/* Freelance first (amber, below), then permanent from the ◆ */
-.rail__freelance {
-  inset-inline-start: 96px;
-  top: 110px;
-  bottom: 26px;
-  width: 3px;
-  background: var(--amber);
-  transform-origin: 50% 100%;
-}
-
-.rail--switch .rail__fork {
-  background: var(--amber);
-}
-
-.rail__switch {
-  inset-inline-start: 91px;
-  top: 98px;
-  width: 13px;
-  height: 13px;
-  background: var(--green);
-  transform: rotate(45deg);
-}
-
-.rail__switch-label {
-  inset-inline-start: 112px;
-  top: 92px;
-  font-size: 11px;
   color: var(--green-ink);
 }
 
-/* The branch grows from its start date when it scrolls into view */
-.rail.will-draw .rail__branch,
-.rail.will-draw .rail__freelance {
-  transform: scaleY(0);
+.ref--tag::before {
+  content: '◆ ';
 }
 
-.rail.will-draw .rail__fork {
-  transform: scaleX(0);
+.ref-end {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(var(--node-y) + 60px - 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.rail.will-draw .rail__end,
-.rail.will-draw .rail__open,
-.rail.will-draw .rail__switch,
-.rail.will-draw .rail__switch-label {
-  opacity: 0;
+.ref__closed {
+  font-size: 12px;
+  color: var(--muted);
 }
 
-.rail.will-draw.is-drawn .rail__fork {
-  transform: scaleX(1);
-  transition: transform .25s var(--ease);
+/* Lanes, commits, forks */
+.graph {
+  grid-area: graph;
+  position: relative;
+  min-height: 150px;
 }
 
-.rail.will-draw.is-drawn .rail__branch,
-.rail.will-draw.is-drawn .rail__freelance {
-  transform: scaleY(1);
-  transition: transform .7s var(--ease) .2s;
+.lane,
+.arrow,
+.node,
+.endcap {
+  position: absolute;
 }
 
-.rail.will-draw.is-drawn .rail__end,
-.rail.will-draw.is-drawn .rail__open,
-.rail.will-draw.is-drawn .rail__switch,
-.rail.will-draw.is-drawn .rail__switch-label {
-  opacity: 1;
-  transition: opacity .3s .8s;
+.lane {
+  --c: var(--green);
+  top: 0;
+  bottom: 0;
+  inset-inline-start: var(--x);
+  width: var(--lane-w);
+  border-radius: var(--lane-w);
+  background: var(--c);
+  transform-origin: 50% 100%;
 }
 
-.rail.will-draw.is-drawn .rail__open {
+.lane--main { --c: var(--green); --x: var(--x-main); }
+.lane--freelance { --c: var(--amber); --x: var(--x-freelance); }
+.lane--pepprio { --c: var(--red); --x: var(--x-pepprio); }
+
+.shape--fromNode { top: var(--node-y); }
+.shape--toNode { bottom: auto; height: var(--node-y); }
+.shape--open { top: 14px; }
+.shape--endBelow { top: calc(var(--node-y) + 60px); }
+
+/* Still running: arrowhead at the top of the lane */
+.arrow {
+  top: 4px;
+  inset-inline-start: calc(var(--x) - 5px);
+  width: 16px;
+  height: 16px;
+  border-top: var(--lane-w) solid var(--c);
+  border-left: var(--lane-w) solid var(--c);
+  border-radius: 3px;
   transform: rotate(45deg);
 }
 
-/* RTL: the arrowhead points up in both directions */
-[dir='rtl'] .rail__open {
-  border-width: 3px 3px 0 0;
+[dir='rtl'] .arrow {
+  border-left: 0;
+  border-right: var(--lane-w) solid var(--c);
   transform: rotate(-45deg);
 }
 
-[dir='rtl'] .rail.will-draw.is-drawn .rail__open {
+.fork {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  width: var(--gw);
+  height: var(--node-y);
+  overflow: visible;
+}
+
+[dir='rtl'] .fork {
+  transform: scaleX(-1);
+}
+
+.fork path {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.fork--freelance path { stroke: var(--amber); }
+.fork--pepprio path { stroke: var(--red); }
+
+/* Commit nodes: large circles with the company mark inside */
+.node {
+  --c: var(--green);
+  top: calc(var(--node-y) - var(--node) / 2);
+  inset-inline-start: calc(var(--x) + var(--lane-w) / 2 - var(--node) / 2);
+  z-index: 1;
+  width: var(--node);
+  height: var(--node);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 3px solid var(--c);
+  background: var(--panel);
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.node img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #fff;
+}
+
+/* Node colour follows its lane (declared after .node) */
+.node.lane--main { --c: var(--green); }
+.node.lane--freelance { --c: var(--amber); }
+.node.lane--pepprio { --c: var(--red); }
+
+/* The last commit of a closed branch, and the end-cap above it */
+.node--end {
+  --node: 20px;
+  top: calc(var(--node-y) + 60px - 10px);
+  background: var(--c);
+}
+
+.endcap {
+  top: calc(var(--node-y) + 60px - 22px);
+  inset-inline-start: calc(var(--x) - 6px);
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+/* Branches draw themselves when they scroll into view */
+.graph.will-draw .lane {
+  transform: scaleY(0);
+}
+
+.graph.will-draw .fork path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.graph.will-draw .node,
+.graph.will-draw .arrow,
+.graph.will-draw .endcap {
+  opacity: 0;
+  transform: scale(.6);
+}
+
+.graph.will-draw .arrow {
+  transform: rotate(45deg) scale(.6);
+}
+
+.graph.will-draw.is-drawn .lane {
+  transform: scaleY(1);
+  transition: transform .7s var(--ease);
+}
+
+.graph.will-draw.is-drawn .fork path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset .5s var(--ease) .4s;
+}
+
+.graph.will-draw.is-drawn .node,
+.graph.will-draw.is-drawn .endcap {
+  opacity: 1;
+  transform: none;
+  transition: opacity .3s .5s, transform .3s .5s;
+}
+
+.graph.will-draw.is-drawn .arrow {
+  opacity: 1;
+  transform: rotate(45deg);
+  transition: opacity .3s .6s;
+}
+
+[dir='rtl'] .graph.will-draw.is-drawn .arrow {
   transform: rotate(-45deg);
 }
 
 /* ---------- Job ---------- */
 .job {
-  flex: 1 1 auto;
+  grid-area: job;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -329,9 +446,13 @@ usePageSeo({
   line-height: 1.2;
 }
 
-.job__period {
+.job__commit {
   font-size: 13px;
   color: var(--muted);
+}
+
+.job__hash {
+  color: var(--amber-ink);
 }
 
 .job__company {
@@ -403,9 +524,7 @@ usePageSeo({
 }
 
 .job__stack {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--muted);
+  margin-top: 6px;
 }
 
 .job__site {
@@ -448,59 +567,51 @@ usePageSeo({
   color: var(--muted);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   .row {
-    gap: 12px;
+    --node: 28px;
+    --lane-w: 5px;
+    /* matches the fork curves, drawn in a 116px box scaled to 64px */
+    --x-main: 11px !important;
+    --x-freelance: 31px !important;
+    --x-pepprio: 51px !important;
+    --gw: 64px !important;
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-areas: 'graph refs' 'graph job';
+    column-gap: 10px;
   }
 
-  .rail {
-    flex-basis: 76px;
-  }
-
-  .rail__year {
-    font-size: 11px;
-  }
-
-  .rail__axis {
-    inset-inline-start: 34px;
-  }
-
-  .rail__tick {
-    inset-inline-start: 28px;
-    width: 14px;
-  }
-
-  .rail__branch,
-  .rail__freelance {
-    inset-inline-start: 60px;
-  }
-
-  .rail__fork {
-    inset-inline-start: 35px;
-    width: 27px;
-  }
-
-  .rail__end {
-    inset-inline-start: 53px;
-  }
-
-  .rail__open {
-    inset-inline-start: 55px;
-  }
-
-  .rail__switch {
-    inset-inline-start: 55px;
-  }
-
-  .rail__switch-label {
+  .row__year {
     display: none;
   }
 
-  .rail__year {
-    top: 46px;
-    inset-inline-start: 0;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
+  .row__year-inline {
+    display: inline;
+    font-size: 12px;
+    color: var(--muted);
+    align-self: center;
+  }
+
+  .row__refs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-top: calc(var(--node-y) - 12px);
+  }
+
+  .ref-end {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .fork {
+    width: 64px;
+  }
+
+  .job {
+    padding-top: 8px;
   }
 
   .job__role {

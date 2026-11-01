@@ -65,12 +65,6 @@ export function installPressFeedback(): () => void {
   return () => document.removeEventListener('pointerdown', onDown)
 }
 
-/** Score counter "pop" when it increases. */
-export function popElement(el: Element | null | undefined, color: string) {
-  if (!el || prefersReducedMotion()) return
-  animate(el, { scale: [1, 1.5, 1], color: [color, color, getComputedStyle(el).color] }, { duration: 0.35 })
-}
-
 /**
  * `v-count` — counts a number up from 0 when it scrolls into view ("15" → 0, 1, … 15).
  * The server renders the final value; the client only animates it.
