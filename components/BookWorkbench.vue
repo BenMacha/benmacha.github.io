@@ -2,7 +2,7 @@
   <figure class="fig">
     <div class="fig__panel">
       <svg role="img" :aria-label="$t('book.fig1.label')" viewBox="0 0 440 340" class="fig__svg">
-        <g fill="none" stroke="var(--line)" stroke-width="1.4" stroke-linejoin="round">
+        <g fill="none" stroke="var(--draw)" stroke-width="1.4" stroke-linejoin="round">
           <!-- bench -->
           <path d="M40 230 L220 320 L400 230 L220 140 Z" fill="var(--slab)" />
           <path d="M40 230 L40 246 L220 336 L400 246 L400 230" />

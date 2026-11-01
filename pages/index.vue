@@ -460,9 +460,31 @@ useHead({
   }
 
   .toc__link {
-    flex-direction: column;
-    gap: 2px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
     padding: 14px 0;
+  }
+
+  .toc__link > span {
+    flex: none;
+  }
+
+  .toc__num {
+    grid-row: 1;
+    grid-column: 1;
+    font-size: 12px;
+  }
+
+  .toc__page {
+    grid-row: 1;
+    grid-column: 2;
+    font-size: 12px;
+  }
+
+  .toc__title,
+  .toc__text {
+    grid-column: 1 / -1;
   }
 
   .toc__title {
