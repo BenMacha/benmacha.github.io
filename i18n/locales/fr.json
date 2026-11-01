@@ -330,9 +330,12 @@
     "more": "+{n} quêtes",
     "less": "Réduire",
     "start": "START · 2016",
-    "freelanceBranch": "FREELANCE",
+    "freelanceBranch": "FREELANCE KEYTCHENS",
     "legendTrunk": "Tuyau vert : poste salarié",
     "legendBranch": "Tuyau jaune : freelance ou projet en parallèle",
+    "legendPermanent": "Nom en rouge : salarié (CDI, CDD)",
+    "legendFreelance": "Nom en vert : freelance",
+    "legendOwn": "Nom en jaune : ma société",
     "countryChange": "✈ 2019 · TUNISIE → FRANCE"
   },
   "skillsUi": {

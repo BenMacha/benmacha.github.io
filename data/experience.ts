@@ -22,14 +22,32 @@ export interface Rail {
 }
 
 export const rails: Record<string, Rail> = {
-  'ORPI': { node: 'trunk', branch: 'open' },
+  'ORPI': { node: 'trunk' },
   'PEPPRIO': { node: 'branch', branch: 'forkBelow' },
   'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'trunk' },
+  // The Keytchens freelance period (09/18 – 08/20) merges into the trunk when the contract became a CDI (09/20)
   'KEYTCHENS': { node: 'trunk', branch: 'mergeAtHead' },
   'MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
   'MOBELITE': { node: 'trunk', branch: 'through' },
   'PIXELS TRADE': { node: 'trunk', branch: 'forkAtHead' },
   'ARGOLIFE': { node: 'trunk' },
+}
+
+/**
+ * Contract of each job, keyed like `rails` (from LinkedIn): the company name is drawn in red for a
+ * salaried job (CDI; Mobelite was a CDD), in green for a freelance one and in yellow for my own
+ * company. Keytchens was freelance (09/18 – 08/20) then CDI (09/20 – 08/24): its name follows the
+ * CDI, each phase keeps its own colour.
+ */
+export const contracts: Record<string, 'permanent' | 'freelance' | 'own'> = {
+  'ORPI': 'permanent',
+  'PEPPRIO': 'own',
+  'CCM BENCHMARK · GROUPE LE FIGARO': 'permanent',
+  'KEYTCHENS': 'permanent',
+  'MATALTO': 'permanent',
+  'MOBELITE': 'permanent',
+  'PIXELS TRADE': 'permanent',
+  'ARGOLIFE': 'permanent',
 }
 
 /** A "Tunisia → France" milestone is shown just above this company. */

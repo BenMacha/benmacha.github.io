@@ -330,9 +330,12 @@
     "more": "+{n} مهام",
     "less": "طي",
     "start": "START · 2016",
-    "freelanceBranch": "عمل حر",
+    "freelanceBranch": "KEYTCHENS · عمل حر",
     "legendTrunk": "الأنبوب الأخضر: وظيفة بأجر",
     "legendBranch": "الأنبوب الأصفر: عمل حر أو مشروع موازٍ",
+    "legendPermanent": "الاسم بالأحمر: وظيفة بأجر (عقد دائم أو محدد المدة)",
+    "legendFreelance": "الاسم بالأخضر: عمل حر",
+    "legendOwn": "الاسم بالأصفر: شركتي الخاصة",
     "countryChange": "✈ 2019 · من تونس إلى فرنسا"
   },
   "skillsUi": {

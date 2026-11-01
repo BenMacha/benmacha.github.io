@@ -105,6 +105,15 @@ export const updatedAt = '2026-11-01'
 export const pullRequests: PullRequest[] = [
   {
     "repo": "symfony/symfony",
+    "number": 67712,
+    "title": "[Messenger] Stop keeping alive the messages that a listener prevents the worker from handling",
+    "url": "https://github.com/symfony/symfony/pull/67712",
+    "state": "merged",
+    "mergedAt": "2026-11-01T09:38:08Z",
+    "createdAt": "2026-10-31T20:58:13Z"
+  },
+  {
+    "repo": "symfony/symfony",
     "number": 67707,
     "title": "[Security] Reject login links with an out of range \"expires\" parameter",
     "url": "https://github.com/symfony/symfony/pull/67707",
@@ -228,15 +237,6 @@ export const pullRequests: PullRequest[] = [
     "state": "merged",
     "mergedAt": "2026-10-31T21:34:34Z",
     "createdAt": "2026-10-31T20:57:25Z"
-  },
-  {
-    "repo": "symfony/symfony",
-    "number": 67712,
-    "title": "[Messenger] Stop keeping alive the messages that a listener prevents the worker from handling",
-    "url": "https://github.com/symfony/symfony/pull/67712",
-    "state": "open",
-    "mergedAt": null,
-    "createdAt": "2026-10-31T20:58:13Z"
   },
   {
     "repo": "symfony/symfony",

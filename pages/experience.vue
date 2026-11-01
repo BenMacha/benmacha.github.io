@@ -5,6 +5,8 @@
     <p class="legend" aria-hidden="true">
       <span class="legend__item"><i class="legend__swatch legend__swatch--trunk" />{{ $t('experienceUi.legendTrunk') }}</span>
       <span class="legend__item"><i class="legend__swatch legend__swatch--branch" />{{ $t('experienceUi.legendBranch') }}</span>
+      <span class="legend__item"><i class="legend__dot legend__dot--permanent" />{{ $t('experienceUi.legendPermanent') }}</span>
+      <span class="legend__item"><i class="legend__dot legend__dot--own" />{{ $t('experienceUi.legendOwn') }}</span>
     </p>
 
     <ol class="levels">
@@ -27,21 +29,21 @@
               <div class="rail__branch" :class="`rail__branch--${railOf(job).branch}`" />
               <div v-if="hasElbow(job)" class="rail__elbow" :class="`rail__elbow--${railOf(job).branch}`" />
               <div v-if="railOf(job).node === 'branch' || railOf(job).branch === 'open'" class="rail__blip" />
-              <span v-if="railOf(job).label" class="rail__label">{{ $t(railOf(job).label!) }}</span>
+              <span v-if="railOf(job).label" class="rail__label"><span>{{ $t(railOf(job).label!) }}</span></span>
             </template>
           </div>
 
           <article v-reveal="i" v-lift class="job card">
             <div class="job__bar">
               <span class="level">LVL 1-{{ experiences.length - i }}</span>
-              <span>session://work</span>
+              <span>session://{{ sessionOf(job) }}</span>
               <span class="job__period">{{ job.period }}</span>
             </div>
 
             <div class="job__body">
               <div>
                 <div class="job__title">
-                  <h2 class="job__company pixel">{{ job.company }}</h2>
+                  <h2 class="job__company pixel" :class="contracts[job.company] && `job__company--${contracts[job.company]}`">{{ job.company }}</h2>
                 </div>
                 <p class="job__role">{{ job.role }}</p>
                 <p v-if="job.location" class="job__location">⌖ {{ job.location }}</p>
@@ -85,17 +87,36 @@
         <div class="pixel start-label">{{ $t('experienceUi.start') }}</div>
       </li>
     </ol>
+
+    <!-- Open source work, beside the jobs -->
+    <section class="contrib card" aria-labelledby="exp-contrib">
+      <div class="contrib__eyebrow pixel">{{ $t('sections.openSource') }}</div>
+      <h2 id="exp-contrib" class="contrib__title pixel">{{ $t('openSource.previewTitle') }}</h2>
+      <p class="contrib__text">{{ $t('openSource.intro') }}</p>
+      <ul class="contrib__stats">
+        <li><span class="contrib__icon contrib__icon--coin" aria-hidden="true" /><b class="pixel">{{ mergedCount }}</b> {{ $t('openSource.merged') }}</li>
+        <li><span class="contrib__icon contrib__icon--q pixel" aria-hidden="true">?</span><b class="pixel">{{ openCount }}</b> {{ $t('openSource.open') }}</li>
+        <li><span class="contrib__icon contrib__icon--crate" aria-hidden="true" /><b class="pixel">{{ packages.length }}</b> {{ $t('openSource.packages') }}</li>
+      </ul>
+      <NuxtLink :to="localePath('/open-source')" class="btn btn--coin contrib__link">{{ $t('openSource.seeAll') }} ▶</NuxtLink>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { countryChangeBefore, rails, type Rail } from '~/data/experience'
+import { contracts, countryChangeBefore, rails, type Rail } from '~/data/experience'
+import { mergedCount, openCount, packages } from '~/data/opensource'
 import type { Experience } from '~/composables/useResume'
 
 const TASK_LIMIT = 6
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 const { experiences } = useResume()
+
+// Terminal header of each card: the company's own session ("CCM BENCHMARK · GROUPE LE FIGARO" → ccm-benchmark)
+const sessionOf = (job: Experience) =>
+  (job.company.split('·')[0] ?? job.company).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const expanded = reactive<Record<number, boolean>>({})
 
 const railOf = (job: Experience): Rail => rails[job.company] ?? { node: 'trunk' }
@@ -236,9 +257,14 @@ usePageSeo({
   z-index: 2;
   inset-inline-start: var(--branch-x);
   width: var(--branch-w);
+  display: flex;
+  justify-content: center;
   transform: translateY(-50%);
+}
+
+/* Vertical text sits in its own box: in a vertical writing mode, inline-start would mean "top" */
+.rail__label span {
   writing-mode: vertical-rl;
-  text-align: center;
   font-family: var(--font-pixel, monospace);
   font-size: 8px;
   letter-spacing: 1px;
@@ -273,6 +299,25 @@ usePageSeo({
 }
 
 .legend__swatch--branch {
+  background: var(--coin);
+}
+
+.legend__dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #000;
+}
+
+.legend__dot--permanent {
+  background: var(--mario);
+}
+
+.legend__dot--freelance {
+  background: var(--grass);
+}
+
+.legend__dot--own {
   background: var(--coin);
 }
 
@@ -377,7 +422,40 @@ usePageSeo({
   margin: 0;
   font-size: 15px;
   line-height: 1.5;
-  color: var(--accent);
+  /* Neutral until the contract is known (see `contracts` in data/experience.ts) */
+  color: var(--ink);
+}
+
+.job__company--permanent {
+  color: var(--mario-light);
+}
+
+html.light .job__company--permanent {
+  color: var(--mario-dark);
+}
+
+.job__company--own {
+  color: var(--coin);
+}
+
+html.light .job__company--own {
+  color: #9a6a00;
+}
+
+.job__company--freelance {
+  color: var(--grass);
+}
+
+html.light .job__company--own {
+  color: var(--coin);
+}
+
+html.light .job__company--own {
+  color: #9a6a00;
+}
+
+.job__company--freelance {
+  color: var(--grass-dark);
 }
 
 .job__role {
@@ -474,5 +552,93 @@ usePageSeo({
 .start-label {
   font-size: 10px;
   color: var(--muted);
+}
+
+/* Open source block under the map */
+.contrib {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 48px;
+  padding: 24px;
+}
+
+.contrib__eyebrow {
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--eyebrow);
+}
+
+html.light .contrib__eyebrow {
+  color: var(--accent);
+}
+
+.contrib__title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--accent);
+}
+
+.contrib__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.contrib__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.contrib__stats li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contrib__stats b {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.contrib__icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--navy);
+}
+
+.contrib__icon--coin {
+  width: 14px;
+  margin-inline: 3px;
+  border-radius: 50%;
+  background: var(--coin);
+  box-shadow: inset -3px 0 0 var(--coin-dark);
+}
+
+.contrib__icon--q {
+  font-size: 9px;
+  color: var(--navy);
+  background: var(--coin);
+  box-shadow: inset -2px -2px 0 var(--coin-dark);
+}
+
+.contrib__icon--crate {
+  background: #d9a066;
+  box-shadow: inset -2px -2px 0 #a06833;
+}
+
+.contrib__link {
+  align-self: flex-start;
 }
 </style>
