@@ -40,3 +40,61 @@ export const startYear = (period: string) => {
   const yy = period.match(/\d{2}\/(\d{2})/)?.[1]
   return yy ? `20${yy}` : ''
 }
+
+/**
+ * Git graph of the career (GitKraken-style), one row per job, newest first.
+ * Lanes: `main` = salaried career (green), `freelance` = freelance missions (amber),
+ * `pepprio` = my own company (red). Each row says what every lane does on that row:
+ *  - `full`: passes through the whole row,
+ *  - `fromNode`: starts at the row's commit and goes down (newest commit of the lane),
+ *  - `toNode`: comes from above and ends at the row's commit (first commit of the lane),
+ *  - `open`: passes through and is still running above (arrowhead at the top),
+ *  - `forkFromNode`: leaves the main lane at the row's commit with an S curve and goes up,
+ *  - `endBelow`: comes from below and stops at a closed end-cap under the row's commit
+ *    (a branch that ended without being merged).
+ */
+export type Lane = 'main' | 'freelance' | 'pepprio'
+export type LaneShape = 'full' | 'fromNode' | 'toNode' | 'open' | 'forkFromNode' | 'endBelow'
+
+export interface GraphRef {
+  kind: 'head' | 'branch' | 'tag'
+  lane: Lane
+  text: string
+  /** End date of a branch closed without merge, shown on its badge */
+  closed?: string
+}
+
+export interface GraphRow {
+  /** Lane that carries this row's commit */
+  node: Lane
+  lanes: Partial<Record<Lane, LaneShape>>
+  refs: GraphRef[]
+  /** Refs of a second, closed commit drawn lower in the row (the end of a branch) */
+  endRefs?: GraphRef[]
+}
+
+export const graph: Record<string, GraphRow> = {
+  'ORPI': { node: 'main', lanes: { main: 'fromNode', pepprio: 'open' }, refs: [{ kind: 'head', lane: 'main', text: 'HEAD -> main' }] },
+  'PEPPRIO': { node: 'pepprio', lanes: { main: 'full', pepprio: 'full' }, refs: [{ kind: 'head', lane: 'pepprio', text: 'HEAD -> pepprio' }] },
+  // Pepprio forks from main at 11/2024, during the CCM Benchmark job
+  'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'main', lanes: { main: 'full', pepprio: 'forkFromNode' }, refs: [{ kind: 'branch', lane: 'main', text: 'main' }] },
+  // Freelance until 08/2020, closed without merge; the CDI starts on main in 09/2020 (tag)
+  'KEYTCHENS': {
+    node: 'main',
+    lanes: { main: 'full', freelance: 'endBelow' },
+    refs: [{ kind: 'branch', lane: 'main', text: 'main' }, { kind: 'tag', lane: 'main', text: 'v-cdi 09/2020' }],
+    endRefs: [{ kind: 'branch', lane: 'freelance', text: 'freelance/keytchens', closed: '08/2020' }],
+  },
+  'MATALTO': { node: 'main', lanes: { main: 'full', freelance: 'full' }, refs: [{ kind: 'branch', lane: 'main', text: 'main' }] },
+  'MOBELITE': { node: 'main', lanes: { main: 'full', freelance: 'full' }, refs: [{ kind: 'branch', lane: 'main', text: 'main' }] },
+  // The Keytchens freelance branch forks from main at 09/2018, during the Pixels Trade job
+  'PIXELS TRADE': { node: 'main', lanes: { main: 'full', freelance: 'forkFromNode' }, refs: [{ kind: 'branch', lane: 'main', text: 'main' }] },
+  'ARGOLIFE': { node: 'main', lanes: { main: 'toNode' }, refs: [{ kind: 'branch', lane: 'main', text: 'main' }] },
+}
+
+/** A short, stable commit-like hash for a row ("ORPI" → "4f1c9a2"). */
+export function commitHash(text: string) {
+  let h = 2166136261
+  for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
+  return (h >>> 0).toString(16).padStart(8, '0').slice(0, 7)
+}
