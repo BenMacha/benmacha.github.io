@@ -227,8 +227,28 @@ html.light {
     font-size: 9px;
   }
 
+  /* One line on phones: no avatars, smaller type */
   .ab-status {
-    padding: 6px 8px 6px 12px;
-    font-size: 11px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 5px 6px 5px 12px;
+    font-size: 10px;
+  }
+
+  .ab-status__faces {
+    display: none;
+  }
+
+  .ab-status__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ab-status button {
+    flex: none;
+    padding: 6px 8px;
+    font-size: 10px;
   }
 }
