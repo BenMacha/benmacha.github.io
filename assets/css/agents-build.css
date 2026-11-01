@@ -1,0 +1,234 @@
+/* ==========================================================================
+   Agents build intro (components/AgentsBuild.client.vue)
+   The page is built live by labelled cursors, section by section.
+   Every rule hangs off `.ab-armed`, a class only the client script adds to
+   the page root: server HTML, crawlers and visitors without JS see the page.
+   ========================================================================== */
+
+:root,
+html.dark {
+  --ab-select: #3d8bff;
+  --ab-wire: var(--rule-strong);
+}
+
+html.light {
+  --ab-select: #1f6fe5;
+}
+
+/* ---------- Build states ---------- */
+.ab-armed [data-build]:not(.ab-built) {
+  position: relative;
+  visibility: hidden;
+}
+
+/* Wireframe placeholder of a block not built yet */
+.ab-armed [data-build]:not(.ab-built)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  visibility: visible;
+  border: 1px dashed var(--ab-wire);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.ab-armed [data-build].ab-building {
+  animation: ab-reveal .55s var(--ease) both;
+}
+
+.ab-armed [data-build][data-build-kind='text'].ab-building {
+  animation: ab-type .7s var(--ease) both;
+}
+
+[dir='rtl'] .ab-armed [data-build][data-build-kind='text'].ab-building {
+  animation-name: ab-type-rtl;
+}
+
+@keyframes ab-reveal {
+  from { opacity: 0; transform: translateY(6px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Text is "typed": revealed in the reading direction */
+@keyframes ab-type {
+  from { clip-path: inset(-.3em 100% -.3em -.3em); }
+  to { clip-path: inset(-.3em -.3em -.3em -.3em); }
+}
+
+@keyframes ab-type-rtl {
+  from { clip-path: inset(-.3em -.3em -.3em 100%); }
+  to { clip-path: inset(-.3em -.3em -.3em -.3em); }
+}
+
+/* ---------- Overlay: cursors and selection frames ---------- */
+/* Absolute over the whole document, clipped so it never widens the page */
+.ab-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  overflow: clip;
+  pointer-events: none;
+  z-index: 35;
+}
+
+.ab-agent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: transform .5s cubic-bezier(.3, .7, .2, 1), opacity .4s;
+  will-change: transform;
+}
+
+.ab-agent svg {
+  display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35));
+}
+
+.ab-agent span {
+  position: absolute;
+  left: 14px;
+  top: 16px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font: 600 11px/1 var(--font-mono);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.ab-agent.is-gone {
+  opacity: 0;
+}
+
+.ab-sel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1.5px solid var(--ab-select);
+  border-radius: 2px;
+  transition: opacity .3s;
+}
+
+.ab-sel i {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--ab-select);
+}
+
+.ab-sel i:nth-child(1) { left: -5px; top: -5px; }
+.ab-sel i:nth-child(2) { right: -5px; top: -5px; }
+.ab-sel i:nth-child(3) { left: -5px; bottom: -5px; }
+.ab-sel i:nth-child(4) { right: -5px; bottom: -5px; }
+
+.ab-sel b {
+  position: absolute;
+  left: -1.5px;
+  top: -24px;
+  padding: 5px 6px;
+  border-radius: 3px;
+  background: var(--ab-select);
+  font: 600 11px/1 var(--font-mono);
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* ---------- Status pill ---------- */
+.ab-status {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  max-width: calc(100% - 32px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 12px;
+  padding: 8px 10px 8px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .25);
+  font: 500 12px/1.2 var(--font-mono);
+  color: var(--ink);
+  transform: translateX(-50%);
+  transition: opacity .4s, transform .4s var(--ease);
+}
+
+.ab-status.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+}
+
+.ab-status__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: ab-pulse 1s infinite;
+}
+
+.ab-status.is-done .ab-status__dot {
+  animation: none;
+}
+
+.ab-status__faces {
+  display: flex;
+  padding-inline-start: 4px;
+}
+
+.ab-status__faces i {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: -4px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+}
+
+.ab-status button {
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  font: 500 12px/1 var(--font-mono);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.ab-status button:hover {
+  border-color: var(--rule-strong);
+  color: var(--green-ink);
+}
+
+.ab-status button:focus-visible {
+  outline: 2px solid var(--ab-select);
+  outline-offset: 2px;
+}
+
+@keyframes ab-pulse {
+  50% { opacity: .35; }
+}
+
+@media (max-width: 639px) {
+  .ab-agent span {
+    left: 11px;
+    top: 13px;
+    padding: 3px 4px;
+    font-size: 9px;
+  }
+
+  .ab-sel b {
+    top: -20px;
+    padding: 4px 5px;
+    font-size: 9px;
+  }
+
+  .ab-status {
+    padding: 6px 8px 6px 12px;
+    font-size: 11px;
+  }
+}

@@ -1,16 +1,16 @@
 <template>
-  <header class="chapter-head">
-    <div class="running-head mono" aria-hidden="true">
+  <header class="chapter-head" data-build-stage>
+    <div class="running-head mono" aria-hidden="true" data-build>
       <span>Ben Macha Ali — {{ $t('book.volume') }}</span>
       <span>{{ running }}</span>
     </div>
     <div class="chapter-head__main">
       <div class="chapter-head__text">
-        <span class="eyebrow" :class="accent === 'green' ? 'eyebrow--green' : 'eyebrow--red'">{{ eyebrow }}</span>
-        <h1 class="chapter-head__title">{{ title }}</h1>
-        <p v-if="lead" class="lead">{{ lead }}</p>
+        <span class="eyebrow" data-build :class="accent === 'green' ? 'eyebrow--green' : 'eyebrow--red'">{{ eyebrow }}</span>
+        <h1 class="chapter-head__title" data-build data-build-kind="text">{{ title }}</h1>
+        <p v-if="lead" class="lead" data-build>{{ lead }}</p>
       </div>
-      <div v-if="$slots.default" class="chapter-head__side">
+      <div v-if="$slots.default" class="chapter-head__side" data-build>
         <slot />
       </div>
     </div>

@@ -57,6 +57,19 @@ function getObserver(): IntersectionObserver {
   return observer
 }
 
+/**
+ * Shows at once, without animation, the pending `v-reveal` elements inside `root`:
+ * used when another effect (the agents build intro) takes over their entrance.
+ */
+export function settleReveals(root: Element) {
+  for (const el of [...pending.keys()]) {
+    if (!root.contains(el)) continue
+    pending.delete(el)
+    observer?.unobserve(el)
+    el.style.opacity = ''
+  }
+}
+
 export const revealDirective: Directive<HTMLElement, number | undefined> = {
   getSSRProps: () => ({}),
   mounted(el, binding) {

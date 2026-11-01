@@ -584,5 +584,13 @@
     "expIntro": "From 2016 to today, from Tunis to Paris, drawn as a git graph. The main branch carries the salaried jobs; the freelance and Pepprio branches (my own company) fork from it at their start date and are closed when the mission ends. Each job is a commit, the newest at the top.",
     "cdiMarker": "PERMANENT",
     "contents": "Chapter contents"
+  },
+  "agentsBuild": {
+    "label": "Page build",
+    "building": "{agents} agents · {built}/{total} layers · building…",
+    "done": "{agents} agents · {total} layers · built in {s} s",
+    "skipped": "{agents} agents · {total} layers · built",
+    "skip": "Skip",
+    "replay": "Replay"
   }
 }

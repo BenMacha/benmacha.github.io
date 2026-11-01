@@ -53,7 +53,7 @@ export default defineNuxtConfig({
     '@nuxtjs/sitemap',
   ],
 
-  css: ['~/assets/css/main.css', '~/assets/css/anatomy.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/anatomy.css', '~/assets/css/agents-build.css'],
 
   // Title, description, canonical, hreflang and Open Graph are set per page (usePageSeo + layout)
   app: {

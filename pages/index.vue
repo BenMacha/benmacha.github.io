@@ -1,17 +1,17 @@
 <template>
   <div>
     <!-- Preface -->
-    <section class="container preface">
+    <section class="container preface" data-build-stage>
       <div class="preface__text">
-        <span class="eyebrow eyebrow--green">{{ $t('book.preface') }}</span>
-        <h1 class="preface__title">{{ $t('book.heroLead') }} <span class="accent">{{ $t('book.heroAccent') }}</span></h1>
-        <p class="lead">{{ $t('book.heroText') }}</p>
-        <div class="preface__cta">
+        <span class="eyebrow eyebrow--green" data-build>{{ $t('book.preface') }}</span>
+        <h1 class="preface__title" data-build data-build-kind="text">{{ $t('book.heroLead') }} <span class="accent">{{ $t('book.heroAccent') }}</span></h1>
+        <p class="lead" data-build>{{ $t('book.heroText') }}</p>
+        <div class="preface__cta" data-build>
           <a :href="socialLinks.cv" target="_blank" class="btn btn--primary">{{ $t('book.cv') }}</a>
           <a :href="`mailto:${socialLinks.email}`" class="btn">{{ $t('book.contact') }}</a>
         </div>
         <dl class="facts">
-          <div v-for="fact in facts" :key="fact.label" class="facts__item">
+          <div v-for="fact in facts" :key="fact.label" class="facts__item" data-build>
             <dt class="mono">{{ fact.label }}</dt>
             <dd :class="fact.tone">
               <template v-if="fact.unit">{{ fact.unitBefore }}<span v-count="fact.value">{{ fact.value }}</span>{{ fact.unitAfter }}</template>
@@ -20,18 +20,18 @@
           </div>
         </dl>
       </div>
-      <BookWorkbench class="preface__fig" />
+      <BookWorkbench class="preface__fig" data-build />
     </section>
 
     <!-- Table of contents -->
-    <section class="toc" aria-labelledby="toc-title">
+    <section class="toc" aria-labelledby="toc-title" data-build-stage>
       <div class="container toc__inner">
         <div class="toc__head">
-          <h2 id="toc-title" class="h2">{{ $t('book.toc') }}</h2>
-          <span class="caption">{{ $t('book.tocSummary') }}</span>
+          <h2 id="toc-title" class="h2" data-build data-build-kind="text">{{ $t('book.toc') }}</h2>
+          <span class="caption" data-build>{{ $t('book.tocSummary') }}</span>
         </div>
         <ol class="toc__list">
-          <li v-for="(chapter, i) in chapters" :key="chapter.page" v-reveal="i">
+          <li v-for="(chapter, i) in chapters" :key="chapter.page" v-reveal="i" data-build>
             <NuxtLink :to="localePath(`/${chapter.page}`)" class="toc__link">
               <span class="toc__num mono" :class="chapter.accent === 'green' ? 'eyebrow--green' : 'eyebrow--red'">{{ chapter.num }}</span>
               <span class="toc__title">{{ $t(`nav.${chapter.page}`) }}</span>
@@ -44,39 +44,39 @@
     </section>
 
     <!-- Latest chapters (jobs) -->
-    <section class="container latest" aria-labelledby="latest-title">
+    <section class="container latest" aria-labelledby="latest-title" data-build-stage>
       <div class="latest__intro">
-        <span class="eyebrow eyebrow--red">{{ $t('book.chapter') }} 01</span>
-        <h2 id="latest-title" class="h2">{{ $t('book.latestTitle') }}</h2>
-        <p class="latest__text">{{ $t('book.latestText') }}</p>
-        <p class="legend">
+        <span class="eyebrow eyebrow--red" data-build>{{ $t('book.chapter') }} 01</span>
+        <h2 id="latest-title" class="h2" data-build data-build-kind="text">{{ $t('book.latestTitle') }}</h2>
+        <p class="latest__text" data-build>{{ $t('book.latestText') }}</p>
+        <p class="legend" data-build>
           <span><i class="swatch swatch--green" />{{ $t('book.legend.salaried') }}</span>
           <span><i class="swatch swatch--amber" />{{ $t('book.legend.freelance') }}</span>
           <span><i class="swatch swatch--red" />{{ $t('book.legend.own') }}</span>
         </p>
       </div>
       <div class="latest__jobs">
-        <article v-for="(job, i) in latest" :key="job.company" v-reveal="i" class="job card">
+        <article v-for="(job, i) in latest" :key="job.company" v-reveal="i" class="job card" data-build>
           <span class="job__stroke" :class="`swatch--${tone(job.company)}`" />
           <span class="mono job__meta">{{ job.period }} · {{ $t(`book.kinds.${contractOf(job.company).kind}`) }}</span>
           <h3 class="job__company">{{ companyName(job.company) }}</h3>
           <p class="job__role">{{ job.role }}</p>
           <p class="job__text">{{ job.tasks[0] }}</p>
         </article>
-        <NuxtLink :to="localePath('/experience')" class="latest__more btn btn--ghost">{{ $t('sections.seeAll') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
+        <NuxtLink :to="localePath('/experience')" class="latest__more btn btn--ghost" data-build>{{ $t('sections.seeAll') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
       </div>
     </section>
 
     <!-- Appendix A: open source -->
-    <section class="container annex" aria-labelledby="annex-a">
+    <section class="container annex" aria-labelledby="annex-a" data-build-stage>
       <div class="annex__card card">
         <div class="annex__text">
-          <span class="eyebrow eyebrow--green">{{ $t('book.annexA.eyebrow') }}</span>
-          <h2 id="annex-a" class="h2 annex__title">{{ $t('book.annexA.title', { n: symfonyMerged }) }}</h2>
-          <p class="annex__lead">{{ $t('book.annexA.text') }}</p>
-          <NuxtLink :to="localePath('/open-source')" class="btn btn--green annex__cta">{{ $t('book.annexA.cta') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
+          <span class="eyebrow eyebrow--green" data-build>{{ $t('book.annexA.eyebrow') }}</span>
+          <h2 id="annex-a" class="h2 annex__title" data-build data-build-kind="text">{{ $t('book.annexA.title', { n: symfonyMerged }) }}</h2>
+          <p class="annex__lead" data-build>{{ $t('book.annexA.text') }}</p>
+          <NuxtLink :to="localePath('/open-source')" class="btn btn--green annex__cta" data-build>{{ $t('book.annexA.cta') }} <span class="dir-arrow" aria-hidden="true">→</span></NuxtLink>
         </div>
-        <dl class="annex__stats">
+        <dl class="annex__stats" data-build>
           <div class="stat"><dd class="stat__value green" v-count="mergedCount">{{ mergedCount }}</dd><dt class="mono">{{ $t('book.annexA.merged') }}</dt></div>
           <div class="stat"><dd class="stat__value" v-count="openCount">{{ openCount }}</dd><dt class="mono">{{ $t('book.annexA.open') }}</dt></div>
           <div class="stat"><dd class="stat__value" v-count="upstream">{{ upstream }}</dd><dt class="mono">{{ $t('book.annexA.projects') }}</dt></div>
@@ -84,6 +84,8 @@
         </dl>
       </div>
     </section>
+
+    <AgentsBuild />
   </div>
 </template>
 
