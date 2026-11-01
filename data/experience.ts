@@ -14,22 +14,26 @@ export const featuredCompanies = ['ORPI', 'PEPPRIO', 'CCM BENCHMARK · GROUPE LE
  *   - `mergeAtHead`: leaves the trunk at the row's pipe head and goes down,
  *   - `forkAtHead`: comes down from above and joins the trunk at the row's pipe head,
  *   - `endBelowHead`: comes up from below and is capped just under the row's pipe head: a freelance
- *     mission closed at its end date, before the next contract starts (no merge into the trunk).
+ *     mission closed at its end date, before the next contract starts (no merge into the trunk),
+ *   - `levelUp`: comes up from below and joins the trunk through a pipe coupler just under the row's
+ *     pipe head: the freelance contract turned into a CDI with the same company.
  */
 export interface Rail {
   node: 'trunk' | 'branch'
-  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead' | 'endBelowHead'
+  branch?: 'through' | 'open' | 'forkBelow' | 'mergeAtHead' | 'forkAtHead' | 'endBelowHead' | 'levelUp'
   /** i18n key of a short label written along the yellow pipe. */
   label?: string
+  /** i18n key of the label written under the coupler of a `levelUp` branch. */
+  levelUp?: string
 }
 
 export const rails: Record<string, Rail> = {
   'ORPI': { node: 'trunk' },
   'PEPPRIO': { node: 'branch', branch: 'forkBelow' },
   'CCM BENCHMARK · GROUPE LE FIGARO': { node: 'trunk' },
-  // Every freelance branch closes at its own end date: the Keytchens freelance mission ends in
-  // 08/20, before the CDI starts in 09/20, so its pipe is capped under the Keytchens pipe head
-  'KEYTCHENS': { node: 'trunk', branch: 'endBelowHead' },
+  // Keytchens: freelance until 08/20, then a CDI from 09/20; the yellow pipe ends at 08/20 and joins
+  // the green trunk through a coupler where the contract changes
+  'KEYTCHENS': { node: 'trunk', branch: 'levelUp', levelUp: 'experienceUi.levelUp' },
   'MATALTO': { node: 'trunk', branch: 'through', label: 'experienceUi.freelanceBranch' },
   'MOBELITE': { node: 'trunk', branch: 'through' },
   'PIXELS TRADE': { node: 'trunk', branch: 'forkAtHead' },

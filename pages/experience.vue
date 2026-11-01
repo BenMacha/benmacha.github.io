@@ -34,6 +34,18 @@
                 :class="`rail__blip--${railOf(job).branch}`"
               />
               <span v-if="railOf(job).label" class="rail__label"><span>{{ $t(railOf(job).label!) }}</span></span>
+              <!-- Contract change: the freelance pipe joins the trunk through a coupler, with a super mushroom -->
+              <template v-if="railOf(job).branch === 'levelUp'">
+                <div class="rail__coupler" />
+                <svg class="rail__mushroom" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">
+                  <path fill="#000" d="M4 0h4v1h2v1h1v2h1v4h-1v1H9v3H3V9H1V8H0V4h1V2h1V1h2z" />
+                  <path fill="#e52521" d="M4 1h4v1h2v2h1v4H1V4h1V2h2z" />
+                  <path fill="#fff" d="M5 1h2v2H5zM1 5h2v2H1zM9 5h2v2H9z" />
+                  <path fill="#ffe0b0" d="M4 8h4v3H4z" />
+                  <path fill="#000" d="M5 9h1v1H5zM7 9h1v1H7z" />
+                </svg>
+                <span v-if="railOf(job).levelUp" class="rail__levelup"><span>{{ $t(railOf(job).levelUp!) }}</span></span>
+              </template>
             </template>
           </div>
 
@@ -126,7 +138,7 @@ const expanded = reactive<Record<number, boolean>>({})
 const railOf = (job: Experience): Rail => rails[job.company] ?? { node: 'trunk' }
 
 // A horizontal pipe joins the branch to the trunk where the branch starts or ends
-const hasElbow = (job: Experience) => ['forkBelow', 'mergeAtHead', 'forkAtHead'].includes(railOf(job).branch ?? '')
+const hasElbow = (job: Experience) => ['forkBelow', 'mergeAtHead', 'forkAtHead', 'levelUp'].includes(railOf(job).branch ?? '')
 
 function visibleTasks(tasks: string[], index: number) {
   return expanded[index] ? tasks : tasks.slice(0, TASK_LIMIT)
@@ -260,6 +272,63 @@ usePageSeo({
 .rail__elbow--mergeAtHead,
 .rail__elbow--forkAtHead {
   top: var(--elbow-y);
+}
+
+/* Contract change (freelance -> CDI): the yellow pipe stops at 08/20 and joins the trunk at 09/20
+   through a coupler, under the row's pipe head */
+.rail__branch--levelUp,
+.rail__elbow--levelUp {
+  top: var(--cap-y);
+}
+
+.rail__coupler {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--cap-y) - 6px);
+  inset-inline-start: calc(var(--trunk-x) + var(--trunk-w) - 4px);
+  width: 14px;
+  height: calc(var(--elbow-h) + 12px);
+  background: var(--pipe);
+  border: 3px solid #000;
+  box-shadow: inset 3px 0 0 #7ee07e, inset -4px 0 0 #1f7a2a;
+}
+
+.rail__mushroom {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--cap-y) - 31px);
+  inset-inline-start: calc(var(--trunk-x) + var(--trunk-w) + 8px);
+  width: 30px;
+  height: 30px;
+  image-rendering: pixelated;
+}
+
+.rail__levelup {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--cap-y) + var(--elbow-h) + 12px);
+  inset-inline-start: var(--branch-x);
+  width: var(--branch-w);
+  display: flex;
+  justify-content: center;
+}
+
+.rail__levelup span {
+  writing-mode: vertical-rl;
+  font-family: var(--font-pixel, monospace);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #3d2a00;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rail__mushroom {
+    animation: mushroom-bob 1.6s steps(2, end) infinite;
+  }
+}
+
+@keyframes mushroom-bob {
+  50% { transform: translateY(-3px); }
 }
 
 .rail__label {
