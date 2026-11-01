@@ -163,6 +163,18 @@
       "viewOn": "View on",
       "items": [
         {
+          "name": "Pepprio",
+          "icon": "",
+          "description": "Order management SaaS for restaurants: Uber Eats, Deliveroo, Just Eat and Glovo on a single tablet, POS, kitchen display, kiosk and automatic disputes.",
+          "url": "https://www.pepprio.com"
+        },
+        {
+          "name": "OrpiHub",
+          "icon": "",
+          "description": "ORPI network data platform (internal project): sales steering, mapping, exports, agency audits and an AI business assistant with an MCP server and RAG.",
+          "url": "https://www.orpi.com"
+        },
+        {
           "name": "UberEat PHP SDK",
           "icon": "🍽️",
           "description": "PHP SDK for UberEat API integration",
@@ -171,7 +183,7 @@
             "Order and menu management",
             "Detailed documentation and examples"
           ],
-          "url": "https://github.com/BenMacha/ubereat-php"
+          "url": "https://github.com/pepprio/uber-eats-sdk-php"
         },
         {
           "name": "Symfony CRUD Template Bundle",
@@ -190,6 +202,30 @@
           "icon": "📊",
           "description": "Diagram generator for Symfony projects",
           "url": "https://github.com/BenMacha/diagram-bundle"
+        },
+        {
+          "name": "Symfony Audit Bundle",
+          "icon": "",
+          "description": "Audits Doctrine entity changes with rollback, a web interface and a REST API.",
+          "url": "https://github.com/BenMacha/audit-bundle"
+        },
+        {
+          "name": "AuthX Bundle",
+          "icon": "",
+          "description": "Authentication and authorization for Symfony: JWT, OpenID Connect, user management, audit logging and subscriptions.",
+          "url": "https://github.com/BenMacha/authx-bundle"
+        },
+        {
+          "name": "Omnimail MCP",
+          "icon": "",
+          "description": "Open source multi-account mail MCP server (iCloud, Gmail, Outlook, Yahoo, Proton, Infomaniak, IMAP), with Docker, GDPR compliant.",
+          "url": "https://github.com/BenMacha/omnimail-mcp"
+        },
+        {
+          "name": "Portfolio benmacha.tn",
+          "icon": "",
+          "description": "This site: a trilingual (FR / EN / AR) technical book in Nuxt 3, prerendered, with isometric figures.",
+          "url": "https://github.com/BenMacha/benmacha.github.io"
         }
       ]
     }

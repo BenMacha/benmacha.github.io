@@ -163,6 +163,18 @@
       "viewOn": "عرض على",
       "items": [
         {
+          "name": "Pepprio",
+          "icon": "",
+          "description": "منصة SaaS لإدارة طلبات المطاعم: Uber Eats وDeliveroo وJust Eat وGlovo على جهاز لوحي واحد، مع نقطة بيع وشاشة مطبخ وكشك ومعالجة تلقائية للنزاعات.",
+          "url": "https://www.pepprio.com"
+        },
+        {
+          "name": "OrpiHub",
+          "icon": "",
+          "description": "منصة بيانات شبكة ORPI (مشروع داخلي): القيادة التجارية والخرائط والتصدير وتدقيق الوكالات ومساعد ذكاء اصطناعي مع خادم MCP وRAG.",
+          "url": "https://www.orpi.com"
+        },
+        {
           "name": "UberEat PHP SDK",
           "icon": "🍽️",
           "description": "مكتبة PHP لدمج واجهة برمجة UberEat",
@@ -171,7 +183,7 @@
             "إدارة الطلبات والقوائم",
             "توثيق مفصل وأمثلة"
           ],
-          "url": "https://github.com/BenMacha/ubereat-php"
+          "url": "https://github.com/pepprio/uber-eats-sdk-php"
         },
         {
           "name": "Symfony CRUD Template Bundle",
@@ -190,6 +202,30 @@
           "icon": "📊",
           "description": "مولد المخططات لمشاريع Symfony",
           "url": "https://github.com/BenMacha/diagram-bundle"
+        },
+        {
+          "name": "Symfony Audit Bundle",
+          "icon": "",
+          "description": "تدقيق تعديلات كيانات Doctrine مع إمكانية التراجع وواجهة ويب وواجهة REST.",
+          "url": "https://github.com/BenMacha/audit-bundle"
+        },
+        {
+          "name": "AuthX Bundle",
+          "icon": "",
+          "description": "المصادقة والتفويض في Symfony: JWT وOpenID Connect وإدارة المستخدمين وسجل التدقيق والاشتراكات.",
+          "url": "https://github.com/BenMacha/authx-bundle"
+        },
+        {
+          "name": "Omnimail MCP",
+          "icon": "",
+          "description": "خادم MCP مفتوح المصدر لعدة حسابات بريد (iCloud وGmail وOutlook وYahoo وProton وInfomaniak وIMAP)، مع Docker ومتوافق مع RGPD.",
+          "url": "https://github.com/BenMacha/omnimail-mcp"
+        },
+        {
+          "name": "Portfolio benmacha.tn",
+          "icon": "",
+          "description": "هذا الموقع: كتاب تقني بثلاث لغات (FR / EN / AR) مبني بـ Nuxt 3 ومولَّد مسبقًا، مع رسوم متساوية القياس.",
+          "url": "https://github.com/BenMacha/benmacha.github.io"
         }
       ]
     }

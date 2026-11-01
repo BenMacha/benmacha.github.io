@@ -10,6 +10,7 @@
         <ul v-if="project.tasks.length" class="bullets">
           <li v-for="task in project.tasks" :key="task">{{ task }}</li>
         </ul>
+        <TechList v-if="projectStacks[project.url]" :items="projectStacks[project.url]!" small class="project__stack" />
         <a :href="project.url" target="_blank" rel="noopener" class="project__link mono">{{ project.url.replace(/^https?:\/\//, '') }} ↗</a>
       </li>
     </ol>
@@ -19,6 +20,8 @@
 </template>
 
 <script setup lang="ts">
+import { projectStacks } from '~/data/projects'
+
 const { t } = useI18n()
 const { projects } = useResume()
 
@@ -60,6 +63,10 @@ usePageSeo({
 .project__desc {
   margin: 0;
   color: var(--ink-2);
+}
+
+.project__stack {
+  margin-top: 4px;
 }
 
 .project__link {
