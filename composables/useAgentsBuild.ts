@@ -8,6 +8,8 @@ import { settleReveals } from './useScrollReveal'
  *   data-build                  a block (layer) inside it, shown as a dashed wireframe until built
  *   data-build-kind="text"      typed in: revealed in the reading direction
  *   data-build-kind="draw"      a `v-draw` figure: its branches are drawn when the block is built
+ *   data-build-split="N"        a long container (article body, card grid): its children are built
+ *                               in N consecutive groups, one layer each
  *
  * Nothing is hidden until `start()` adds `ab-armed` to the root on the client, so
  * the server HTML stays complete. Styles: assets/css/agents-build.css.
@@ -42,7 +44,9 @@ export function createAgentsBuild(options: {
   const crew = AGENTS.slice(0, options.agentCount)
   const timers = new Set<number>()
 
+  /** Every hidden element, and the layers (groups of elements) the agents build */
   let blocks: HTMLElement[] = []
+  let units: HTMLElement[][] = []
   let agents: Agent[] = []
   let io: IntersectionObserver | null = null
   let run = 0
@@ -67,9 +71,40 @@ export function createAgentsBuild(options: {
   }
 
   /** Document coordinates, measured once per block */
-  function box(el: Element): Box {
-    const r = el.getBoundingClientRect()
-    return { x: r.left + window.scrollX, y: r.top + window.scrollY, w: r.width, h: r.height }
+  function box(els: Element[]): Box {
+    let [left, top, right, bottom] = [Infinity, Infinity, -Infinity, -Infinity]
+    for (const el of els) {
+      const r = el.getBoundingClientRect()
+      if (!r.width && !r.height) continue
+      left = Math.min(left, r.left)
+      top = Math.min(top, r.top)
+      right = Math.max(right, r.right)
+      bottom = Math.max(bottom, r.bottom)
+    }
+    if (left === Infinity) return { x: 0, y: 0, w: 0, h: 0 }
+    return { x: left + window.scrollX, y: top + window.scrollY, w: right - left, h: bottom - top }
+  }
+
+  /** Layers: each [data-build] block, plus the children of [data-build-split] containers in N groups */
+  function collect() {
+    const splits = [...root.querySelectorAll<HTMLElement>('[data-build-split]')]
+    const own = [...root.querySelectorAll<HTMLElement>('[data-build]')]
+      .filter(el => !el.parentElement?.closest('[data-build-split]'))
+    const found: HTMLElement[][] = own.map(el => [el])
+    for (const container of splits) {
+      const children = [...container.children] as HTMLElement[]
+      const groups = Math.max(1, Math.min(Number(container.dataset.buildSplit) || 4, children.length))
+      const size = Math.ceil(children.length / groups)
+      for (let i = 0; i < children.length; i += size) {
+        const group = children.slice(i, i + size)
+        group.forEach(el => el.setAttribute('data-build', ''))
+        found.push(group)
+      }
+    }
+    // Document order, so a section is built top to bottom
+    found.sort((a, b) => (a[0]!.compareDocumentPosition(b[0]!) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+    units = found
+    blocks = found.flat()
   }
 
   function sizeOverlay() {
@@ -101,7 +136,8 @@ export function createAgentsBuild(options: {
     })
   }
 
-  function label(el: HTMLElement, b: Box) {
+  function label(unit: HTMLElement[], b: Box) {
+    const el = unit.length > 1 ? unit[0]!.parentElement! : unit[0]!
     const cls = [...el.classList].find(c => !c.startsWith('ab-') && !c.includes('draw'))
     return `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ''} · ${Math.round(b.w)}×${Math.round(b.h)}`
   }
@@ -113,14 +149,14 @@ export function createAgentsBuild(options: {
   }
 
   function emit() {
-    onChange({ phase: 'building', built, total: blocks.length, seconds: null })
+    onChange({ phase: 'building', built, total: units.length, seconds: null })
   }
 
-  async function buildBlock(el: HTMLElement, a: Agent, token: number) {
-    const b = box(el)
+  async function buildBlock(unit: HTMLElement[], a: Agent, token: number) {
+    const b = box(unit)
     // Not rendered at this width (display: none): nothing to draw
     if (!b.w && !b.h) {
-      markBuilt(el, false)
+      unit.forEach(el => markBuilt(el, false))
       built++
       emit()
       return
@@ -136,12 +172,12 @@ export function createAgentsBuild(options: {
     sel.style.width = `${Math.round(b.w + 8)}px`
     sel.style.height = `${Math.round(b.h + 8)}px`
     sel.innerHTML = '<i></i><i></i><i></i><i></i><b></b>'
-    sel.querySelector('b')!.textContent = label(el, b)
+    sel.querySelector('b')!.textContent = label(unit, b)
     overlay.appendChild(sel)
 
-    markBuilt(el, true)
+    unit.forEach(el => markBuilt(el, true))
     // The entrance animation is dropped once played (its final clip-path would clip overflowing glyphs)
-    later(() => el.classList.remove('ab-building'), 800)
+    later(() => unit.forEach(el => el.classList.remove('ab-building')), 800)
     // Drag to the far corner, like resizing the layer
     place(a, b.x + b.w - 10, b.y + b.h - 6)
     built++
@@ -155,7 +191,7 @@ export function createAgentsBuild(options: {
 
   async function buildStage(stage: Element, token: number) {
     sizeOverlay()
-    const own = blocks.filter(el => stage.contains(el) && !el.classList.contains('ab-built'))
+    const own = units.filter(unit => stage.contains(unit[0]!) && !unit[0]!.classList.contains('ab-built'))
     let next = 0
     await Promise.all(agents.map(async (a, k) => {
       await sleep(k * 70)
@@ -188,7 +224,7 @@ export function createAgentsBuild(options: {
     clearTimers()
 
     blocks.forEach(el => markBuilt(el, false))
-    built = blocks.length
+    built = units.length
     overlay.querySelectorAll('.ab-sel').forEach(el => el.remove())
     agents.forEach((a, i) => later(() => a.el.classList.add('is-gone'), 200 + i * 40))
     later(() => {
@@ -197,7 +233,7 @@ export function createAgentsBuild(options: {
     }, 1200)
 
     const seconds = skipped ? null : Math.round((performance.now() - t0) / 100) / 10
-    onChange({ phase: 'done', built, total: blocks.length, seconds })
+    onChange({ phase: 'done', built, total: units.length, seconds })
   }
 
   function start() {
@@ -208,7 +244,7 @@ export function createAgentsBuild(options: {
     built = 0
     t0 = performance.now()
 
-    blocks = [...root.querySelectorAll<HTMLElement>('[data-build]')]
+    collect()
     const stages = [...root.querySelectorAll<HTMLElement>('[data-build-stage]')]
     if (!blocks.length || !stages.length) return
 

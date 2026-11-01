@@ -6,7 +6,7 @@
       :subtitle="$t('blog.subtitle')"
     />
 
-    <div class="filters" role="group" :aria-label="$t('blog.title')">
+    <div class="filters" data-build-stage data-build role="group" :aria-label="$t('blog.title')">
       <button
         v-for="filter in filters"
         :key="filter.value"
@@ -20,10 +20,12 @@
       </button>
     </div>
 
-    <div v-if="visible.length" class="grid posts">
+    <div v-if="visible.length" class="grid posts" data-build-stage data-build-split="8">
       <BlogCard v-for="(article, i) in visible" :key="article.slug" v-reveal="i" :article="article" />
     </div>
     <p v-else class="empty">{{ $t('blog.noArticles') }}</p>
+
+    <AgentsBuild />
   </div>
 </template>
 

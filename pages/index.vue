@@ -174,7 +174,7 @@ useHead({
 
 .preface__title {
   margin: 0;
-  font-size: clamp(38px, 6.2vw, 64px);
+  font-size: clamp(34px, 4.4vw, 52px);
   line-height: 1.04;
   letter-spacing: -1.5px;
 }

@@ -2,12 +2,12 @@
   <div class="container page os">
     <SectionTitle page :title="$t('openSource.title')" :subtitle="$t('openSource.intro')" />
 
-    <OpenSourceMachine />
+    <OpenSourceMachine data-build-stage data-build />
 
-    <section class="os__section" aria-labelledby="os-prs">
-      <h2 id="os-prs" class="os__heading"><span class="mono">4.1</span> {{ $t('openSource.byProject') }}</h2>
+    <section class="os__section" aria-labelledby="os-prs" data-build-stage>
+      <h2 id="os-prs" class="os__heading" data-build><span class="mono">4.1</span> {{ $t('openSource.byProject') }}</h2>
       <div class="os__projects">
-        <article v-for="(project, i) in projects" :key="project.id" v-reveal="i" class="project card">
+        <article v-for="(project, i) in projects" :key="project.id" v-reveal="i" class="project card" data-build>
           <header class="project__head">
             <span class="project__logo" aria-hidden="true"><OpenSourceLogo :logo="project.logo" /></span>
             <h3 class="project__name">{{ project.name }}</h3>
@@ -50,17 +50,19 @@
       </div>
     </section>
 
-    <section class="os__section" aria-labelledby="os-packages">
-      <h2 id="os-packages" class="os__heading"><span class="mono">4.2</span> {{ $t('openSource.shelf.heading') }}</h2>
-      <OpenSourceShelf />
+    <section class="os__section" aria-labelledby="os-packages" data-build-stage>
+      <h2 id="os-packages" class="os__heading" data-build><span class="mono">4.2</span> {{ $t('openSource.shelf.heading') }}</h2>
+      <OpenSourceShelf data-build />
     </section>
 
-    <section class="os__section" aria-labelledby="os-orgs">
-      <h2 id="os-orgs" class="os__heading"><span class="mono">4.3</span> {{ $t('openSource.orgs.heading') }}</h2>
-      <OpenSourceStreet />
+    <section class="os__section" aria-labelledby="os-orgs" data-build-stage>
+      <h2 id="os-orgs" class="os__heading" data-build><span class="mono">4.3</span> {{ $t('openSource.orgs.heading') }}</h2>
+      <OpenSourceStreet data-build />
     </section>
 
     <p class="os__updated">{{ $t('openSource.updated', { date: formatDate(updatedAt) }) }}</p>
+
+    <AgentsBuild />
   </div>
 </template>
 

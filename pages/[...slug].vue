@@ -1,5 +1,8 @@
 <template>
-  <NotFound />
+  <div>
+    <NotFound />
+    <AgentsBuild />
+  </div>
 </template>
 
 <script setup lang="ts">

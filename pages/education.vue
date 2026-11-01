@@ -2,14 +2,14 @@
   <div class="container container--narrow page education">
     <SectionTitle page :title="$t('education.title')" :subtitle="$t('intro.education')" />
 
-    <div class="stack">
-      <AchievementCard v-for="(degree, i) in education" :key="degree.school" v-reveal="i" :degree="degree" />
+    <div class="stack" data-build-stage>
+      <AchievementCard v-for="(degree, i) in education" :key="degree.school" v-reveal="i" :degree="degree" data-build />
     </div>
 
-    <section class="stack">
-      <h2 class="subtitle"><span class="mono">6.2</span> {{ $t('education.internships.title') }}</h2>
+    <section class="stack" data-build-stage>
+      <h2 class="subtitle" data-build><span class="mono">6.2</span> {{ $t('education.internships.title') }}</h2>
       <div class="grid" style="--min: 280px; gap: 18px">
-        <article v-for="(internship, i) in internships" :key="internship.company" v-reveal="i" class="entry card">
+        <article v-for="(internship, i) in internships" :key="internship.company" v-reveal="i" class="entry card" data-build>
           <div class="entry__head">
             <div>
               <h3 class="entry__company">{{ internship.company }}</h3>
@@ -24,10 +24,10 @@
       </div>
     </section>
 
-    <section class="stack">
-      <h2 class="subtitle"><span class="mono">6.3</span> {{ $t('education.interests.title') }}</h2>
+    <section class="stack" data-build-stage>
+      <h2 class="subtitle" data-build><span class="mono">6.3</span> {{ $t('education.interests.title') }}</h2>
       <div class="grid" style="--min: 280px; gap: 18px">
-        <article v-for="(interest, i) in interests" :key="interest.title" v-reveal="i" class="entry card">
+        <article v-for="(interest, i) in interests" :key="interest.title" v-reveal="i" class="entry card" data-build>
           <h3 class="entry__title">{{ interest.title }}</h3>
           <div class="tags">
             <span v-for="item in interest.items" :key="item" class="tag">{{ item }}</span>
@@ -37,6 +37,8 @@
     </section>
 
     <PageProse page="education" class="education__prose" />
+
+    <AgentsBuild />
   </div>
 </template>
 

@@ -28,7 +28,7 @@
 <script setup lang="ts">
 /**
  * Client side only (the server renders a hidden empty span): plays the "built live by agents" intro on the page it is placed in (its parent
- * element is the root): once per browser session and page, never with reduced motion.
+ * element is the root): on every load of the page, never with reduced motion.
  * Mark sections with `data-build-stage` and blocks with `data-build` (see useAgentsBuild).
  */
 import { prefersReducedMotion } from '~/composables/useMotion'
@@ -37,7 +37,6 @@ import { AGENTS, createAgentsBuild, type AgentsBuildState } from '~/composables/
 const PILL_HIDE_MS = 8000
 
 const { t, locale } = useI18n()
-const route = useRoute()
 
 const anchor = ref<HTMLElement | null>(null)
 const overlay = ref<HTMLElement | null>(null)
@@ -96,23 +95,9 @@ function onKeydown() {
   if (build?.running) build.skip()
 }
 
-const storageKey = () => `agents-build:${route.path}`
-
-function alreadyPlayed() {
-  try {
-    if (sessionStorage.getItem(storageKey())) return true
-    sessionStorage.setItem(storageKey(), '1')
-  }
-  catch {
-    // Storage blocked: play it anyway
-  }
-  return false
-}
-
 onMounted(async () => {
   const root = anchor.value?.parentElement
   if (!root || prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return
-  if (alreadyPlayed()) return
 
   // The overlay and the status pill are only rendered on the client
   mounted.value = true

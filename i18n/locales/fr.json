@@ -523,9 +523,9 @@
     "toc": "Sommaire",
     "menu": "Ouvrir le sommaire",
     "preface": "// Préface",
-    "heroLead": "Je conçois des produits SI et IA",
-    "heroAccent": "qui tournent en production.",
-    "heroText": "Chef de projet SI & IA générative chez ORPI, Tech Lead PHP/Symfony, fondateur de Pepprio. Dix ans de Tunis à Paris, racontés comme un manuel technique : chaque chapitre, une pièce de la machine.",
+    "heroLead": "Développeur PHP natif, puis Symfony, React et Vue.js.",
+    "heroAccent": "Aujourd'hui, l'IA fait le travail de cinq, et je garde la main sur le code.",
+    "heroText": "Chef de projet SI & IA générative chez ORPI, Tech Lead PHP/Symfony, fondateur de Pepprio. Pas de vibe coding : chaque ligne générée est relue, testée et comprise avant d'aller en production. Dix ans de Tunis à Paris, racontés comme un manuel technique.",
     "cv": "Lire le CV (PDF)",
     "contact": "Me contacter",
     "facts": {
