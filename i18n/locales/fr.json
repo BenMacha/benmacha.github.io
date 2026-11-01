@@ -318,7 +318,6 @@
     "skills": "MONDE 2 · INVENTAIRE",
     "projects": "MONDE 3 · BLOCS BONUS",
     "blog": "MONDE 4 · LOGS",
-    "arcade": "MONDE 6 · ARCADE",
     "seeAll": "Tout voir",
     "openInventory": "Ouvrir l'inventaire",
     "education": "MONDE 5 · SUCCES",
@@ -355,27 +354,6 @@
   "blogUi": {
     "eyebrow": "MONDE 4 · LOGS SERVEUR",
     "readTime": "de lecture"
-  },
-  "arcade": {
-    "title": "Jeux d'antan",
-    "start": "START",
-    "pressStart": "APPUIE SUR START",
-    "gameOver": "GAME OVER",
-    "pause": "PAUSE · START",
-    "victory": "VICTOIRE !",
-    "score": "SCORE",
-    "best": "BEST",
-    "lines": "LIGNES",
-    "move": "bouger",
-    "rotate": "tourner",
-    "down": "descendre",
-    "drop": "ESPACE chute",
-    "orMouse": "ou souris",
-    "shoot": "ESPACE tirer",
-    "points": "7 pts",
-    "breakout": "CASSE-BRIQUES",
-    "swipe": "glisser",
-    "tetrisTouch": "Mobile : glisser pour bouger, toucher pour tourner"
   },
   "contactUi": {
     "eyebrow": "INSERT COIN · PLAYER 2 ?",
@@ -623,11 +601,6 @@
       "open": "en revue",
       "projects": "projets",
       "bundles": "bundles"
-    },
-    "annexB": {
-      "eyebrow": "Annexe B · Récréation",
-      "title": "Récréation",
-      "text": "Cinq petits jeux écrits pour le plaisir : clavier, souris ou tactile. Rien à apprendre ici, juste une pause entre deux chapitres."
     },
     "footer": "Écrivons le prochain chapitre.",
     "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris. L'axe à gauche compte les années ; chaque poste est une branche ouverte à sa date de début et fermée à sa date de fin.",

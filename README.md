@@ -1,6 +1,6 @@
 # Ben Macha Ali - Portfolio
 
-Personal portfolio website built with **Nuxt 3**, designed as a technical book (vol. 2026: preface, contents, chapters, appendices), with line-drawn figures, playable mini-games and multilingual support.
+Personal portfolio website built with **Nuxt 3**, designed as a technical book (vol. 2026: preface, contents, chapters, appendices), with line-drawn figures and multilingual support.
 
 **Live:** [benmacha.tn](https://benmacha.tn)
 
@@ -18,7 +18,6 @@ Personal portfolio website built with **Nuxt 3**, designed as a technical book (
 
 - Technical book design: running heads, chapter and page numbers, thin rules, dark (default) and light palettes
 - Experience chapter drawn as a year axis with one branch per job, coloured by contract
-- Appendix B (home page): Snake, Tetris, Breakout, Pong and Space Invaders (keyboard, mouse and touch)
 - Trilingual support (FR / EN / AR) with full RTL layout for Arabic
 - Technical blog (PHP, Symfony, Docker, Linux, DevOps) with category filters
 - SEO: meta tags, JSON-LD for articles, sitemap, canonical URLs
@@ -28,7 +27,7 @@ Personal portfolio website built with **Nuxt 3**, designed as a technical book (
 
 | Route | Description |
 |-------|-------------|
-| `/` | Preface — Fig. 1, key facts, contents, latest jobs, Appendix A (open source), Appendix B (mini-games) |
+| `/` | Preface — Fig. 1, key facts, contents, latest jobs, Appendix A (open source) |
 | `/experience` | Work experience as a level map |
 | `/skills` | Skills inventory by category |
 | `/projects` | Open source projects ("?" blocks) |
@@ -74,9 +73,8 @@ The repositories and packages it reads are listed at the top of the script. The 
 ```
 ├── assets/css/          # Design tokens and shared book primitives
 ├── components/          # Layout, sections and UI components
-│   ├── arcade/          # Mini-games and their cabinet frame
 │   └── open-source/     # Open source figures, ledger and lists
-├── composables/         # Resume data, blog helpers, arcade plumbing, Motion effects
+├── composables/         # Resume data, blog helpers, chapters, Motion effects
 ├── data/                # Blog articles, skills, site links, open source contributions
 ├── i18n/locales/        # Translation files (fr.json, en.json, ar.json)
 ├── layouts/             # Default layout (header, footer, progress bar)
