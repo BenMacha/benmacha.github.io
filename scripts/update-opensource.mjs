@@ -5,7 +5,8 @@
 //        GITHUB_TOKEN=$(gh auth token) node scripts/update-opensource.mjs   (higher rate limit)
 //
 // For every repository below it asks the GitHub search API for `is:pr author:<AUTHOR> repo:<repo>`,
-// keeps the merged and the open pull requests, and reads the download totals of the Packagist
+// keeps every pull request (merged, open, approved or closed without merge: the history stays,
+// rejections included), and reads the download totals of the Packagist
 // packages. Only the generated block between the markers in data/opensource.ts is rewritten:
 // the types, the notes and the organizations stay as they are written there.
 // Node 20+, built-ins only.
@@ -37,19 +38,27 @@ async function pullRequests(repo) {
     items.push(...data.items)
     if (items.length >= data.total_count || data.items.length < 100) break
   }
-  return items
-    .map(item => ({
-      repo,
-      number: item.number,
-      title: item.title.trim(),
-      url: item.html_url,
-      state: item.pull_request?.merged_at ? 'merged' : item.state === 'open' ? 'open' : 'closed',
-      mergedAt: item.pull_request?.merged_at ?? null,
-      createdAt: item.created_at,
-    }))
-    // Closed without being merged: not a contribution
-    .filter(pr => pr.state !== 'closed')
-    .sort((a, b) => (b.mergedAt ?? b.createdAt).localeCompare(a.mergedAt ?? a.createdAt) || b.number - a.number)
+  const prs = items.map(item => ({
+    repo,
+    number: item.number,
+    title: item.title.trim(),
+    url: item.html_url,
+    state: item.pull_request?.merged_at ? 'merged' : item.state === 'open' ? 'open' : 'closed',
+    approved: false,
+    mergedAt: item.pull_request?.merged_at ?? null,
+    closedAt: item.pull_request?.merged_at ? null : item.closed_at ?? null,
+    createdAt: item.created_at,
+  }))
+  // An open pull request is "approved" when its latest review is an approval
+  for (const pr of prs.filter(pr => pr.state === 'open')) {
+    const reviews = await getJson(`https://api.github.com/repos/${repo}/pulls/${pr.number}/reviews?per_page=100`, { headers })
+    const last = reviews.filter(r => ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)).at(-1)
+    pr.approved = last?.state === 'APPROVED'
+  }
+  const order = { merged: 0, open: 1, closed: 2 }
+  return prs.sort((a, b) => order[a.state] - order[b.state]
+    || (b.mergedAt ?? b.closedAt ?? b.createdAt).localeCompare(a.mergedAt ?? a.closedAt ?? a.createdAt)
+    || b.number - a.number)
 }
 
 async function packageInfo(name) {
@@ -66,7 +75,8 @@ async function packageInfo(name) {
 const prs = []
 for (const repo of REPOS) {
   const list = await pullRequests(repo)
-  console.log(`${repo}: ${list.filter(pr => pr.state === 'merged').length} merged, ${list.filter(pr => pr.state === 'open').length} open`)
+  const count = state => list.filter(pr => pr.state === state).length
+  console.log(`${repo}: ${count('merged')} merged, ${count('open')} open (${list.filter(pr => pr.approved).length} approved), ${count('closed')} closed`)
   prs.push(...list)
 }
 const packages = []

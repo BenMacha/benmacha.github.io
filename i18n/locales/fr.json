@@ -468,6 +468,8 @@
     "intro": "Les pull requests envoyées aux projets que j'utilise tous les jours, les bundles Symfony que je publie sur Packagist et les organisations que je construis en public.",
     "merged": "fusionnées",
     "open": "en revue",
+    "closed": "fermées",
+    "approved": "approuvée",
     "mergedShare": "{n} % fusionnées",
     "packages": "paquets",
     "downloads": "installations",
@@ -482,6 +484,13 @@
     "repo": "Dépôt",
     "mergedList": "Fusionnées",
     "openList": "En revue",
+    "closedList": "Fermées sans fusion",
+    "closedHint": "Refusées ou abandonnées : je les garde ici, avec les remarques des mainteneurs dans chaque pull request. On apprend aussi de ce qui n'est pas accepté.",
+    "creditList": "Reprises par un mainteneur",
+    "credits": {
+      "doctrineMessageId": "Validation de l'identifiant des messages Doctrine, réécrite par Nicolas Grekas à partir de ma {from}.",
+      "legacyReauth": "Ré-authentification gardée pour les anciens jetons, réécrite par Nicolas Grekas à partir de ma {from}."
+    },
     "notes": {
       "tingSqlInjection": "Signalement d'une injection SQL dans le pilote PostgreSQL, corrigée en amont dans la version 4.1.1."
     },

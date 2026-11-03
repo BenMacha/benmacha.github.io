@@ -4,7 +4,7 @@ import ar from '~/i18n/locales/ar.json'
 import { blogArticles } from '~/data/blog'
 import { skillSections } from '~/data/skills'
 import { socialLinks } from '~/data/site'
-import { contributionsByProject, mergedCount, openCount, packages, securityNotes, updatedAt } from '~/data/opensource'
+import { closedCount, contributionsByProject, credits, hasContributions, mergedCount, openCount, packages, securityNotes, updatedAt } from '~/data/opensource'
 
 /**
  * Builds the Markdown profiles for AI assistants and answer engines
@@ -209,27 +209,36 @@ function experiences(lang: LlmsLang, full: boolean): string {
 const OPEN_SOURCE = {
   "fr": {
     "heading": "Contributions open source",
-    "intro": "{m} pull requests fusionnées et {o} en revue dans des projets open source (données au {d}).",
+    "intro": "{m} pull requests fusionnées, {o} en revue et {c} fermées sans fusion dans des projets open source (données au {d}). Les pull requests refusées sont gardées comme historique.",
     "merged": "fusionnées",
     "open": "en revue",
+    "closed": "fermées sans fusion",
+    "approved": "approuvée, en attente de fusion",
+    "credit": "reprise par un mainteneur",
     "packages": "Packages publiés sur Packagist",
     "downloads": "téléchargements",
     "security": "Signalement de sécurité"
   },
   "en": {
     "heading": "Open source contributions",
-    "intro": "{m} merged pull requests and {o} under review in open source projects (data as of {d}).",
+    "intro": "{m} merged pull requests, {o} under review and {c} closed without merge in open source projects (data as of {d}). Rejected pull requests are kept as history.",
     "merged": "merged",
     "open": "under review",
+    "closed": "closed without merge",
+    "approved": "approved, waiting for the merge",
+    "credit": "taken over by a maintainer",
     "packages": "Packages published on Packagist",
     "downloads": "downloads",
     "security": "Security report"
   },
   "ar": {
     "heading": "المساهمات في المصادر المفتوحة",
-    "intro": "{m} طلب دمج مقبول و{o} قيد المراجعة في مشاريع مفتوحة المصدر (البيانات بتاريخ {d}).",
+    "intro": "{m} طلب دمج مقبول و{o} قيد المراجعة و{c} مغلقة دون دمج في مشاريع مفتوحة المصدر (البيانات بتاريخ {d}). نحتفظ بالطلبات المرفوضة كتاريخ.",
     "merged": "مقبولة",
     "open": "قيد المراجعة",
+    "closed": "مغلقة دون دمج",
+    "approved": "موافَق عليها، في انتظار الدمج",
+    "credit": "أعاد كتابتها أحد المشرفين",
     "packages": "حزم منشورة على Packagist",
     "downloads": "تنزيل",
     "security": "بلاغ أمني"
@@ -238,16 +247,18 @@ const OPEN_SOURCE = {
 
 function openSource(lang: LlmsLang, full: boolean): string {
   const t = OPEN_SOURCE[lang]
-  const intro = t.intro.replace('{m}', String(mergedCount)).replace('{o}', String(openCount)).replace('{d}', updatedAt)
-  const pr = (p: { title: string, url: string, number: number }) => `  - [#${p.number}](${p.url}) ${p.title}`
+  const intro = t.intro.replace('{m}', String(mergedCount)).replace('{o}', String(openCount)).replace('{c}', String(closedCount)).replace('{d}', updatedAt)
+  const pr = (p: { title: string, url: string, number: number, approved?: boolean }) => `  - [#${p.number}](${p.url}) ${p.title}${p.approved ? ` (${t.approved})` : ''}`
   const sections = contributionsByProject
-    .filter(project => project.merged.length + project.open.length > 0)
+    .filter(hasContributions)
     .map((project) => {
-      const lines = [`### [${project.name}](${project.url}) — ${project.merged.length} ${t.merged}, ${project.open.length} ${t.open}`]
+      const lines = [`### [${project.name}](${project.url}) — ${project.merged.length} ${t.merged}, ${project.open.length} ${t.open}, ${project.closed.length} ${t.closed}`]
       if (project.merged.length) lines.push(`- ${t.merged}:`, ...project.merged.map(pr))
       if (project.open.length) lines.push(`- ${t.open}:`, ...project.open.map(pr))
+      if (project.closed.length) lines.push(`- ${t.closed}:`, ...project.closed.map(pr))
+      const taken = credits.filter(c => c.project === project.id).map(c => `- ${t.credit}: [${c.label}](${c.url}) (${c.from})`)
       const notes = securityNotes.filter(n => n.project === project.id).map(n => `- ${t.security}: [${n.label}](${n.url})`)
-      return [...lines, ...notes].join('\n')
+      return [...lines, ...taken, ...notes].join('\n')
     })
   const pkgs = full && packages.length
     ? [`### ${t.packages}\n\n${packages.map(p => `- [${p.name}](${p.url}): ${p.description} (${p.downloads} ${t.downloads})`).join('\n')}`]
