@@ -14,6 +14,7 @@
             <span class="project__badges">
               <span v-if="project.merged.length" class="badge badge--merged mono">{{ project.merged.length }} {{ $t('openSource.merged') }}</span>
               <span v-if="project.open.length" class="badge badge--open mono">{{ project.open.length }} {{ $t('openSource.open') }}</span>
+              <span v-if="project.closed.length" class="badge badge--closed mono">{{ project.closed.length }} {{ $t('openSource.closed') }}</span>
             </span>
             <a :href="project.url" target="_blank" rel="noopener" class="project__repo">{{ $t('openSource.repo') }} ↗</a>
           </header>
@@ -21,16 +22,33 @@
           <div class="project__lists">
             <div v-for="group in groups(project)" :key="group.state" class="prs">
               <h4 class="prs__title mono">
-                <span class="swatch" :class="group.state === 'merged' ? 'swatch--green' : 'swatch--open'" aria-hidden="true" />
+                <span class="swatch" :class="`swatch--${group.state}`" aria-hidden="true" />
                 {{ group.title }} · {{ group.items.length }}
               </h4>
               <ul class="prs__list">
-                <li v-for="pr in group.items" :key="pr.url" class="pr">
+                <li v-for="pr in group.items" :key="pr.url" class="pr" :class="{ 'pr--closed': pr.state === 'closed' }">
                   <a :href="pr.url" target="_blank" rel="noopener" class="pr__link">
                     <span class="pr__num">#{{ pr.number }}</span>
                     <span class="pr__title">{{ pr.title }}</span>
                   </a>
-                  <time class="pr__date" :datetime="pr.mergedAt ?? pr.createdAt">{{ formatDate(pr.mergedAt ?? pr.createdAt) }}</time>
+                  <span v-if="pr.approved" class="pr__tag mono">{{ $t('openSource.approved') }}</span>
+                  <time class="pr__date" :datetime="pr.mergedAt ?? pr.closedAt ?? pr.createdAt">{{ formatDate(pr.mergedAt ?? pr.closedAt ?? pr.createdAt) }}</time>
+                </li>
+              </ul>
+              <p v-if="group.state === 'closed'" class="prs__hint">{{ $t('openSource.closedHint') }}</p>
+            </div>
+
+            <div v-if="creditsOf(project.id).length" class="prs">
+              <h4 class="prs__title mono">
+                <span class="swatch swatch--credit" aria-hidden="true" />
+                {{ $t('openSource.creditList') }} · {{ creditsOf(project.id).length }}
+              </h4>
+              <ul class="prs__list">
+                <li v-for="credit in creditsOf(project.id)" :key="credit.url" class="pr">
+                  <p class="note">
+                    {{ $t(`openSource.credits.${credit.key}`, { from: credit.from }) }}
+                    <a :href="credit.url" target="_blank" rel="noopener" class="note__link">{{ credit.label }} ↗</a>
+                  </p>
                 </li>
               </ul>
             </div>
@@ -67,16 +85,19 @@
 </template>
 
 <script setup lang="ts">
-import { contributionsByProject, securityNotes, updatedAt, type ProjectContributions } from '~/data/opensource'
+import { contributionsByProject, credits, hasContributions, securityNotes, updatedAt, type ProjectContributions } from '~/data/opensource'
 
 const { t, locale } = useI18n()
 
-const projects = contributionsByProject.filter(p => p.merged.length || p.open.length)
+const projects = contributionsByProject.filter(hasContributions)
 
 const groups = (project: ProjectContributions) => [
   { state: 'merged', title: t('openSource.mergedList'), items: project.merged },
   { state: 'open', title: t('openSource.openList'), items: project.open },
+  { state: 'closed', title: t('openSource.closedList'), items: project.closed },
 ].filter(g => g.items.length)
+
+const creditsOf = (id: string) => credits.filter(credit => credit.project === id)
 
 const notesOf = (id: string) => securityNotes.filter(note => note.project === id)
 
@@ -205,6 +226,20 @@ usePageSeo({
   color: var(--muted);
 }
 
+.swatch--merged {
+  background: var(--green);
+}
+
+.swatch--credit {
+  background: var(--green);
+  opacity: .55;
+}
+
+.swatch--closed {
+  background: transparent;
+  border: 1.5px solid var(--muted);
+}
+
 .swatch--open {
   background: var(--muted);
 }
@@ -250,6 +285,27 @@ usePageSeo({
 
 .pr__title {
   overflow-wrap: anywhere;
+}
+
+.pr--closed .pr__title {
+  color: var(--ink-2);
+}
+
+.pr__tag {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--green-ink);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.prs__hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
 }
 
 .pr__date {

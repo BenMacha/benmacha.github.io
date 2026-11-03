@@ -105,15 +105,17 @@ def logo_path(key):
 
 
 def pr_counts():
-    """Merged / open pull requests per repository, from the portfolio's data/opensource.ts."""
+    """Merged / open / approved / closed pull requests per repository, from the portfolio's data/opensource.ts."""
     import json
     text = OPENSOURCE_TS.read_text()
     block = text[text.index("export const pullRequests"):]
     prs = json.loads(block[block.index("= [") + 2: block.index("\n]") + 2])
     out = {}
     for pr in prs:
-        c = out.setdefault(pr["repo"], {"merged": 0, "open": 0})
+        c = out.setdefault(pr["repo"], {"merged": 0, "open": 0, "approved": 0, "closed": 0})
         c[pr["state"]] += 1
+        if pr.get("approved"):
+            c["approved"] += 1
     return out
 
 
@@ -424,11 +426,16 @@ def edit_text(xml):
     def count_text(repos):
         merged = sum(counts.get(r, {}).get("merged", 0) for r in repos)
         opened = sum(counts.get(r, {}).get("open", 0) for r in repos)
+        approved = sum(counts.get(r, {}).get("approved", 0) for r in repos)
+        closed = sum(counts.get(r, {}).get("closed", 0) for r in repos)
         parts = []
         if merged:
             parts.append(f"{merged} pull request{'s' if merged > 1 else ''} fusionnée{'s' if merged > 1 else ''}")
         if opened:
-            parts.append(f"{opened} en revue")
+            parts.append(f"{opened} en revue" + (f" dont {approved} approuvée{'s' if approved > 1 else ''}" if approved else ""))
+        # rejected ones stay: they are part of the history
+        if closed:
+            parts.append(f"{closed} fermée{'s' if closed > 1 else ''} sans fusion")
         return ", ".join(parts)
 
     def pr_list(repo):
@@ -436,7 +443,7 @@ def edit_text(xml):
 
     upstream = [
         ("symfony", "#000000", "Symfony", ["symfony/symfony"], [(rel("rIdUpSymfony", "https://github.com/symfony/symfony"), "github.com/symfony/symfony"), (rel("rIdPrSymfony", pr_list("symfony/symfony")), "mes pull requests")],
-         "Security, Messenger, Cache, Form, RateLimiter"),
+         "Security, Messenger, Cache, Form, RateLimiter ; 2 correctifs repris par Nicolas Grekas à partir de mes pull requests (#67725, #67726)"),
         ("apiplatform", "#374151", "API Platform", ["api-platform/core", "api-platform/api-platform"], [(rel("rIdUpApi", "https://github.com/api-platform/core"), "github.com/api-platform/core"), (rel("rIdPrApi", pr_list("api-platform/core")), "mes pull requests")],
          "Doctrine, sérialiseur, GraphQL, Laravel ; installateur api-platform/api-platform"),
         ("caddy", "#1f88c0", "Caddy", ["caddyserver/caddy"], [(rel("rIdUpCaddy", "https://github.com/caddyserver/caddy"), "github.com/caddyserver/caddy"), (rel("rIdPrCaddy", pr_list("caddyserver/caddy")), "mes pull requests")],

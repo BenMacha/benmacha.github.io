@@ -468,6 +468,8 @@
     "intro": "Pull requests sent to the projects I use every day, the Symfony bundles I publish on Packagist and the organizations I build in the open.",
     "merged": "merged",
     "open": "under review",
+    "closed": "closed",
+    "approved": "approved",
     "mergedShare": "{n} % merged",
     "packages": "packages",
     "downloads": "installs",
@@ -482,6 +484,13 @@
     "repo": "Repository",
     "mergedList": "Merged",
     "openList": "Under review",
+    "closedList": "Closed without merge",
+    "closedHint": "Rejected or dropped: I keep them here, with the maintainers' remarks in each pull request. What is not accepted teaches too.",
+    "creditList": "Taken over by a maintainer",
+    "credits": {
+      "doctrineMessageId": "Doctrine message id validation, rewritten by Nicolas Grekas from my {from}.",
+      "legacyReauth": "Re-authentication kept for legacy tokens, rewritten by Nicolas Grekas from my {from}."
+    },
     "notes": {
       "tingSqlInjection": "Reported an SQL injection in the PostgreSQL driver, fixed upstream in version 4.1.1."
     },
