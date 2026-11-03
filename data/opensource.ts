@@ -424,6 +424,17 @@ export const pullRequests: PullRequest[] = [
   },
   {
     "repo": "caddyserver/caddy",
+    "number": 8316,
+    "title": "caddyfile: reject negative import argument indices",
+    "url": "https://github.com/caddyserver/caddy/pull/8316",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-03T08:15:37Z",
+    "closedAt": null,
+    "createdAt": "2026-11-01T09:28:25Z"
+  },
+  {
+    "repo": "caddyserver/caddy",
     "number": 8317,
     "title": "admin: authorize remote requests matching any permission entry",
     "url": "https://github.com/caddyserver/caddy/pull/8317",
@@ -468,14 +479,25 @@ export const pullRequests: PullRequest[] = [
   },
   {
     "repo": "caddyserver/caddy",
-    "number": 8316,
-    "title": "caddyfile: reject negative import argument indices",
-    "url": "https://github.com/caddyserver/caddy/pull/8316",
+    "number": 8343,
+    "title": "caddyhttp: lower-case path patterns with placeholders at request time",
+    "url": "https://github.com/caddyserver/caddy/pull/8343",
     "state": "open",
-    "approved": true,
+    "approved": false,
     "mergedAt": null,
     "closedAt": null,
-    "createdAt": "2026-11-01T09:28:25Z"
+    "createdAt": "2026-11-03T07:44:08Z"
+  },
+  {
+    "repo": "caddyserver/caddy",
+    "number": 8342,
+    "title": "fastcgi: fail the request when a param name cannot fit in a record",
+    "url": "https://github.com/caddyserver/caddy/pull/8342",
+    "state": "open",
+    "approved": false,
+    "mergedAt": null,
+    "closedAt": null,
+    "createdAt": "2026-11-03T07:44:05Z"
   },
   {
     "repo": "caddyserver/caddy",
