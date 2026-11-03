@@ -600,6 +600,12 @@
     "done": "{agents} agents · {total} layers · built in {s} s",
     "skipped": "{agents} agents · {total} layers · built",
     "skip": "Skip",
-    "replay": "Replay"
+    "replay": "Replay",
+    "loading": "Loading…",
+    "actions": {
+      "write": "typing",
+      "design": "designing",
+      "select": "selecting"
+    }
   }
 }

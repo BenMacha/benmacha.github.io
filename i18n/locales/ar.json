@@ -600,6 +600,12 @@
     "done": "{agents} وكلاء · {total} طبقة · اكتمل البناء في {s} ث",
     "skipped": "{agents} وكلاء · {total} طبقة · اكتمل البناء",
     "skip": "تخطي",
-    "replay": "إعادة"
+    "replay": "إعادة",
+    "loading": "جارٍ التحميل…",
+    "actions": {
+      "write": "يكتب",
+      "design": "يصمّم",
+      "select": "يحدّد"
+    }
   }
 }
