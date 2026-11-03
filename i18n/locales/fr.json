@@ -600,6 +600,12 @@
     "done": "{agents} agents · {total} calques · construit en {s} s",
     "skipped": "{agents} agents · {total} calques · construit",
     "skip": "Passer",
-    "replay": "Rejouer"
+    "replay": "Rejouer",
+    "loading": "Chargement…",
+    "actions": {
+      "write": "écrit",
+      "design": "dessine",
+      "select": "sélectionne"
+    }
   }
 }

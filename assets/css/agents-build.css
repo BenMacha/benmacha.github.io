@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agents build intro (components/AgentsBuild.client.vue)
+   Agents build intro (components/AgentsBuild.vue)
    The page is built live by labelled cursors, section by section.
    Every rule hangs off `.ab-armed`, a class only the client script adds to
    the page root: server HTML, crawlers and visitors without JS see the page.
@@ -132,6 +132,109 @@ html.light {
   font: 600 11px/1 var(--font-mono);
   color: #fff;
   white-space: nowrap;
+}
+
+/* ---------- Loader: the mark in the middle, cursors orbiting it ---------- */
+/* Under the overlay (35), so the cursors stay above it */
+.ab-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background: var(--bg);
+  transition: opacity .55s var(--ease), visibility .55s;
+}
+
+.ab-loader__mark {
+  width: 64px;
+  height: 64px;
+  animation: ab-breathe 1.6s ease-in-out infinite;
+}
+
+.ab-loader__mark svg {
+  display: block;
+}
+
+.ab-loader__text {
+  position: absolute;
+  top: calc(50% + 150px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+
+.ab-loader.is-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.ab-loader.is-out .ab-loader__mark {
+  animation: ab-mark-out .45s var(--ease) both;
+}
+
+.ab-loader.is-out .ab-loader__text {
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+/* No scrolling while the page loads */
+html.ab-loading {
+  overflow: hidden;
+}
+
+@keyframes ab-breathe {
+  50% { transform: scale(1.06); }
+}
+
+@keyframes ab-mark-out {
+  to { opacity: 0; transform: scale(.4) rotate(-12deg); }
+}
+
+/* Swimming: positions are set every frame, no transition */
+.ab-agent.is-swim {
+  transition: opacity .4s;
+}
+
+.ab-agent svg {
+  transform-origin: 1px 1px;
+}
+
+/* ---------- Actions: typing caret, selection marquee ---------- */
+.ab-caret {
+  position: absolute;
+  left: -3px;
+  top: -6px;
+  width: 2px;
+  height: 18px;
+  border-radius: 1px;
+  opacity: 0;
+}
+
+.ab-agent.is-typing .ab-caret {
+  opacity: 1;
+  animation: ab-blink .5s steps(1) infinite;
+}
+
+@keyframes ab-blink {
+  50% { opacity: 0; }
+}
+
+.ab-marquee {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border: 1px dashed var(--ab-select);
+  background: color-mix(in srgb, var(--ab-select) 10%, transparent);
+  transition: width .42s cubic-bezier(.4, 0, .2, 1), height .42s cubic-bezier(.4, 0, .2, 1), opacity .3s;
 }
 
 /* ---------- Status pill ---------- */

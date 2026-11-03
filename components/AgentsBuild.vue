@@ -33,8 +33,17 @@
  */
 import { prefersReducedMotion } from '~/composables/useMotion'
 import { AGENTS, createAgentsBuild, type AgentsBuildState } from '~/composables/useAgentsBuild'
+import { introPlayed } from '~/composables/useAgentsIntro'
 
 const PILL_HIDE_MS = 8000
+
+/** Site mark in the middle of the loader: "BA" between code brackets */
+const MARK = `<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="var(--panel)" stroke="var(--rule-strong)" stroke-width="1.5"/>
+  <path d="M17 22 L10 32 L17 42" fill="none" stroke="#ec3b33" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 22 L54 32 L47 42" fill="none" stroke="#7bc313" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="32" y="38.5" text-anchor="middle" font-family="var(--font-mono), monospace" font-size="17" font-weight="700" fill="var(--ink)">BA</text>
+</svg>`
 
 const { t, locale } = useI18n()
 
@@ -87,7 +96,29 @@ function skip() {
 
 function replay() {
   window.scrollTo({ top: 0, behavior: 'instant' })
-  build?.start()
+  build?.start(true)
+}
+
+/**
+ * After a route change, the new page is mounted while it is still sliding in
+ * and the window is still where the previous page was scrolled: wait for the
+ * page transition to end, then for the scroll back to the top to stop.
+ */
+function pageSettled(maxMs = 2500) {
+  return new Promise<void>((resolve) => {
+    const t0 = performance.now()
+    let lastY = -1
+    let still = 0
+    const check = () => {
+      const moving = document.querySelector('.page-enter-active, .page-leave-active')
+      const y = window.scrollY
+      still = !moving && y === lastY ? still + 1 : 0
+      lastY = y
+      if (still >= 6 || performance.now() - t0 > maxMs) resolve()
+      else requestAnimationFrame(check)
+    }
+    requestAnimationFrame(check)
+  })
 }
 
 // Any key press during the build (Escape, Tab, End…) shows the page at once
@@ -106,11 +137,26 @@ onMounted(async () => {
 
   const small = window.matchMedia('(max-width: 639px)').matches
   crew.value = AGENTS.slice(0, small ? 5 : 10)
-  build = createAgentsBuild({ root, overlay: overlay.value, agentCount: crew.value.length, onChange })
+  build = createAgentsBuild({
+    root,
+    overlay: overlay.value,
+    agentCount: crew.value.length,
+    onChange,
+    icon: MARK,
+    labels: {
+      loading: t('agentsBuild.loading'),
+      write: t('agentsBuild.actions.write'),
+      design: t('agentsBuild.actions.design'),
+      select: t('agentsBuild.actions.select'),
+    },
+  })
   window.addEventListener('keydown', onKeydown)
 
   try {
-    build.start()
+    // The loader only when the site is opened, not on every page change
+    const first = !introPlayed.value
+    introPlayed.value = true
+    build.start(first, first ? Promise.resolve() : pageSettled())
   }
   catch {
     build.stop()
