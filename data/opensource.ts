@@ -122,7 +122,7 @@ export const organizations: Organization[] = [
 ]
 
 // <generated> — written by scripts/update-opensource.mjs, do not edit by hand
-export const updatedAt = '2026-11-03'
+export const updatedAt = '2026-11-04'
 
 export const pullRequests: PullRequest[] = [
   {
@@ -303,12 +303,56 @@ export const pullRequests: PullRequest[] = [
   },
   {
     "repo": "api-platform/core",
+    "number": 8777,
+    "title": "fix(doctrine): left join collection associations in IriFilter inside OR groups",
+    "url": "https://github.com/api-platform/core/pull/8777",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-04T09:09:08Z",
+    "closedAt": null,
+    "createdAt": "2026-11-01T09:05:42Z"
+  },
+  {
+    "repo": "api-platform/core",
+    "number": 8778,
+    "title": "fix(serializer): reject a non-string id in JSON-LD and JSON:API relations",
+    "url": "https://github.com/api-platform/core/pull/8778",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-03T19:41:08Z",
+    "closedAt": null,
+    "createdAt": "2026-11-01T09:05:44Z"
+  },
+  {
+    "repo": "api-platform/core",
+    "number": 8775,
+    "title": "fix(doctrine): ignore nested array values in range and search filters",
+    "url": "https://github.com/api-platform/core/pull/8775",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-03T15:31:17Z",
+    "closedAt": null,
+    "createdAt": "2026-11-01T09:05:36Z"
+  },
+  {
+    "repo": "api-platform/core",
+    "number": 8776,
+    "title": "fix(doctrine): reject too large pages with ODM partial pagination",
+    "url": "https://github.com/api-platform/core/pull/8776",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-03T15:30:01Z",
+    "closedAt": null,
+    "createdAt": "2026-11-01T09:05:39Z"
+  },
+  {
+    "repo": "api-platform/core",
     "number": 8783,
     "title": "fix(laravel): filter on every value given to EqualsFilter",
     "url": "https://github.com/api-platform/core/pull/8783",
-    "state": "open",
+    "state": "merged",
     "approved": false,
-    "mergedAt": null,
+    "mergedAt": "2026-11-03T15:05:46Z",
     "closedAt": null,
     "createdAt": "2026-11-01T11:47:14Z"
   },
@@ -317,9 +361,9 @@ export const pullRequests: PullRequest[] = [
     "number": 8782,
     "title": "fix(laravel): purge the HTTP cache on GraphQL mutations",
     "url": "https://github.com/api-platform/core/pull/8782",
-    "state": "open",
+    "state": "merged",
     "approved": false,
-    "mergedAt": null,
+    "mergedAt": "2026-11-03T15:05:42Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:05:54Z"
   },
@@ -328,9 +372,9 @@ export const pullRequests: PullRequest[] = [
     "number": 8781,
     "title": "fix(laravel): ignore non-string values in search filters",
     "url": "https://github.com/api-platform/core/pull/8781",
-    "state": "open",
+    "state": "merged",
     "approved": false,
-    "mergedAt": null,
+    "mergedAt": "2026-11-03T15:05:37Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:05:51Z"
   },
@@ -339,9 +383,9 @@ export const pullRequests: PullRequest[] = [
     "number": 8780,
     "title": "fix(serializer): unwrap the collection key type, not the collection type",
     "url": "https://github.com/api-platform/core/pull/8780",
-    "state": "open",
+    "state": "merged",
     "approved": false,
-    "mergedAt": null,
+    "mergedAt": "2026-11-03T15:05:33Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:05:49Z"
   },
@@ -350,55 +394,11 @@ export const pullRequests: PullRequest[] = [
     "number": 8779,
     "title": "fix(state): reject invalid GraphQL pagination cursors",
     "url": "https://github.com/api-platform/core/pull/8779",
-    "state": "open",
+    "state": "merged",
     "approved": false,
-    "mergedAt": null,
+    "mergedAt": "2026-11-03T15:04:59Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:05:47Z"
-  },
-  {
-    "repo": "api-platform/core",
-    "number": 8778,
-    "title": "fix(serializer): reject a non-string id in JSON-LD and JSON:API relations",
-    "url": "https://github.com/api-platform/core/pull/8778",
-    "state": "open",
-    "approved": false,
-    "mergedAt": null,
-    "closedAt": null,
-    "createdAt": "2026-11-01T09:05:44Z"
-  },
-  {
-    "repo": "api-platform/core",
-    "number": 8777,
-    "title": "fix(doctrine): left join collection associations in IriFilter inside OR groups",
-    "url": "https://github.com/api-platform/core/pull/8777",
-    "state": "open",
-    "approved": false,
-    "mergedAt": null,
-    "closedAt": null,
-    "createdAt": "2026-11-01T09:05:42Z"
-  },
-  {
-    "repo": "api-platform/core",
-    "number": 8776,
-    "title": "fix(doctrine): reject too large pages with ODM partial pagination",
-    "url": "https://github.com/api-platform/core/pull/8776",
-    "state": "open",
-    "approved": false,
-    "mergedAt": null,
-    "closedAt": null,
-    "createdAt": "2026-11-01T09:05:39Z"
-  },
-  {
-    "repo": "api-platform/core",
-    "number": 8775,
-    "title": "fix(doctrine): ignore nested array values in range and search filters",
-    "url": "https://github.com/api-platform/core/pull/8775",
-    "state": "open",
-    "approved": false,
-    "mergedAt": null,
-    "closedAt": null,
-    "createdAt": "2026-11-01T09:05:36Z"
   },
   {
     "repo": "api-platform/api-platform",
@@ -421,6 +421,17 @@ export const pullRequests: PullRequest[] = [
     "mergedAt": null,
     "closedAt": null,
     "createdAt": "2026-11-01T09:06:05Z"
+  },
+  {
+    "repo": "caddyserver/caddy",
+    "number": 8343,
+    "title": "caddyhttp: lower-case path patterns with placeholders at request time",
+    "url": "https://github.com/caddyserver/caddy/pull/8343",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-04T06:37:26Z",
+    "closedAt": null,
+    "createdAt": "2026-11-03T07:44:08Z"
   },
   {
     "repo": "caddyserver/caddy",
@@ -476,17 +487,6 @@ export const pullRequests: PullRequest[] = [
     "mergedAt": "2026-11-03T06:58:01Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:28:30Z"
-  },
-  {
-    "repo": "caddyserver/caddy",
-    "number": 8343,
-    "title": "caddyhttp: lower-case path patterns with placeholders at request time",
-    "url": "https://github.com/caddyserver/caddy/pull/8343",
-    "state": "open",
-    "approved": false,
-    "mergedAt": null,
-    "closedAt": null,
-    "createdAt": "2026-11-03T07:44:08Z"
   },
   {
     "repo": "caddyserver/caddy",
