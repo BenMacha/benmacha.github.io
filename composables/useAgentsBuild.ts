@@ -10,6 +10,8 @@ import { settleReveals } from './useScrollReveal'
  *   data-build-kind="draw"      a `v-draw` figure: its branches are drawn when the block is built
  *   data-build-split="N"        a long container (article body, card grid): its children are built
  *                               in N consecutive groups, one layer each
+ *   data-build-troll            once its section is built, a "critic" cursor vandalises this block
+ *                               (struck text, garish colours, a 1/5 rating), then two agents fix it
  *
  * Nothing is hidden until `start()` adds `ab-armed` to the root on the client, so
  * the server HTML stays complete. Styles: assets/css/agents-build.css.
@@ -63,7 +65,7 @@ export function createAgentsBuild(options: {
   onChange: (state: AgentsBuildState) => void
   /** Loader mark (HTML) and the words shown next to the cursors */
   icon: string
-  labels: Record<Action | 'loading', string>
+  labels: Record<Action | 'loading' | 'troll' | 'trolling' | 'fix' | 'rating', string>
 }) {
   const { root, overlay, onChange, labels } = options
   const crew = AGENTS.slice(0, options.agentCount)
@@ -232,30 +234,87 @@ export function createAgentsBuild(options: {
 
   const ROLES: Action[] = ['write', 'design', 'select']
 
+  function makeAgent(name: string, color: string, role: Action): Agent {
+    const el = document.createElement('div')
+    el.className = 'ab-agent'
+    el.innerHTML = `${cursor(color)}<i class="ab-caret" style="background:${color}"></i><span style="background:${color}">${name}</span>`
+    overlay.appendChild(el)
+    return { el, arrow: el.querySelector('svg')!, tag: el.querySelector('span')!, name, role, x: 0, y: 0, vx: 0, vy: 0, busy: false }
+  }
+
   function makeAgents() {
     overlay.replaceChildren()
     const width = document.documentElement.clientWidth
     const step = Math.max(24, (width - 120) / crew.length)
     agents = crew.map(([name, color], i) => {
-      const el = document.createElement('div')
-      el.className = 'ab-agent'
-      el.innerHTML = `${cursor(color)}<i class="ab-caret" style="background:${color}"></i><span style="background:${color}">${name}</span>`
-      overlay.appendChild(el)
-      const a: Agent = {
-        el,
-        arrow: el.querySelector('svg')!,
-        tag: el.querySelector('span')!,
-        name,
-        role: ROLES[i % ROLES.length]!,
-        x: 0,
-        y: 0,
-        vx: 0,
-        vy: 0,
-        busy: false,
-      }
+      const a = makeAgent(name, color, ROLES[i % ROLES.length]!)
       place(a, 20 + i * step, window.scrollY + 80 + (i % 3) * 40)
       return a
     })
+  }
+
+  /**
+   * The critic: a cursor comes in, strikes the text of the block, paints it in
+   * garish colours and pins a 1/5 rating on it; two agents then fix the block
+   * and the critic swims away. The block is left exactly as it was.
+   */
+  async function troll(block: HTMLElement, token: number) {
+    const b = box([block])
+    if (!b.w || !b.h) return
+    const critic = makeAgent(labels.troll, '#ff2bd6', 'select')
+    critic.el.classList.add('ab-agent--troll')
+    place(critic, document.documentElement.clientWidth + 40, b.y - 60)
+    await sleep(60)
+    act(critic, null)
+    critic.tag.textContent = `${labels.troll} · ${labels.trolling}`
+    await swimTo(critic, b.x + b.w * 0.25, b.y + 20, token)
+    if (token !== run) return
+
+    // Strike through, line by line, with the cursor dragging across
+    block.classList.add('ab-troll-strike')
+    glide(critic, b.x + b.w * 0.8, b.y + b.h * 0.6, 650)
+    await sleep(700)
+    if (token !== run) return
+    block.classList.add('ab-troll-paint')
+    glide(critic, b.x + b.w - 30, b.y + 14, 420)
+    await sleep(500)
+    if (token !== run) return
+
+    const sticker = document.createElement('div')
+    sticker.className = 'ab-rating'
+    sticker.innerHTML = '<span class="ab-rating__stars">★<i>★★★★</i></span>'
+    sticker.append(labels.rating)
+    sticker.style.transform = `translate(${Math.round(b.x + b.w - 40)}px, ${Math.round(b.y - 22)}px)`
+    overlay.appendChild(sticker)
+    await sleep(1600)
+    if (token !== run) return
+
+    // Two agents come and fix it
+    const fixers = agents.filter(a => !a.busy).slice(0, 2)
+    fixers.forEach(a => (a.busy = true))
+    critic.tag.textContent = labels.troll
+    void swimTo(critic, document.documentElement.clientWidth + 60, b.y - 120, token)
+    await Promise.all(fixers.map((a, k) => {
+      a.tag.textContent = `${a.name} · ${labels.fix}`
+      return swimTo(a, k ? b.x + b.w - 30 : b.x + 20, k ? b.y + 14 : b.y + b.h - 20, token)
+    }))
+    if (token !== run) return
+    sticker.classList.add('is-torn')
+    block.classList.remove('ab-troll-paint')
+    await sleep(380)
+    block.classList.remove('ab-troll-strike')
+    await sleep(500)
+    sticker.remove()
+    critic.el.remove()
+    fixers.forEach((a) => {
+      act(a, null)
+      a.busy = false
+    })
+  }
+
+  function untroll() {
+    root.querySelectorAll('.ab-troll-strike, .ab-troll-paint')
+      .forEach(el => el.classList.remove('ab-troll-strike', 'ab-troll-paint'))
   }
 
   /** The page is fully loaded: window load event and web fonts, at least `min` ms, at most 6 s */
@@ -524,7 +583,8 @@ export function createAgentsBuild(options: {
 
     blocks.forEach(el => markBuilt(el, false))
     built = units.length
-    overlay.querySelectorAll('.ab-sel, .ab-marquee').forEach(el => el.remove())
+    untroll()
+    overlay.querySelectorAll('.ab-sel, .ab-marquee, .ab-rating, .ab-agent--troll').forEach(el => el.remove())
     agents.forEach((a, i) => later(() => a.el.classList.add('is-gone'), 200 + i * 40))
     later(() => {
       overlay.replaceChildren()
@@ -578,6 +638,10 @@ export function createAgentsBuild(options: {
       chain = chain
         .then(() => (token === run ? withSafety(buildStage(stage, token)) : undefined))
         .then(() => {
+          const target = stage.querySelector<HTMLElement>('[data-build-troll]')
+          return target && token === run && !skipping ? troll(target, token) : undefined
+        })
+        .then(() => {
           if (token === run && !pending.size) finish(false)
         })
         .catch(() => finish(true))
@@ -616,6 +680,7 @@ export function createAgentsBuild(options: {
     io = null
     clearTimers()
     dropLoader()
+    untroll()
     blocks.forEach(el => markBuilt(el, false))
     root.classList.remove('ab-armed')
     overlay.replaceChildren()

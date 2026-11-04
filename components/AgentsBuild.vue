@@ -148,6 +148,10 @@ onMounted(async () => {
       write: t('agentsBuild.actions.write'),
       design: t('agentsBuild.actions.design'),
       select: t('agentsBuild.actions.select'),
+      troll: t('agentsBuild.troll.name'),
+      trolling: t('agentsBuild.troll.doing'),
+      fix: t('agentsBuild.troll.fix'),
+      rating: t('agentsBuild.troll.rating'),
     },
   })
   window.addEventListener('keydown', onKeydown)

@@ -606,6 +606,12 @@
       "write": "écrit",
       "design": "dessine",
       "select": "sélectionne"
+    },
+    "troll": {
+      "name": "critique",
+      "doing": "note",
+      "fix": "corrige",
+      "rating": " 1/5 · la pire expérience"
     }
   }
 }

@@ -237,6 +237,79 @@ html.ab-loading {
   transition: width .42s cubic-bezier(.4, 0, .2, 1), height .42s cubic-bezier(.4, 0, .2, 1), opacity .3s;
 }
 
+/* ---------- The critic: struck text, garish colours, a 1/5 rating ---------- */
+.ab-troll-strike,
+.ab-troll-strike * {
+  text-decoration: line-through wavy #ff2bd6 !important;
+  text-decoration-thickness: 2px !important;
+}
+
+.ab-troll-strike {
+  transition: background-color .3s, color .3s, transform .3s var(--ease), filter .3s;
+}
+
+.ab-troll-paint {
+  background: #c6ff00 !important;
+  color: #ff2bd6 !important;
+  outline: 4px dotted #ff7a00;
+  transform: rotate(-1.2deg);
+  filter: saturate(2.2) hue-rotate(35deg);
+  font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', cursive !important;
+}
+
+.ab-troll-paint * {
+  color: #7a00ff !important;
+  font-family: inherit !important;
+}
+
+.ab-agent--troll span {
+  background: #ff2bd6 !important;
+  color: #c6ff00;
+}
+
+.ab-rating {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  background: #fff35c;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  font: 700 13px/1 var(--font-mono);
+  color: #1a1a1a;
+  white-space: nowrap;
+  rotate: 6deg;
+  animation: ab-stamp .35s cubic-bezier(.2, 1.6, .4, 1) both;
+}
+
+.ab-rating__stars {
+  color: #ff7a00;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.ab-rating__stars i {
+  font-style: normal;
+  color: #b9b9b9;
+}
+
+.ab-rating.is-torn {
+  animation: ab-torn .45s ease-in both;
+}
+
+@keyframes ab-stamp {
+  from { opacity: 0; transform-origin: center; scale: 2.2; }
+  to { opacity: 1; scale: 1; }
+}
+
+@keyframes ab-torn {
+  to { opacity: 0; translate: 30px 40px; rotate: 28deg; }
+}
+
 /* ---------- Status pill ---------- */
 .ab-status {
   position: fixed;

@@ -606,6 +606,12 @@
       "write": "typing",
       "design": "designing",
       "select": "selecting"
+    },
+    "troll": {
+      "name": "critic",
+      "doing": "rating",
+      "fix": "fixing",
+      "rating": " 1/5 · worst experience ever"
     }
   }
 }
