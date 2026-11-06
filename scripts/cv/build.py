@@ -626,6 +626,23 @@ def build():
     core = re.sub(r"<dc:title>.*?</dc:title>", "<dc:title>CV — Ali BEN MECHA</dc:title>", core)
     entries["docProps/core.xml"] = core.encode()
 
+    # Footer of every page: the site and the email, as links, before "Ali BEN MECHA — CV · n / N"
+    footer = entries["word/footer1.xml"].decode()
+    ffont = '<w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>'
+
+    def frun(text, colour="6B7280"):
+        return f'<w:r><w:rPr>{ffont}<w:color w:val="{colour}"/><w:sz w:val="15"/><w:szCs w:val="15"/></w:rPr><w:t xml:space="preserve">{text}</w:t></w:r>'
+
+    links = (f'<w:hyperlink w:history="1" r:id="rIdFootSite">{frun("benmacha.tn", GREEN)}</w:hyperlink>' + frun("  ·  ")
+             + f'<w:hyperlink w:history="1" r:id="rIdFootMail">{frun("contact@benmacha.tn", GREEN)}</w:hyperlink>' + frun("  ·  "))
+    at = footer.index("<w:r>", footer.index("<w:p>"))
+    entries["word/footer1.xml"] = (footer[:at] + links + footer[at:]).encode()
+    hl = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+    entries["word/_rels/footer1.xml.rels"] = (
+        '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        f'<Relationship Id="rIdFootSite" Type="{hl}" Target="https://benmacha.tn" TargetMode="External"/>'
+        f'<Relationship Id="rIdFootMail" Type="{hl}" Target="mailto:contact@benmacha.tn" TargetMode="External"/></Relationships>').encode()
+
     def save(path, xml_text, media=None):
         with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
             for name, data in entries.items():
