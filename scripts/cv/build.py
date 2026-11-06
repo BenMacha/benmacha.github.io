@@ -433,6 +433,15 @@ def edit_text(xml):
     name_end = xml.index('Ali BEN MECHA</w:t></w:r>') + len('Ali BEN MECHA</w:t></w:r>')
     photo_pos = '<wp:positionH relativeFrom="margin"><wp:align>right</wp:align></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
     xml = xml[:name_end] + picture("rIdPhoto", "cv-photo", 64, 64, 95, inline=False, anchor_xml=photo_pos) + xml[name_end:]
+    # Profile: Keytchens, the project he created from scratch, before CCM Benchmark
+    old_end = "Ancien Lead Developer PHP chez CCM Benchmark et Tech Lead d&apos;une équipe de 4 développeurs."
+    new_end = ("Chez Keytchens (2018 – 2024), j&apos;ai créé le projet de zéro et fondé son équipe technique : "
+               "plateforme de commandes en temps réel intégrée à Uber Eats et Deliveroo, impression des tickets, "
+               "applications web et mobiles (Symfony, ReactJS, GraphQL, Ionic), migration de Symfony 2.8 à 6.4 sans interruption, "
+               "direction d&apos;une équipe de 4 développeurs. Ancien Lead Developer PHP chez CCM Benchmark.")
+    if xml.count(old_end) != 1:
+        sys.exit("profile sentence not found")
+    xml = xml.replace(old_end, new_end)
     # Mobelite was a fixed-term contract
     at = xml.index('<w:t xml:space="preserve">Mobelite</w:t>')
     loc = xml.index('<w:t xml:space="preserve">  ·  Tunis, Tunisie</w:t>', at)
@@ -616,6 +625,23 @@ def build():
     core = entries["docProps/core.xml"].decode()
     core = re.sub(r"<dc:title>.*?</dc:title>", "<dc:title>CV — Ali BEN MECHA</dc:title>", core)
     entries["docProps/core.xml"] = core.encode()
+
+    # Footer of every page: the site and the email, as links, before "Ali BEN MECHA — CV · n / N"
+    footer = entries["word/footer1.xml"].decode()
+    ffont = '<w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>'
+
+    def frun(text, colour="6B7280"):
+        return f'<w:r><w:rPr>{ffont}<w:color w:val="{colour}"/><w:sz w:val="15"/><w:szCs w:val="15"/></w:rPr><w:t xml:space="preserve">{text}</w:t></w:r>'
+
+    links = (f'<w:hyperlink w:history="1" r:id="rIdFootSite">{frun("benmacha.tn", GREEN)}</w:hyperlink>' + frun("  ·  ")
+             + f'<w:hyperlink w:history="1" r:id="rIdFootMail">{frun("contact@benmacha.tn", GREEN)}</w:hyperlink>' + frun("  ·  "))
+    at = footer.index("<w:r>", footer.index("<w:p>"))
+    entries["word/footer1.xml"] = (footer[:at] + links + footer[at:]).encode()
+    hl = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+    entries["word/_rels/footer1.xml.rels"] = (
+        '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        f'<Relationship Id="rIdFootSite" Type="{hl}" Target="https://benmacha.tn" TargetMode="External"/>'
+        f'<Relationship Id="rIdFootMail" Type="{hl}" Target="mailto:contact@benmacha.tn" TargetMode="External"/></Relationships>').encode()
 
     def save(path, xml_text, media=None):
         with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
