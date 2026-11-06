@@ -433,6 +433,15 @@ def edit_text(xml):
     name_end = xml.index('Ali BEN MECHA</w:t></w:r>') + len('Ali BEN MECHA</w:t></w:r>')
     photo_pos = '<wp:positionH relativeFrom="margin"><wp:align>right</wp:align></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
     xml = xml[:name_end] + picture("rIdPhoto", "cv-photo", 64, 64, 95, inline=False, anchor_xml=photo_pos) + xml[name_end:]
+    # Profile: Keytchens, the project he created from scratch, before CCM Benchmark
+    old_end = "Ancien Lead Developer PHP chez CCM Benchmark et Tech Lead d&apos;une équipe de 4 développeurs."
+    new_end = ("Chez Keytchens (2018 – 2024), j&apos;ai créé le projet de zéro et fondé son équipe technique : "
+               "plateforme de commandes en temps réel intégrée à Uber Eats et Deliveroo, impression des tickets, "
+               "applications web et mobiles (Symfony, ReactJS, GraphQL, Ionic), migration de Symfony 2.8 à 6.4 sans interruption, "
+               "direction d&apos;une équipe de 4 développeurs. Ancien Lead Developer PHP chez CCM Benchmark.")
+    if xml.count(old_end) != 1:
+        sys.exit("profile sentence not found")
+    xml = xml.replace(old_end, new_end)
     # Mobelite was a fixed-term contract
     at = xml.index('<w:t xml:space="preserve">Mobelite</w:t>')
     loc = xml.index('<w:t xml:space="preserve">  ·  Tunis, Tunisie</w:t>', at)
