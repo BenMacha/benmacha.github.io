@@ -592,7 +592,11 @@
     "footer": "Écrivons le prochain chapitre.",
     "expIntro": "De 2016 à aujourd'hui, de Tunis à Paris, raconté comme un graphe git. La branche main porte les postes salariés ; les branches freelance et Pepprio, ma société, en partent à leur date de début et se ferment à la fin de la mission. Chaque poste est un commit, le plus récent en haut.",
     "cdiMarker": "CDI",
-    "contents": "Contenu du chapitre"
+    "contents": "Contenu du chapitre",
+    "author": {
+      "alt": "Photo d'Ali Ben Macha",
+      "role": "Chef de projet SI & IA générative · Tech Lead PHP / Symfony"
+    }
   },
   "agentsBuild": {
     "label": "Construction de la page",

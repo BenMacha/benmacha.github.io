@@ -420,6 +420,19 @@ def edit_text(xml):
     end = h + len("Expérience professionnelle</w:t></w:r>")
     pos = '<wp:positionH relativeFrom="margin"><wp:align>right</wp:align></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>50800</wp:posOffset></wp:positionV>'
     xml = xml[:end] + picture("rIdLegend", "cv-legend", 220, 10, 90, inline=False, anchor_xml=pos) + xml[end:]
+    # Photo at the right of the name (the site's avatar, cropped to a circle); a picture, so the
+    # text of the header is unchanged for CV parsers
+    import base64
+    photo = base64.b64encode((ROOT / "public" / "images" / "avatar.jpeg").read_bytes()).decode()
+    EXTRA_MEDIA["word/media/cv-photo.png"] = (
+        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300" height="300" viewBox="0 0 300 300">'
+        '<defs><clipPath id="c"><circle cx="150" cy="150" r="140"/></clipPath></defs>'
+        f'<image href="data:image/jpeg;base64,{photo}" x="10" y="10" width="280" height="280" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/>'
+        '<circle cx="150" cy="150" r="141" fill="none" stroke="#e5e7eb" stroke-width="6"/></svg>')
+    rel("rIdPhoto", "media/cv-photo.png", IMG)
+    name_end = xml.index('Ali BEN MECHA</w:t></w:r>') + len('Ali BEN MECHA</w:t></w:r>')
+    photo_pos = '<wp:positionH relativeFrom="margin"><wp:align>right</wp:align></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
+    xml = xml[:name_end] + picture("rIdPhoto", "cv-photo", 64, 64, 95, inline=False, anchor_xml=photo_pos) + xml[name_end:]
     # Mobelite was a fixed-term contract
     at = xml.index('<w:t xml:space="preserve">Mobelite</w:t>')
     loc = xml.index('<w:t xml:space="preserve">  ·  Tunis, Tunisie</w:t>', at)

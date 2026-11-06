@@ -592,7 +592,11 @@
     "footer": "Let's write the next chapter.",
     "expIntro": "From 2016 to today, from Tunis to Paris, drawn as a git graph. The main branch carries the salaried jobs; the freelance and Pepprio branches (my own company) fork from it at their start date and are closed when the mission ends. Each job is a commit, the newest at the top.",
     "cdiMarker": "PERMANENT",
-    "contents": "Chapter contents"
+    "contents": "Chapter contents",
+    "author": {
+      "alt": "Photo of Ali Ben Macha",
+      "role": "IT & generative AI project manager · PHP / Symfony Tech Lead"
+    }
   },
   "agentsBuild": {
     "label": "Page build",
