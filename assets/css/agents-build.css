@@ -117,22 +117,32 @@ html.light {
   translate: -5px -10px;
 }
 
-/* Name tags only for the critic and the cursors that fix its work */
+/* Name tag: the technology each cursor is named after */
 .ab-agent__tag {
   position: absolute;
   left: 13px;
   top: 15px;
-  display: none;
-  padding: 4px 6px;
+  padding: 3px 5px;
   border-radius: 4px;
-  font: 600 11px/1 var(--font-mono);
+  font: 600 10px/1 var(--font-mono);
   color: #fff;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
 }
 
-.ab-agent--troll .ab-agent__tag,
-.ab-agent.has-tag .ab-agent__tag {
-  display: block;
+.ab-agent__tag:empty {
+  display: none;
+}
+
+/* Away from the caret while typing, and from the crosshair while drawing */
+.ab-agent[data-shape='beam'] .ab-agent__tag,
+.ab-agent[data-shape='cross'] .ab-agent__tag {
+  left: 10px;
+  top: 12px;
+}
+
+.ab-agent--troll .ab-agent__tag {
+  font-size: 11px;
 }
 
 .ab-agent.is-gone {
@@ -592,7 +602,8 @@ html.ab-loading {
   }
 
   .ab-frame b,
-  .ab-measure b {
+  .ab-measure b,
+  .ab-agent__tag {
     font-size: 9px;
   }
 

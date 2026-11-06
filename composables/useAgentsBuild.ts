@@ -32,9 +32,12 @@ import type { BuildSound } from './useBuildSound'
  * Joel Califa (https://califa.github.io/swarm-site/).
  */
 
-export const AGENT_COLORS = [
-  '#ec3b33', '#7bc313', '#3d8bff', '#b06ad9', '#f5a524', '#14b8a6', '#e8467c', '#2496ed',
-  '#ff7a1a', '#41b883', '#9b7bff', '#0bc5ea', '#e0533d', '#00b37a', '#d97757', '#38bdf8',
+/** The swarm: each cursor is named after a technology (Pepprio first, so phones show it too) */
+export const AGENTS: ReadonlyArray<readonly [name: string, color: string]> = [
+  ['pepprio', '#ec3b33'], ['symfony', '#1f2937'], ['php', '#777bb4'], ['vue', '#42b883'],
+  ['react', '#149eca'], ['docker', '#2496ed'], ['mcp', '#b06ad9'], ['claude', '#d97757'],
+  ['nuxt', '#00b37a'], ['redis', '#dc382d'], ['graphql', '#e10098'], ['typescript', '#3178c6'],
+  ['tailwind', '#0ea5e9'], ['mysql', '#4479a1'], ['api-platform', '#38a9b4'], ['rag', '#d48a00'],
 ]
 
 /** A stage that takes longer than this is considered stuck: everything is revealed. */
@@ -53,6 +56,7 @@ export interface AgentsBuildState {
 type Shape = 'arrow' | 'cross' | 'beam' | 'pen'
 
 interface Agent {
+  name: string
   el: HTMLElement
   icon: HTMLElement
   tag: HTMLElement
@@ -100,7 +104,7 @@ export function createAgentsBuild(options: {
   sound: BuildSound | null
 }) {
   const { root, overlay, onChange, labels } = options
-  const colors = AGENT_COLORS.slice(0, options.agentCount)
+  const crew = AGENTS.slice(0, options.agentCount)
   const timers = new Set<number>()
   const sound = options.sound
 
@@ -239,6 +243,7 @@ export function createAgentsBuild(options: {
     tag.textContent = label
     overlay.appendChild(el)
     return {
+      name: label,
       el,
       icon: el.querySelector('.ab-agent__icon')!,
       tag,
@@ -254,7 +259,7 @@ export function createAgentsBuild(options: {
 
   function makeAgents() {
     overlay.replaceChildren()
-    agents = colors.map(color => makeAgent(color))
+    agents = crew.map(([name, color]) => makeAgent(color, name))
   }
 
   /**
@@ -711,8 +716,7 @@ export function createAgentsBuild(options: {
     const fixers = agents.filter(a => !a.busy).slice(0, 2)
     fixers.forEach((a) => {
       a.busy = true
-      a.tag.textContent = labels.fix
-      a.el.classList.add('has-tag')
+      a.tag.textContent = `${a.name} · ${labels.fix}`
     })
     critic.tag.textContent = labels.troll
     void swimTo(critic, document.documentElement.clientWidth + 60, b.y - 120, token)
@@ -728,7 +732,7 @@ export function createAgentsBuild(options: {
     sticker.remove()
     critic.el.remove()
     fixers.forEach((a) => {
-      a.el.classList.remove('has-tag')
+      a.tag.textContent = a.name
       a.busy = false
     })
   }

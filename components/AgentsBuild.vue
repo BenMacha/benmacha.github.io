@@ -14,7 +14,7 @@
         @focusout="schedulePillHide"
       >
         <span class="ab-status__faces" aria-hidden="true">
-          <i v-for="color in crew.slice(0, 5)" :key="color" :style="{ background: color }" />
+          <i v-for="[name, color] in crew.slice(0, 5)" :key="name" :title="name" :style="{ background: color }" />
         </span>
         <span class="ab-status__text">{{ statusText }}</span>
         <span v-if="state.phase === 'building'" class="ab-status__bar" aria-hidden="true">
@@ -47,7 +47,7 @@
  * Mark sections with `data-build-stage` and blocks with `data-build` (see useAgentsBuild).
  */
 import { prefersReducedMotion } from '~/composables/useMotion'
-import { AGENT_COLORS, createAgentsBuild, type AgentsBuildState } from '~/composables/useAgentsBuild'
+import { AGENTS, createAgentsBuild, type AgentsBuildState } from '~/composables/useAgentsBuild'
 import { createBuildSound, type BuildSound, type SoundState } from '~/composables/useBuildSound'
 import { introPlayed } from '~/composables/useAgentsIntro'
 
@@ -68,7 +68,7 @@ const overlay = ref<HTMLElement | null>(null)
 const state = ref<AgentsBuildState | null>(null)
 const hidden = ref(false)
 const mounted = ref(false)
-const crew = ref(AGENT_COLORS.slice(0, 16))
+const crew = ref(AGENTS.slice(0, 16))
 const speed = ref(1)
 const soundState = ref<SoundState>('locked')
 
@@ -200,7 +200,7 @@ onMounted(async () => {
   if (!overlay.value || !anchor.value) return
 
   const small = window.matchMedia('(max-width: 639px)').matches
-  crew.value = AGENT_COLORS.slice(0, small ? 8 : 16)
+  crew.value = AGENTS.slice(0, small ? 8 : 16)
   sound = sharedSound()
   soundState.value = sound.state
   build = createAgentsBuild({
