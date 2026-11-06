@@ -8,6 +8,11 @@
  * Browsers keep audio locked until the visitor clicks or presses a key: the
  * engine stays silent until then, `unlock()` is called on the first gesture.
  * On by default; the choice is remembered in localStorage.
+ *
+ * On phones (Android; iOS has no vibration API) the same moments vibrate
+ * lightly: each typed key, each click, each snap and block placed, the final
+ * chord. Like audio, browsers only allow it after the first tap, and muting
+ * the sound stops the vibrations too.
  */
 
 const STORAGE_KEY = 'ba-build-sound'
@@ -24,6 +29,25 @@ export function createBuildSound(onState: (state: SoundState) => void) {
   let enabled = readPref()
   let lastKey = 0
   let lastNote = 0
+  let lastBuzz = 0
+  const canBuzz = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
+    && typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+  /** A short vibration, at most one every `gap` ms, once the visitor has tapped the page */
+  function buzz(pattern: number | number[], gap = 45) {
+    if (!enabled || !canBuzz) return
+    const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation
+    if (activation && !activation.hasBeenActive) return
+    const now = performance.now()
+    if (now - lastBuzz < gap) return
+    lastBuzz = now
+    try {
+      navigator.vibrate(pattern)
+    }
+    catch {
+      // not allowed here: stay still
+    }
+  }
 
   function readPref() {
     try {
@@ -124,6 +148,7 @@ export function createBuildSound(onState: (state: SoundState) => void) {
 
   /** One key of a mechanical keyboard; a space is deeper */
   function key(x?: number, space = false) {
+    buzz(space ? 9 : 5, 55)
     const c = ready()
     if (!c) return
     const now = c.currentTime
@@ -137,12 +162,14 @@ export function createBuildSound(onState: (state: SoundState) => void) {
 
   /** Mouse button pressed / released */
   function press(x?: number) {
+    buzz(10)
     const c = ready()
     if (!c) return
     burst(c, panner(c, x), c.currentTime, 2600, 6, 0.12, 0.02)
   }
 
   function release(x?: number) {
+    buzz(6)
     const c = ready()
     if (!c) return
     burst(c, panner(c, x), c.currentTime, 3400, 6, 0.08, 0.016)
@@ -150,6 +177,7 @@ export function createBuildSound(onState: (state: SoundState) => void) {
 
   /** A guide snapping into place */
   function snap(x?: number) {
+    buzz([8, 30, 8])
     const c = ready()
     if (!c) return
     const out = panner(c, x)
@@ -162,6 +190,7 @@ export function createBuildSound(onState: (state: SoundState) => void) {
    * higher to the right; on an eighth-note grid, never two at once.
    */
   function note(x: number, w: number, h: number) {
+    buzz(14, 120)
     const c = ready()
     if (!c) return
     const now = c.currentTime
@@ -215,6 +244,7 @@ export function createBuildSound(onState: (state: SoundState) => void) {
 
   /** Rising arpeggio as the swarm fans out */
   function arpeggio() {
+    buzz([12, 50, 12, 50, 12], 0)
     const c = ready()
     if (!c) return
     const now = c.currentTime
@@ -223,6 +253,7 @@ export function createBuildSound(onState: (state: SoundState) => void) {
 
   /** Soft chord when the page is built */
   function chord() {
+    buzz([30, 60, 30, 60, 60], 0)
     const c = ready()
     if (!c) return
     const now = c.currentTime

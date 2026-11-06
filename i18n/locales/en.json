@@ -612,7 +612,7 @@
       "on": "Sound",
       "off": "Muted",
       "tap": "Tap for sound",
-      "key": "Sound (M key)"
+      "key": "Sound and vibration (M key)"
     },
     "speed": "Build speed"
   }
