@@ -3,6 +3,13 @@
     <!-- Preface -->
     <section class="container preface" data-build-stage>
       <div class="preface__text">
+        <figure class="author" data-build>
+          <img src="/images/avatar.jpeg" :alt="$t('book.author.alt')" width="64" height="64" class="author__photo" decoding="async">
+          <figcaption>
+            <span class="author__name">Ali Ben Macha</span>
+            <span class="author__role mono">{{ $t('book.author.role') }}</span>
+          </figcaption>
+        </figure>
         <span class="eyebrow eyebrow--green" data-build>{{ $t('book.preface') }}</span>
         <h1 class="preface__title" data-build data-build-kind="text">{{ $t('book.heroLead') }} <span class="accent">{{ $t('book.heroAccent') }}</span></h1>
         <p class="lead" data-build>{{ $t('book.heroText') }}</p>
@@ -170,6 +177,42 @@ useHead({
   display: flex;
   flex-direction: column;
   gap: 22px;
+}
+
+/* Author portrait, like the author's photo on a book's flap */
+.author {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+}
+
+.author__photo {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--rule-strong), 0 6px 18px rgba(0, 0, 0, .25);
+}
+
+.author figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.author__name {
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.author__role {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .preface__title {
