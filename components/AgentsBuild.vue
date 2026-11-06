@@ -13,11 +13,26 @@
         @focusin="holdPill"
         @focusout="schedulePillHide"
       >
-        <span class="ab-status__dot" />
         <span class="ab-status__faces" aria-hidden="true">
-          <i v-for="[name, color] in crew" :key="name" :style="{ background: color }" />
+          <i v-for="color in crew.slice(0, 5)" :key="color" :style="{ background: color }" />
         </span>
         <span class="ab-status__text">{{ statusText }}</span>
+        <span v-if="state.phase === 'building'" class="ab-status__bar" aria-hidden="true">
+          <i :style="{ width: `${state.total ? (state.built / state.total) * 100 : 0}%` }" />
+        </span>
+        <button
+          type="button"
+          class="ab-status__sound"
+          :class="{ 'is-locked': soundState === 'locked' }"
+          :aria-pressed="soundState !== 'off'"
+          :title="t('agentsBuild.sound.key')"
+          @click="toggleSound"
+        >
+          {{ soundLabel }}
+        </button>
+        <button v-if="state.phase === 'building'" type="button" class="ab-status__speed" :title="t('agentsBuild.speed')" @click="cycleSpeed">
+          {{ speed }}×
+        </button>
         <button v-if="state.phase === 'building'" type="button" @click="skip">{{ t('agentsBuild.skip') }}</button>
         <button v-else type="button" @click="replay">{{ t('agentsBuild.replay') }}</button>
       </div>
@@ -32,7 +47,8 @@
  * Mark sections with `data-build-stage` and blocks with `data-build` (see useAgentsBuild).
  */
 import { prefersReducedMotion } from '~/composables/useMotion'
-import { AGENTS, createAgentsBuild, type AgentsBuildState } from '~/composables/useAgentsBuild'
+import { AGENT_COLORS, createAgentsBuild, type AgentsBuildState } from '~/composables/useAgentsBuild'
+import { createBuildSound, type BuildSound, type SoundState } from '~/composables/useBuildSound'
 import { introPlayed } from '~/composables/useAgentsIntro'
 
 const PILL_HIDE_MS = 8000
@@ -52,10 +68,50 @@ const overlay = ref<HTMLElement | null>(null)
 const state = ref<AgentsBuildState | null>(null)
 const hidden = ref(false)
 const mounted = ref(false)
-const crew = ref(AGENTS.slice(0, 10))
+const crew = ref(AGENT_COLORS.slice(0, 16))
+const speed = ref(1)
+const soundState = ref<SoundState>('locked')
 
 let build: ReturnType<typeof createAgentsBuild> | null = null
 let pillTimer = 0
+let sound: BuildSound | null = null
+
+const soundLabel = computed(() => {
+  if (soundState.value === 'off') return `🔇 ${t('agentsBuild.sound.off')}`
+  if (soundState.value === 'locked') return `🔈 ${t('agentsBuild.sound.tap')}`
+  return `🔊 ${t('agentsBuild.sound.on')}`
+})
+
+/** One sound engine for the whole visit, so audio stays unlocked across pages */
+function sharedSound() {
+  const holder = introPlayed as typeof introPlayed & { sound?: BuildSound, listeners?: Set<(s: SoundState) => void> }
+  if (!holder.sound) {
+    holder.listeners = new Set()
+    holder.sound = createBuildSound(s => holder.listeners!.forEach(fn => fn(s)))
+  }
+  holder.listeners!.add(onSound)
+  return holder.sound
+}
+
+function onSound(s: SoundState) {
+  soundState.value = s
+}
+
+function toggleSound() {
+  if (!sound) return
+  if (sound.state === 'locked') void sound.unlock()
+  else sound.toggle()
+}
+
+// Browsers only allow audio after a click or a key press
+function unlockSound() {
+  if (sound?.state === 'locked') void sound.unlock()
+}
+
+function cycleSpeed() {
+  speed.value = speed.value >= 3 ? 1 : speed.value + 1
+  build?.setSpeed(speed.value)
+}
 
 const seconds = computed(() => {
   const s = state.value?.seconds
@@ -121,8 +177,16 @@ function pageSettled(maxMs = 2500) {
   })
 }
 
-// Any key press during the build (Escape, Tab, End…) shows the page at once
-function onKeydown() {
+// M switches the sound; any other key during the build (Escape, Tab, End…) shows the page at once
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'm' || e.key === 'M') {
+    if (!(e.target as HTMLElement | null)?.closest?.('input, textarea, [contenteditable]')) {
+      if (sound?.state === 'locked') void sound.unlock()
+      else sound?.toggle()
+    }
+    return
+  }
+  unlockSound()
   if (build?.running) build.skip()
 }
 
@@ -136,18 +200,18 @@ onMounted(async () => {
   if (!overlay.value || !anchor.value) return
 
   const small = window.matchMedia('(max-width: 639px)').matches
-  crew.value = AGENTS.slice(0, small ? 5 : 10)
+  crew.value = AGENT_COLORS.slice(0, small ? 8 : 16)
+  sound = sharedSound()
+  soundState.value = sound.state
   build = createAgentsBuild({
     root,
     overlay: overlay.value,
     agentCount: crew.value.length,
     onChange,
     icon: MARK,
+    sound,
     labels: {
       loading: t('agentsBuild.loading'),
-      write: t('agentsBuild.actions.write'),
-      design: t('agentsBuild.actions.design'),
-      select: t('agentsBuild.actions.select'),
       troll: t('agentsBuild.troll.name'),
       trolling: t('agentsBuild.troll.doing'),
       fix: t('agentsBuild.troll.fix'),
@@ -155,6 +219,8 @@ onMounted(async () => {
     },
   })
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('pointerdown', unlockSound, { passive: true })
+  build.setSpeed(speed.value)
 
   try {
     // The loader only when the site is opened, not on every page change
@@ -170,6 +236,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('pointerdown', unlockSound)
+  ;(introPlayed as typeof introPlayed & { listeners?: Set<(s: SoundState) => void> }).listeners?.delete(onSound)
   window.clearTimeout(pillTimer)
   build?.stop()
   build = null

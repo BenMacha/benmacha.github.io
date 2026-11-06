@@ -602,16 +602,18 @@
     "skip": "Passer",
     "replay": "Rejouer",
     "loading": "Chargement…",
-    "actions": {
-      "write": "écrit",
-      "design": "dessine",
-      "select": "sélectionne"
-    },
     "troll": {
       "name": "critique",
       "doing": "note",
       "fix": "corrige",
       "rating": " 1/5 · la pire expérience"
-    }
+    },
+    "sound": {
+      "on": "Son",
+      "off": "Muet",
+      "tap": "Activer le son",
+      "key": "Son (touche M)"
+    },
+    "speed": "Vitesse de construction"
   }
 }
