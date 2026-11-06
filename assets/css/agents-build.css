@@ -1,6 +1,7 @@
 /* ==========================================================================
    Agents build intro (components/AgentsBuild.vue)
-   The page is built live by labelled cursors, section by section.
+   The page is built live by a swarm of cursors, section by section,
+   like a team in a design tool (frames, typed text, guides, duplicates).
    Every rule hangs off `.ab-armed`, a class only the client script adds to
    the page root: server HTML, crawlers and visitors without JS see the page.
    ========================================================================== */
@@ -8,11 +9,13 @@
 :root,
 html.dark {
   --ab-select: #3d8bff;
+  --ab-guide: #f24822;
   --ab-wire: var(--rule-strong);
 }
 
 html.light {
   --ab-select: #1f6fe5;
+  --ab-guide: #e0361a;
 }
 
 /* ---------- Build states ---------- */
@@ -60,8 +63,9 @@ html.light {
   to { clip-path: inset(-.3em -.3em -.3em -.3em); }
 }
 
-/* ---------- Overlay: cursors and selection frames ---------- */
-/* Absolute over the whole document, clipped so it never widens the page */
+/* ---------- Overlay: cursors ---------- */
+/* Absolute over the whole document, clipped so it never widens the page.
+   It never takes the pointer: the page under it stays clickable. */
 .ab-overlay {
   position: absolute;
   top: 0;
@@ -76,19 +80,49 @@ html.light {
   position: absolute;
   left: 0;
   top: 0;
-  transition: transform .5s cubic-bezier(.3, .7, .2, 1), opacity .4s;
+  z-index: 3;
+  transition: opacity .5s;
   will-change: transform;
 }
 
-.ab-agent svg {
+.ab-agent__icon {
   display: block;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35));
 }
 
-.ab-agent span {
+.ab-agent__icon svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .4));
+}
+
+/* The arrow tip, the crosshair centre, the I-beam centre and the pen nib sit on (x, y) */
+.ab-agent__icon .ab-icon--arrow {
+  transform-origin: 1px 1px;
+}
+
+.ab-agent[data-shape='arrow'] .ab-agent__icon,
+.ab-agent[data-shape='pen'] .ab-agent__icon {
+  translate: -1px -1px;
+}
+
+.ab-agent[data-shape='pen'] .ab-agent__icon {
+  translate: -1px -17px;
+}
+
+.ab-agent[data-shape='cross'] .ab-agent__icon {
+  translate: -8.5px -8.5px;
+}
+
+.ab-agent[data-shape='beam'] .ab-agent__icon {
+  translate: -5px -10px;
+}
+
+/* Name tags only for the critic and the cursors that fix its work */
+.ab-agent__tag {
   position: absolute;
-  left: 14px;
-  top: 16px;
+  left: 13px;
+  top: 15px;
+  display: none;
   padding: 4px 6px;
   border-radius: 4px;
   font: 600 11px/1 var(--font-mono);
@@ -96,42 +130,222 @@ html.light {
   white-space: nowrap;
 }
 
+.ab-agent--troll .ab-agent__tag,
+.ab-agent.has-tag .ab-agent__tag {
+  display: block;
+}
+
 .ab-agent.is-gone {
   opacity: 0;
 }
 
-.ab-sel {
+/* ---------- Frames: drawn boxes, text boxes, selections, duplicates ---------- */
+.ab-frame {
   position: absolute;
   left: 0;
   top: 0;
-  border: 1.5px solid var(--ab-select);
-  border-radius: 2px;
+  z-index: 2;
+  border: 1px solid var(--ab-select);
+  transition: opacity .3s, background-color .3s;
+}
+
+.ab-frame i {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: #fff;
+  border: 1px solid var(--ab-select);
+}
+
+.ab-frame i:nth-child(1) { left: -4px; top: -4px; }
+.ab-frame i:nth-child(2) { right: -4px; top: -4px; }
+.ab-frame i:nth-child(3) { left: -4px; bottom: -4px; }
+.ab-frame i:nth-child(4) { right: -4px; bottom: -4px; }
+
+.ab-frame b {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: var(--ab-select);
+  font: 600 10px/1 var(--font-mono);
+  color: #fff;
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+.ab-frame b:empty,
+.ab-frame--select b,
+.ab-frame--ghost b {
+  display: none;
+}
+
+/* Grey placeholder while the box is drawn, cleared when the block appears */
+.ab-frame--draw {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.ab-frame--draw.is-filled {
+  background: transparent;
+}
+
+.ab-frame--text i {
+  display: none;
+}
+
+.ab-frame--ghost {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--ab-select) 8%, transparent);
+}
+
+.ab-frame.is-out {
+  opacity: 0;
+}
+
+/* Typing caret */
+.ab-caret {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: 2px;
+  border-radius: 1px;
+}
+
+/* A guide dragged out of the left ruler (document coordinates) */
+.ab-guide {
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  width: 0;
+  border-left: 1px solid var(--ab-guide);
+  transition: opacity .4s;
+}
+
+.ab-guide.is-set {
+  border-left-style: dashed;
+}
+
+.ab-guide.is-out {
+  opacity: 0;
+}
+
+/* Red spacing between a block and its duplicate */
+.ab-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
   transition: opacity .3s;
 }
 
-.ab-sel i {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: var(--bg);
-  border: 1.5px solid var(--ab-select);
+.ab-measure.is-v {
+  width: 0;
+  border-left: 1px solid var(--ab-guide);
 }
 
-.ab-sel i:nth-child(1) { left: -5px; top: -5px; }
-.ab-sel i:nth-child(2) { right: -5px; top: -5px; }
-.ab-sel i:nth-child(3) { left: -5px; bottom: -5px; }
-.ab-sel i:nth-child(4) { right: -5px; bottom: -5px; }
+.ab-measure.is-h {
+  height: 0;
+  border-top: 1px solid var(--ab-guide);
+}
 
-.ab-sel b {
+.ab-measure b {
   position: absolute;
-  left: -1.5px;
-  top: -24px;
-  padding: 5px 6px;
+  padding: 2px 4px;
   border-radius: 3px;
-  background: var(--ab-select);
-  font: 600 11px/1 var(--font-mono);
+  background: var(--ab-guide);
+  font: 600 10px/1 var(--font-mono);
   color: #fff;
-  white-space: nowrap;
+}
+
+.ab-measure.is-v b {
+  left: 5px;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.ab-measure.is-h b {
+  left: 50%;
+  top: 5px;
+  translate: -50% 0;
+}
+
+.ab-measure.is-out {
+  opacity: 0;
+}
+
+/* ---------- Rulers along the top and the left edge ---------- */
+.ab-rulers {
+  position: fixed;
+  inset: 0;
+  z-index: 33;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .45s var(--ease);
+}
+
+.ab-rulers.is-on {
+  opacity: 1;
+}
+
+.ab-rulers__top,
+.ab-rulers__left {
+  position: absolute;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--panel) 88%, transparent);
+  font: 500 9px/1 var(--font-mono);
+  color: var(--muted);
+  transition: translate .45s var(--ease);
+}
+
+.ab-rulers__top {
+  top: 0;
+  left: 18px;
+  right: 0;
+  height: 18px;
+  border-bottom: 1px solid var(--rule);
+  background-image:
+    repeating-linear-gradient(to right, var(--rule-strong) 0 1px, transparent 1px 100px),
+    repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px 10px);
+  background-size: 100% 100%, 100% 5px;
+  background-position: -18px 0, -18px 100%;
+  background-repeat: no-repeat, repeat-x;
+  translate: 0 -100%;
+}
+
+.ab-rulers__left {
+  top: 18px;
+  left: 0;
+  bottom: 0;
+  width: 18px;
+  border-right: 1px solid var(--rule);
+  background-image:
+    repeating-linear-gradient(to bottom, var(--rule-strong) 0 1px, transparent 1px 100px),
+    repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px 10px);
+  background-size: 100% 100%, 5px 100%;
+  background-position: 0 0, 100% 0;
+  background-repeat: repeat-y, repeat-y;
+  translate: -100% 0;
+}
+
+.ab-rulers.is-on .ab-rulers__top,
+.ab-rulers.is-on .ab-rulers__left {
+  translate: 0 0;
+}
+
+.ab-rulers__top span {
+  position: absolute;
+  top: 3px;
+  margin-left: -15px;
+}
+
+.ab-rulers__left span {
+  position: absolute;
+  left: 2px;
+  margin-top: -18px;
+  writing-mode: vertical-rl;
+  rotate: 180deg;
 }
 
 /* ---------- Loader: the mark in the middle, cursors orbiting it ---------- */
@@ -206,38 +420,80 @@ html.ab-loading {
   transform-origin: 1px 1px;
 }
 
-/* ---------- Actions: typing caret, selection marquee ---------- */
-.ab-caret {
-  position: absolute;
-  left: -3px;
-  top: -6px;
-  width: 2px;
-  height: 18px;
-  border-radius: 1px;
-  opacity: 0;
+/* ---------- The critic: struck text, garish colours, a 1/5 rating ---------- */
+.ab-troll-strike,
+.ab-troll-strike * {
+  text-decoration: line-through wavy #ff2bd6 !important;
+  text-decoration-thickness: 2px !important;
 }
 
-.ab-agent.is-typing .ab-caret {
-  opacity: 1;
-  animation: ab-blink .5s steps(1) infinite;
+.ab-troll-strike {
+  transition: background-color .3s, color .3s, transform .3s var(--ease), filter .3s;
 }
 
-@keyframes ab-blink {
-  50% { opacity: 0; }
+.ab-troll-paint {
+  background: #c6ff00 !important;
+  color: #ff2bd6 !important;
+  outline: 4px dotted #ff7a00;
+  transform: rotate(-1.2deg);
+  filter: saturate(2.2) hue-rotate(35deg);
+  font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', cursive !important;
 }
 
-.ab-marquee {
+.ab-troll-paint * {
+  color: #7a00ff !important;
+  font-family: inherit !important;
+}
+
+.ab-agent--troll span {
+  background: #ff2bd6 !important;
+  color: #c6ff00;
+}
+
+.ab-rating {
   position: absolute;
   left: 0;
   top: 0;
-  width: 0;
-  height: 0;
-  border: 1px dashed var(--ab-select);
-  background: color-mix(in srgb, var(--ab-select) 10%, transparent);
-  transition: width .42s cubic-bezier(.4, 0, .2, 1), height .42s cubic-bezier(.4, 0, .2, 1), opacity .3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  background: #fff35c;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  font: 700 13px/1 var(--font-mono);
+  color: #1a1a1a;
+  white-space: nowrap;
+  rotate: 6deg;
+  animation: ab-stamp .35s cubic-bezier(.2, 1.6, .4, 1) both;
 }
 
-/* ---------- Status pill ---------- */
+.ab-rating__stars {
+  color: #ff7a00;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.ab-rating__stars i {
+  font-style: normal;
+  color: #b9b9b9;
+}
+
+.ab-rating.is-torn {
+  animation: ab-torn .45s ease-in both;
+}
+
+@keyframes ab-stamp {
+  from { opacity: 0; transform-origin: center; scale: 2.2; }
+  to { opacity: 1; scale: 1; }
+}
+
+@keyframes ab-torn {
+  to { opacity: 0; translate: 30px 40px; rotate: 28deg; }
+}
+
+/* ---------- Status bar ---------- */
 .ab-status {
   position: fixed;
   left: 50%;
@@ -245,17 +501,15 @@ html.ab-loading {
   z-index: 60;
   max-width: calc(100% - 32px);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 10px 12px;
-  padding: 8px 10px 8px 16px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, .25);
+  gap: 10px;
+  padding: 6px 6px 6px 10px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 12px;
+  background: #16191f;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
   font: 500 12px/1.2 var(--font-mono);
-  color: var(--ink);
+  color: #e8ebf0;
   transform: translateX(-50%);
   transition: opacity .4s, transform .4s var(--ease);
 }
@@ -266,21 +520,9 @@ html.ab-loading {
   transform: translate(-50%, 12px);
 }
 
-.ab-status__dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: ab-pulse 1s infinite;
-}
-
-.ab-status.is-done .ab-status__dot {
-  animation: none;
-}
-
 .ab-status__faces {
   display: flex;
+  flex: none;
   padding-inline-start: 4px;
 }
 
@@ -288,57 +530,81 @@ html.ab-loading {
   width: 14px;
   height: 14px;
   margin-inline-start: -4px;
-  border: 2px solid var(--panel);
+  border: 2px solid #16191f;
   border-radius: 50%;
 }
 
+.ab-status__text {
+  white-space: nowrap;
+}
+
+.ab-status__bar {
+  flex: none;
+  width: 72px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .12);
+}
+
+.ab-status__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #3d8bff;
+  transition: width .3s;
+}
+
 .ab-status button {
+  flex: none;
   padding: 7px 10px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .08);
   font: 500 12px/1 var(--font-mono);
-  color: var(--ink);
+  color: #e8ebf0;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .ab-status button:hover {
-  border-color: var(--rule-strong);
-  color: var(--green-ink);
+  background: rgba(255, 255, 255, .16);
 }
 
 .ab-status button:focus-visible {
-  outline: 2px solid var(--ab-select);
+  outline: 2px solid #3d8bff;
   outline-offset: 2px;
 }
 
+.ab-status__sound.is-locked {
+  background: #3d8bff;
+  color: #fff;
+  animation: ab-pulse 1.4s ease-in-out infinite;
+}
+
 @keyframes ab-pulse {
-  50% { opacity: .35; }
+  50% { opacity: .7; }
 }
 
 @media (max-width: 639px) {
-  .ab-agent span {
-    left: 11px;
-    top: 13px;
-    padding: 3px 4px;
+  .ab-rulers {
+    display: none;
+  }
+
+  .ab-frame b,
+  .ab-measure b {
     font-size: 9px;
   }
 
-  .ab-sel b {
-    top: -20px;
-    padding: 4px 5px;
-    font-size: 9px;
-  }
-
-  /* One line on phones: no avatars, smaller type */
+  /* One line on phones: no avatars, no progress bar, smaller type */
   .ab-status {
-    flex-wrap: nowrap;
-    gap: 8px;
-    padding: 5px 6px 5px 12px;
+    gap: 6px;
+    padding: 5px 5px 5px 10px;
     font-size: 10px;
   }
 
-  .ab-status__faces {
+  .ab-status__faces,
+  .ab-status__bar {
     display: none;
   }
 
@@ -346,12 +612,10 @@ html.ab-loading {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .ab-status button {
-    flex: none;
-    padding: 6px 8px;
+    padding: 6px 7px;
     font-size: 10px;
   }
 }

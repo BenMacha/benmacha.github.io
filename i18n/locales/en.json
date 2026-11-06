@@ -602,10 +602,18 @@
     "skip": "Skip",
     "replay": "Replay",
     "loading": "Loading…",
-    "actions": {
-      "write": "typing",
-      "design": "designing",
-      "select": "selecting"
-    }
+    "troll": {
+      "name": "critic",
+      "doing": "rating",
+      "fix": "fixing",
+      "rating": " 1/5 · worst experience ever"
+    },
+    "sound": {
+      "on": "Sound",
+      "off": "Muted",
+      "tap": "Tap for sound",
+      "key": "Sound (M key)"
+    },
+    "speed": "Build speed"
   }
 }

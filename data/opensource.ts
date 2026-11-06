@@ -403,11 +403,11 @@ export const pullRequests: PullRequest[] = [
   {
     "repo": "api-platform/api-platform",
     "number": 3024,
-    "title": "fix: validate the --symfony-docker-ref value",
+    "title": "feat(installer): validate --symfony-docker-ref",
     "url": "https://github.com/api-platform/api-platform/pull/3024",
-    "state": "open",
+    "state": "merged",
     "approved": false,
-    "mergedAt": null,
+    "mergedAt": "2026-11-06T14:07:17Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:06:07Z"
   },

@@ -40,7 +40,7 @@
           </span>
         </div>
 
-        <article v-reveal class="job" data-build>
+        <article v-reveal class="job" data-build :data-build-troll="job.company === 'KEYTCHENS' ? '' : undefined">
           <div class="job__head">
             <h2 class="job__role">{{ job.role }}</h2>
             <span class="job__commit mono"><span class="job__hash">{{ commitHash(job.company) }}</span> · {{ job.period }}</span>
