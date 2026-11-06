@@ -104,6 +104,65 @@ def logo_path(key):
     return m.group(1)
 
 
+# Technology logos (Simple Icons, CC0) and the name -> logo rules of the site (data/tech.ts)
+TECH_TS = ROOT / "data" / "tech.ts"
+# Brand colours of the logos shown in the skills (darkened when too light to read on white)
+TECH_COLOURS = {
+    "php": "#777BB4", "symfony": "#000000", "laravel": "#FF2D20", "nodedotjs": "#5FA04E", "python": "#3776AB",
+    "graphql": "#E10098", "openapiinitiative": "#6BA539", "react": "#149ECA", "vuedotjs": "#42B883",
+    "typescript": "#3178C6", "capacitor": "#119EFF", "ionic": "#3880FF", "android": "#3DDC84",
+    "mysql": "#4479A1", "postgresql": "#4169E1", "googlebigquery": "#669DF6", "redis": "#DC382D",
+    "docker": "#2496ED", "jenkins": "#D24939", "linux": "#1F2937", "debian": "#A81D33",
+    "traefikproxy": "#24A1C1", "apiplatform": "#38A9B4", "sentry": "#362D59", "git": "#F05032", "githubactions": "#2088FF",
+}
+
+
+def tech_logo(name):
+    """(key, svg path) of the logo for a technology as written in the resume, or None (neutral mark)."""
+    text = TECH_TS.read_text()
+    for pattern, key in re.findall(r"\[/(.+?)/i, '([a-z0-9]+)'\]", text):
+        if re.search(pattern, name.strip(), re.I):
+            if key == "neutral":
+                return None
+            m = re.search(rf"^  {key}: '([^']+)'", text, re.M)
+            return (key, m.group(1)) if m else None
+    return None
+
+
+def pr_history(repos):
+    """Pull requests of these repositories, oldest first: their states, for the contribution strips."""
+    import json
+    text = OPENSOURCE_TS.read_text()
+    block = text[text.index("export const pullRequests"):]
+    prs = json.loads(block[block.index("= [") + 2: block.index("\n]") + 2])
+    return [pr["state"] for pr in sorted((pr for pr in prs if pr["repo"] in repos), key=lambda pr: pr["createdAt"])]
+
+
+PR_GREEN, PR_AMBER, PR_RED, PR_RAIL = "#4f9a12", "#d48a00", "#dc2626", "#9ca3af"
+
+
+def pr_strip_svg(states):
+    """A small git graph: one node per pull request on a branch; a merged one curves into the main line."""
+    step, pad = 24, 12
+    w = pad * 2 + step * max(0, len(states) - 1) + 22
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="40" viewBox="0 0 {w} 40">',
+             f'<path d="M2 32 H{w - 2}" stroke="{PR_RAIL}" stroke-width="3" stroke-linecap="round"/>',
+             f'<path d="M{pad} 11 H{pad + step * max(0, len(states) - 1)}" stroke="{PR_RAIL}" stroke-width="2" stroke-dasharray="3 4"/>']
+    for i, state in enumerate(states):
+        x = pad + i * step
+        if state == "merged":
+            parts.append(f'<path d="M{x} 11 C{x + 9} 11 {x + 9} 32 {x + 18} 32" fill="none" stroke="{PR_GREEN}" stroke-width="2.5"/>'
+                         f'<circle cx="{x + 18}" cy="32" r="3.2" fill="{PR_GREEN}"/>'
+                         f'<circle cx="{x}" cy="11" r="7" fill="{PR_GREEN}"/>')
+        elif state == "open":
+            parts.append(f'<circle cx="{x}" cy="11" r="6" fill="#ffffff" stroke="{PR_AMBER}" stroke-width="3"/>')
+        else:
+            parts.append(f'<circle cx="{x}" cy="11" r="7" fill="{PR_RED}"/>'
+                         f'<path d="M{x - 3} 8 L{x + 3} 14 M{x + 3} 8 L{x - 3} 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>')
+    parts.append("</svg>")
+    return "".join(parts), w / 40
+
+
 def pr_counts():
     """Merged / open / approved / closed pull requests per repository, from the portfolio's data/opensource.ts."""
     import json
@@ -456,12 +515,53 @@ def edit_text(xml):
         EXTRA_MEDIA[f"word/media/logo-{key}.png"] = f'<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path fill="{colour}" fill-rule="evenodd" d="{logo_path(key)}"/></svg>'
         rid = rel(f"rIdLogo{key}", f"media/logo-{key}.png", IMG)
         icon = picture(rid, f"logo-{key}", 10, 10, 100 + n) + run_(" ")
-        contrib.append(item(name, links, f"{count_text(repos)} — {topics}", icon))
+        # A git graph of its pull requests, before the counts
+        svg, ratio = pr_strip_svg(pr_history(repos))
+        EXTRA_MEDIA[f"word/media/prs-{key}.png"] = svg
+        srid = rel(f"rIdPrs{key}", f"media/prs-{key}.png", IMG)
+        strip = picture(srid, f"prs-{key}", round(14 * ratio, 1), 14, 120 + n)
+        title_par, text_par = item(name, links, f"{count_text(repos)} — {topics}", icon).split("</w:p>", 1)
+        strip_par = f'<w:p><w:pPr><w:keepNext/><w:spacing w:after="20" w:before="30"/></w:pPr>{strip}</w:p>'
+        contrib.append(title_par + "</w:p>" + strip_par + text_par)
+    # Legend of the strips, at the right end of the sub-heading (a picture, so the text stays plain)
+    EXTRA_MEDIA["word/media/prs-legend.png"] = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="760" height="40" viewBox="0 0 760 40" font-family="Arial" font-weight="700" font-size="25">'
+        f'<circle cx="22" cy="20" r="9" fill="{PR_GREEN}"/><text x="40" y="29" fill="{PR_GREEN}">fusionnée</text>'
+        f'<circle cx="222" cy="20" r="8" fill="#fff" stroke="{PR_AMBER}" stroke-width="4"/><text x="240" y="29" fill="#a86d00">en revue</text>'
+        f'<circle cx="402" cy="20" r="9" fill="{PR_RED}"/><path d="M398 16 L406 24 M406 16 L398 24" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>'
+        f'<text x="420" y="29" fill="#b91c1c">fermée sans fusion</text></svg>')
+    rel("rIdPrsLegend", "media/prs-legend.png", IMG)
+    legend_pos = '<wp:positionH relativeFrom="margin"><wp:align>right</wp:align></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>12700</wp:posOffset></wp:positionV>'
+    contrib_heading = sub("Projets auxquels j&apos;ai contribué").replace("</w:p>", picture("rIdPrsLegend", "prs-legend", 190, 10, 130, inline=False, anchor_xml=legend_pos) + "</w:p>", 1)
+
+    # Skills: the logo of each technology before its name (the names stay text for CV parsers)
+    pid = 300
+    for label in ("Back-end : ", "Front-end &amp; mobile : ", "Bases de données : ", "DevOps : "):
+        at = xml.index(f'<w:t xml:space="preserve">{label}</w:t>')
+        r0 = xml.index("<w:r>", at)
+        r1 = xml.index("</w:r>", r0) + 6
+        run_xml = xml[r0:r1]
+        rpr = re.search(r"<w:rPr>.*?</w:rPr>", run_xml, re.S).group(0)
+        names = re.search(r"<w:t[^>]*>(.*?)</w:t>", run_xml, re.S).group(1).split(", ")
+        out = []
+        for i, tech in enumerate(names):
+            logo = ("apiplatform", logo_path("apiplatform")) if tech.startswith("API Platform") else tech_logo(tech.replace("&amp;", "&"))
+            if logo:
+                key, path = logo
+                if f"word/media/tech-{key}.png" not in EXTRA_MEDIA:
+                    EXTRA_MEDIA[f"word/media/tech-{key}.png"] = f'<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path fill="{TECH_COLOURS.get(key, "#374151")}" fill-rule="evenodd" d="{path}"/></svg>'
+                    rel(f"rIdTech{key}", f"media/tech-{key}.png", IMG)
+                out.append(picture(f"rIdTech{key}", f"tech-{key}", 8.5, 8.5, pid))
+                pid += 1
+                out.append(f'<w:r>{rpr}<w:t xml:space="preserve"> </w:t></w:r>')
+            sep_ = ", " if i < len(names) - 1 else ""
+            out.append(f'<w:r>{rpr}<w:t xml:space="preserve">{tech}{sep_}</w:t></w:r>')
+        xml = xml[:r0] + "".join(out) + xml[r1:]
     section = (
         head + "Contributions open source" + heading.group(2)
         + sub("Mes projets")
         + "".join(item(name, links, text) for name, links, text in own)
-        + sub("Projets auxquels j&apos;ai contribué")
+        + contrib_heading
         + "".join(contrib)
         + para(run_("Tout le détail : ", NEUTRAL, True), link("rIdOpenSource", "benmacha.tn/open-source"), after=0)
     )
