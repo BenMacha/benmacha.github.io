@@ -34,7 +34,7 @@ import type { BuildSound } from './useBuildSound'
 
 /** The swarm: each cursor is named after a technology (Pepprio first, so phones show it too) */
 export const AGENTS: ReadonlyArray<readonly [name: string, color: string]> = [
-  ['pepprio', '#ec3b33'], ['symfony', '#1f2937'], ['php', '#777bb4'], ['vue', '#42b883'],
+  ['pepprio', '#ec3b33'], ['symfony', '#64748b'], ['php', '#777bb4'], ['vue', '#42b883'],
   ['react', '#149eca'], ['docker', '#2496ed'], ['mcp', '#b06ad9'], ['claude', '#d97757'],
   ['nuxt', '#00b37a'], ['redis', '#dc382d'], ['graphql', '#e10098'], ['typescript', '#3178c6'],
   ['tailwind', '#0ea5e9'], ['mysql', '#4479a1'], ['api-platform', '#38a9b4'], ['rag', '#d48a00'],
