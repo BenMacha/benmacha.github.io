@@ -122,7 +122,7 @@ export const organizations: Organization[] = [
 ]
 
 // <generated> — written by scripts/update-opensource.mjs, do not edit by hand
-export const updatedAt = '2026-11-11'
+export const updatedAt = '2026-11-12'
 
 export const pullRequests: PullRequest[] = [
   {
