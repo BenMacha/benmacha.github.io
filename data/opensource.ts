@@ -122,7 +122,7 @@ export const organizations: Organization[] = [
 ]
 
 // <generated> — written by scripts/update-opensource.mjs, do not edit by hand
-export const updatedAt = '2026-11-18'
+export const updatedAt = '2026-11-19'
 
 export const pullRequests: PullRequest[] = [
   {
@@ -598,7 +598,7 @@ export const packages: Package[] = [
     "description": "A comprehensive Symfony bundle for auditing entity changes with rollback functionality, web interface, and REST API",
     "url": "https://packagist.org/packages/benmacha/audit-bundle",
     "repository": "https://github.com/BenMacha/audit-bundle",
-    "downloads": 4
+    "downloads": 5
   },
   {
     "name": "benmacha/templatebundle",
