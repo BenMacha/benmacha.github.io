@@ -122,7 +122,7 @@ export const organizations: Organization[] = [
 ]
 
 // <generated> — written by scripts/update-opensource.mjs, do not edit by hand
-export const updatedAt = '2026-11-24'
+export const updatedAt = '2026-11-25'
 
 export const pullRequests: PullRequest[] = [
   {
@@ -402,6 +402,17 @@ export const pullRequests: PullRequest[] = [
   },
   {
     "repo": "api-platform/api-platform",
+    "number": 3023,
+    "title": "fix: print the release version",
+    "url": "https://github.com/api-platform/api-platform/pull/3023",
+    "state": "merged",
+    "approved": false,
+    "mergedAt": "2026-11-24T15:23:45Z",
+    "closedAt": null,
+    "createdAt": "2026-11-01T09:06:05Z"
+  },
+  {
+    "repo": "api-platform/api-platform",
     "number": 3024,
     "title": "feat(installer): validate --symfony-docker-ref",
     "url": "https://github.com/api-platform/api-platform/pull/3024",
@@ -410,17 +421,6 @@ export const pullRequests: PullRequest[] = [
     "mergedAt": "2026-11-06T14:07:17Z",
     "closedAt": null,
     "createdAt": "2026-11-01T09:06:07Z"
-  },
-  {
-    "repo": "api-platform/api-platform",
-    "number": 3023,
-    "title": "fix: print the release version",
-    "url": "https://github.com/api-platform/api-platform/pull/3023",
-    "state": "open",
-    "approved": false,
-    "mergedAt": null,
-    "closedAt": null,
-    "createdAt": "2026-11-01T09:06:05Z"
   },
   {
     "repo": "caddyserver/caddy",
